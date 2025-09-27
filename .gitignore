@@ -22,7 +22,7 @@
 *.tsbuildinfo
 .vscode/ # VS Code 설정 (개인 선호에 따라 제외 가능)
 .idea/    # WebStorm/IntelliJ IDEA 설정
-.DS_Store # macOS 관련 파일
+.DS_Store
 *~        # 임시 파일
 
 # 기타 캐시/로그
