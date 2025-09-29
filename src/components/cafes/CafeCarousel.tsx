@@ -25,7 +25,7 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
   const [scrollLeft, setScrollLeft] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  const cardsPerView = 4;
+  const cardsPerView = 5;
   const maxIndex = Math.max(0, cafes.length - cardsPerView);
 
   // 터치/마우스 드래그 이벤트 처리
@@ -84,31 +84,10 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
       <p className="text-gray-600 mb-6">{description}</p>
 
       <div className="relative">
-        {currentIndex > 0 && (
-          <button
-            onClick={goToPrevious}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 transition-all duration-200"
-            aria-label="이전 카드"
-          >
-            <svg
-              className="w-6 h-6 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-        )}
 
         <div
           ref={carouselRef}
-          className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-3"
+          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-3"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           onMouseDown={handleStart}
           onMouseMove={handleMove}
@@ -121,35 +100,13 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
           {cafes.map((cafe) => (
             <div
               key={cafe.cafe_id}
-              className="flex-shrink-0 w-72"
+              className="flex-shrink-0 w-80"
               style={{ cursor: isDragging ? "grabbing" : "grab" }}
             >
               <CafeCard cafe={cafe} />
             </div>
           ))}
         </div>
-
-        {currentIndex < maxIndex && (
-          <button
-            onClick={goToNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 transition-all duration-200"
-            aria-label="다음 카드"
-          >
-            <svg
-              className="w-6 h-6 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        )}
       </div>
     </div>
   );

@@ -268,6 +268,35 @@ function Map({ className = "" }: MapProps) {
                </div>
              `,
           });
+          // 마커 호버 시 인포윈도우 표시
+          marker.addListener("mouseover", () => {
+            // 다른 인포윈도우 모두 닫기
+            infoWindowsRef.current.forEach((iw) => iw.close());
+
+            infoWindow.open(map, marker);
+
+            // 인포윈도우 내 버튼 클릭 이벤트 등록
+            setTimeout(() => {
+              const detailButton = document.getElementById(
+                `cafe-detail-btn-${cafe.cafe_id}`
+              );
+              if (detailButton) {
+                detailButton.addEventListener("click", () => {
+                  router.push(`/cafes/${cafe.cafe_id}`);
+                });
+              }
+            }, 100);
+          });
+
+          // 마커에서 마우스 떼면 인포윈도우 닫기
+          marker.addListener("mouseout", () => {
+            // 약간의 지연을 두어 인포윈도우로 마우스가 이동할 시간을 줌
+            setTimeout(() => {
+              infoWindow.close();
+            }, 100);
+          });
+
+          // 마커 클릭 시에도 인포윈도우 표시 (기존 기능 유지)
           marker.addListener("click", () => {
             // 다른 인포윈도우 모두 닫기
             infoWindowsRef.current.forEach((iw) => iw.close());
@@ -322,7 +351,7 @@ function Map({ className = "" }: MapProps) {
         id="app-map"
         ref={mapRef}
         className={`w-full ${
-          className.includes("h-screen") ? "h-screen" : "h-96"
+          className.includes("h-screen") ? "h-screen" : "h-[38rem]"
         } rounded-lg`}
       />
 

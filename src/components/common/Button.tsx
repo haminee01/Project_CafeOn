@@ -26,7 +26,7 @@ const Button: React.FC<ButtonProps> = ({
   const colorClasses = {
     primary: "bg-primary text-white",
     secondary: "bg-secondary text-white",
-    gray: "bg-gray text-white",
+    gray: "bg-gray-100 text-gray-700 hover:bg-gray-200",
     warning: "bg-warning text-white",
   };
 

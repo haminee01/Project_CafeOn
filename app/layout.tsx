@@ -1,6 +1,6 @@
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import GoogleMapsLoader from "@/components/GoogleMapsLoader";
+import Header from "@/components/common/Header";
+import Footer from "@/components/common/Footer";
+import GoogleMapsLoader from "@/components/map/GoogleMapsLoader";
 import "./globals.css";
 
 export default function RootLayout({
@@ -14,7 +14,9 @@ export default function RootLayout({
     <html lang="ko">
       <body className="min-h-screen" suppressHydrationWarning={true}>
         <Header />
-        <main>{children}</main>
+        <main>
+          {children}
+        </main>
 
         {/* Google Maps API 스크립트 */}
         <GoogleMapsLoader apiKey={API_KEY} />

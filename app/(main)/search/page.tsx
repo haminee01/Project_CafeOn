@@ -4,11 +4,12 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { mockCafes } from "@/data/mockCafes";
 import { Cafe } from "@/types/cafe";
-import SearchBar from "@/components/SearchBar";
-import CategoryFilter from "@/components/CategoryFilter";
-import CafeGrid from "@/components/CafeGrid";
-import Pagination from "@/components/Pagination";
-import Footer from "@/components/Footer";
+import SearchBar from "@/components/common/SearchBar";
+import CategoryFilter from "app/(main)/search/components/CategoryFilter";
+import CafeGrid from "@/components/cafes/CafeGrid";
+import Pagination from "@/components/common/Pagination";
+import Footer from "@/components/common/Footer";
+
 
 const categories = [
   "분위기",
@@ -143,6 +144,7 @@ export default function SearchResultsPage() {
 
   return (
     <div>
+      
       <SearchBar
         value={searchQuery}
         onChange={setSearchQuery}
@@ -152,7 +154,7 @@ export default function SearchResultsPage() {
 
       <div className="container mx-auto px-4">
         {/* 카테고리 필터 - 항상 표시 */}
-        <div className="mb-8">
+        <div className="mb-8 flex justify-center">
           <CategoryFilter
             categories={categories}
             selectedCategory={selectedCategory}

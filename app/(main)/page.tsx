@@ -1,14 +1,16 @@
 "use client";
 
-import Map from "@/components/Map";
-import SearchBar from "@/components/SearchBar";
-import CafeCarousel from "@/components/CafeCarousel";
+import Map from "@/components/map/Map";
+import SearchBar from "@/components/common/SearchBar";
+import CafeCarousel from "@/components/cafes/CafeCarousel";
 import { mockCafes } from "@/data/mockCafes";
-import Footer from "@/components/Footer";
+import Footer from "@/components/common/Footer";
+
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen px-6">
+    <div className="min-h-screen px-20">
+      
       <SearchBar />
 
       <Map className="mb-10" />
@@ -26,16 +28,7 @@ export default function HomePage() {
         <CafeCarousel
           cafes={mockCafes.slice(8, 16)}
           title="찜 많은 카페"
-          description="찜이 많은 카페입니다."
-          showAllButton={true}
-        />
-      </div>
-
-      <div>
-        <CafeCarousel
-          cafes={mockCafes.slice(8, 16)}
-          title="새로 생긴 카페"
-          description="따끈따끈한 신상 카페예요."
+          description="찜이 많은 카페를 만나보세요."
           showAllButton={true}
         />
       </div>

@@ -5,8 +5,7 @@ const nextConfig = {
 
   // 브라우저 확장 프로그램으로 인한 속성 불일치 무시
   experimental: {
-    // 클라이언트 사이드 하이드레이션 최적화
-    optimizeCss: true,
+    // optimizeCss 옵션은 Next.js 15에서 기본적으로 비활성화됨
   },
 
   // 개발 모드에서 하이드레이션 경고 필터링
