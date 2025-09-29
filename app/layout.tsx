@@ -1,18 +1,23 @@
-import Header from "@/components/common/Header";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import GoogleMapsLoader from "@/components/GoogleMapsLoader";
 import "./globals.css";
-import Footer from "@/components/common/Footer";
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const API_KEY = "AIzaSyDC7KBOscL2BuX2h9iy9XrRBVmxi9q1GQU";
+
   return (
     <html lang="ko">
-      <body className="min-h-screen bg-white">
+      <body className="min-h-screen" suppressHydrationWarning={true}>
         <Header />
         <main>{children}</main>
-        <Footer />
+
+        {/* Google Maps API 스크립트 */}
+        <GoogleMapsLoader apiKey={API_KEY} />
       </body>
     </html>
   );

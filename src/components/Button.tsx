@@ -1,0 +1,51 @@
+interface ButtonProps {
+  children: React.ReactNode;
+  color?: "primary" | "secondary" | "gray" | "warning";
+  size?: "sm" | "md" | "lg";
+  onClick?: () => void;
+  type?: "button" | "submit" | "reset";
+  disabled?: boolean;
+  className?: string;
+}
+
+const Button: React.FC<ButtonProps> = ({
+  children,
+  color = "primary",
+  size = "md",
+  onClick,
+  type = "button",
+  disabled = false,
+  className = "",
+}) => {
+  const sizeClasses = {
+    sm: "px-4 py-2 text-sm",
+    md: "px-6 py-3 text-base",
+    lg: "px-8 py-4 text-lg",
+  };
+
+  const colorClasses = {
+    primary: "bg-primary text-white",
+    secondary: "bg-secondary text-white",
+    gray: "bg-gray text-white",
+    warning: "bg-warning text-white",
+  };
+
+  const baseClasses =
+    "rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
+  const disabledClasses = "opacity-50 cursor-not-allowed";
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseClasses} ${sizeClasses[size]} ${colorClasses[color]} ${
+        disabled ? disabledClasses : ""
+      } ${className}`}
+    >
+      {children}
+    </button>
+  );
+};
+
+export default Button;

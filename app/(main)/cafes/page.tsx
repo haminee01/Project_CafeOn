@@ -1,5 +1,9 @@
+import Map from "@/components/Map";
+
 export default function CafeListPage() {
-    return (
+  return (
+    <>
       <h1>CafeListPage</h1>
-    );
-  }
+    </>
+  );
+}

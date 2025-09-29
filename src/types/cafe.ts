@@ -7,4 +7,5 @@ export interface Cafe {
     open_hours: string;
     avg_rating: number;
     created_at: string;
+    description: string;
 }
