@@ -1,58 +1,125 @@
-// import { User, MessageSquare, BookOpen, Clock, Settings } from 'lucide-react'; // 미리보기 환경 오류로 인해 이모지 또는 SVG로 대체
-// import Link from 'next/link'; // Next.js 환경 오류로 인해 표준 a 태그로 대체
-// import { usePathname } from 'next/navigation'; // Next.js 환경 오류로 인해 임시 주석 처리
+// src/components/MypageSidebar.jsx
 
-// 아이콘을 이모지로 대체합니다.
-const iconMap = {
-  Settings: "⚙️", // 회원정보
-  BookOpen: "✍️", // 내가 작성한 리뷰
-  User: "🔖", // 북마크 (북마크 아이콘으로 변경)
-  MessageSquare: "💬", // 채팅방
-  Clock: "⏳", // 히스토리
+import { usePathname } from "next/navigation"; // next/navigation에서 usePathname 훅 가져오기
+
+// 아이콘 컴포넌트 정의
+const icons = {
+  Settings: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4.5 12a7.5 7.5 0 1 0 15 0 7.5 7.5 0 0 0-15 0ZM12 16.5c2.485 0 4.5-2.015 4.5-4.5S14.485 7.5 12 7.5 7.5 9.515 7.5 12s2.015 4.5 4.5 4.5Zm-1.875-5.625v1.125h1.125v-1.125h-1.125ZM12 21.75a9.75 9.75 0 1 1 0-19.5 9.75 9.75 0 0 1 0 19.5ZM4.5 12a7.5 7.5 0 1 0 15 0 7.5 7.5 0 0 0-15 0Z"
+      />
+    </svg>
+  ),
+  BookOpen: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 17.25a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z"
+      />
+    </svg>
+  ),
+  User: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 19.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1-.75-.75v-1.5ZM18.75 19.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1-.75-.75v-1.5ZM12 21a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75Z"
+      />
+    </svg>
+  ),
+  MessageSquare: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 21a9.75 9.75 0 1 0 0-19.5 9.75 9.75 0 0 0 0 19.5ZM12 12c-2.485 0-4.5-2.015-4.5-4.5S9.515 3 12 3s4.5 2.015 4.5 4.5S14.485 12 12 12ZM12 16.5c2.485 0 4.5-2.015 4.5-4.5S14.485 7.5 12 7.5 7.5 9.515 7.5 12s2.015 4.5 4.5 4.5Z"
+      />
+    </svg>
+  ),
+  Clock: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+      />
+    </svg>
+  ),
 };
 
-// 마이페이지 사이드바 메뉴 아이템 정의
 const navItems = [
   { name: "회원정보", href: "/mypage", iconKey: "Settings" },
   { name: "내가 작성한 리뷰", href: "/mypage/reviews", iconKey: "BookOpen" },
   { name: "북마크", href: "/mypage/bookmarks", iconKey: "User" },
-  { name: "채팅방", href: "/mypage/chatrooms", iconKey: "MessageSquare" },
+  { name: "채팅방", href: "/mypage/chats", iconKey: "MessageSquare" },
   { name: "히스토리", href: "/mypage/history", iconKey: "Clock" },
 ];
 
-/**
- * 마이페이지 좌측 사이드바 컴포넌트
- * Tailwind CSS를 사용하여 시안과 유사하게 디자인합니다.
- */
 export default function MypageSidebar() {
-  // const pathname = usePathname(); // Next.js 전용 Hook. 미리보기 환경에서는 사용할 수 없습니다.
-  const currentPathMock = "/mypage"; // 임시로 현재 경로를 '/mypage'로 가정하여 '회원정보'를 활성화
+  const pathname = usePathname(); // 현재 경로를 가져오는 훅 사용
 
   return (
-    <nav className="w-64 flex-shrink-0 p-6 border-r border-gray-100 bg-white">
+    <nav className="w-64 flex-shrink-0 p-6 border-r border-[#CDCDCD] bg-white">
       <ul className="space-y-1">
         {navItems.map((item) => {
-          // 실제 Next.js 환경에서는 아래 주석 처리된 코드를 사용해야 합니다.
-          // const isActive = pathname === item.href;
-          const isActive = item.href === currentPathMock;
+          // 현재 경로(pathname)와 메뉴 아이템의 href를 비교하여 활성화 여부 결정
+          const isActive = pathname === item.href;
+          const IconComponent = icons[item.iconKey as keyof typeof icons];
 
           return (
             <li key={item.name}>
-              {/* Link 대신 표준 a 태그 사용. 실제 프로젝트에서는 Link를 사용하세요. */}
               <a
                 href={item.href}
                 className={`
                   flex items-center p-3 rounded-xl transition-colors duration-200 
                   ${
                     isActive
-                      ? "bg-amber-100 text-amber-700 font-semibold"
-                      : "text-gray-600 hover:bg-amber-50 hover:text-amber-600"
+                      ? "text-[#6E4213] font-semibold"
+                      : "text-gray-600 hover:text-[#C19B6C]"
                   }
                 `}
               >
-                {/* 이모지 아이콘 사용. tailwind text-xl을 사용하여 크기 조정 */}
-                <span className="text-xl w-5 h-5 mr-3 flex items-center justify-center">
-                  {iconMap[item.iconKey as keyof typeof iconMap]}
+                <span className="w-5 h-5 mr-3 flex items-center justify-center">
+                  {IconComponent && <IconComponent />}
                 </span>
                 <span className="text-base">{item.name}</span>
               </a>
