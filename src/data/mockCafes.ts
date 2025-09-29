@@ -410,4 +410,92 @@ export const mockCafes: Cafe[] = [
     description:
       "가리봉동의 주거지역에 위치한 이디야커피로, 지역 주민들에게 친숙한 공간입니다.",
   },
+
+  // 영등포구 추가 카페들 (문래 지역)
+  {
+    cafe_id: "33",
+    name: "문래 마이스페이스",
+    address: "서울특별시 영등포구 도림로141길 15",
+    latitude: 37.5172,
+    longitude: 126.8953,
+    open_hours: "10:00 - 21:30",
+    avg_rating: 4.6,
+    created_at: "2024-02-02",
+    description:
+      "소중한 사람을 위한 선물 디저트. 정성과 시간을 다한 디저트 천국, 마이스페이스 입니다! 문래역 1번 출구에서 도보 6분, 신도림역 6번 출구에서 도보 7분 거리에 위치해 있습니다.",
+  },
+  {
+    cafe_id: "34",
+    name: "문래 디저트 카페",
+    address: "서울특별시 영등포구 도림로 472",
+    latitude: 37.5165,
+    longitude: 126.8947,
+    open_hours: "09:00 - 22:00",
+    avg_rating: 4.4,
+    created_at: "2024-02-03",
+    description:
+      "문래 지역의 히든 디저트 카페로, 특별한 케이크와 음료를 제공합니다. 조용하고 아늑한 분위기에서 휴식을 취할 수 있어요.",
+  },
+  {
+    cafe_id: "35",
+    name: "문래 브런치 카페",
+    address: "서울특별시 영등포구 문래동3가 55-24",
+    latitude: 37.5185,
+    longitude: 126.8965,
+    open_hours: "08:00 - 20:00",
+    avg_rating: 4.3,
+    created_at: "2024-02-04",
+    description:
+      "브런치와 디저트가 맛있는 문래의 인기 카페입니다. 신선한 재료로 만든 샐러드와 파스타도 함께 즐길 수 있어요.",
+  },
+
+  // 유사 카페들 (데이트/로맨틱 카페)
+  {
+    cafe_id: "36",
+    name: "로맨틱한 데이트 카페",
+    address: "서울특별시 강남구 테헤란로 123",
+    latitude: 37.5665,
+    longitude: 127.0333,
+    open_hours: "10:00 - 23:00",
+    avg_rating: 4.5,
+    created_at: "2024-02-05",
+    description:
+      "커플들이 좋아하는 아늑한 공간들을 모았습니다. 특별한 날을 위한 완벽한 데이트 카페입니다.",
+  },
+  {
+    cafe_id: "37",
+    name: "힐링 카페 스페이스",
+    address: "서울특별시 마포구 홍익로 3",
+    latitude: 37.5563,
+    longitude: 126.9226,
+    open_hours: "09:00 - 22:00",
+    avg_rating: 4.4,
+    created_at: "2024-02-06",
+    description:
+      "마음의 휴식을 위한 힐링 공간. 자연스러운 인테리어와 편안한 분위기에서 스트레스를 해소해보세요.",
+  },
+  {
+    cafe_id: "38",
+    name: "아늑한 북카페",
+    address: "서울특별시 서대문구 신촌로 83",
+    latitude: 37.5598,
+    longitude: 126.942,
+    open_hours: "08:00 - 24:00",
+    avg_rating: 4.2,
+    created_at: "2024-02-07",
+    description:
+      "책과 커피가 함께하는 특별한 공간. 조용한 분위기에서 독서와 커피를 동시에 즐길 수 있습니다.",
+  },
+  {
+    cafe_id: "39",
+    name: "포토스팟 카페",
+    address: "서울특별시 종로구 인사동길 12",
+    latitude: 37.5735,
+    longitude: 126.9858,
+    open_hours: "10:00 - 21:00",
+    avg_rating: 4.6,
+    created_at: "2024-02-08",
+    description:
+      "인스타그램에 올리기 좋은 예쁜 포토스팟들이 가득한 카페입니다. 특별한 순간을 기록해보세요.",
+  },
 ];
