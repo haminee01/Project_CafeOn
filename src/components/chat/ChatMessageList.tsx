@@ -17,11 +17,13 @@ interface ChatMessageListProps {
     senderName: string,
     event: React.MouseEvent<HTMLDivElement>
   ) => void;
+  onListClick: () => void;
 }
 
 const ChatMessageList: React.FC<ChatMessageListProps> = ({
   messages,
   onProfileClick,
+  onListClick,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -30,7 +32,10 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 border-y">
+    <div
+      className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 border-y"
+      onClick={onListClick}
+    >
       {messages.map((message) => (
         <div
           key={message.id}

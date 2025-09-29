@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import ChatModal from "../../../../src/components/chat/ChatModal";
+import ChatModal from "../../../../src/components/chat/CafeChatModal";
 
 interface CafeDetailPageProps {
   params: {
