@@ -1,4 +1,4 @@
-// src/components/chat/ChatMessageInput.tsx
+"use client";
 
 import React, { useState } from "react";
 
@@ -9,38 +9,42 @@ interface ChatMessageInputProps {
 const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
   onSendMessage,
 }) => {
-  const [inputValue, setInputValue] = useState("");
+  const [input, setInput] = useState("");
 
-  const handleSendMessage = () => {
-    if (inputValue.trim()) {
-      onSendMessage(inputValue);
-      setInputValue("");
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSendMessage();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input.trim()) {
+      onSendMessage(input.trim());
+      setInput("");
     }
   };
 
   return (
-    <div className="p-4 border-t border-gray-200 flex">
-      <input
-        type="text"
-        className="flex-1 rounded-full border border-gray-300 px-4 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
-        placeholder="메시지 보내기"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyPress={handleKeyPress}
-      />
-      <button
-        onClick={handleSendMessage}
-        className="ml-2 rounded-full bg-[#A86E3C] px-6 py-2 text-white hover:bg-[#8d5e33]"
-      >
-        보내기
-      </button>
-    </div>
+    <form onSubmit={handleSubmit} className="p-4 bg-white rounded-b-xl">
+      <div className="flex items-center space-x-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="메시지를 입력하세요..."
+          className="flex-1 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#6E4213] focus:border-transparent transition duration-150"
+        />
+        <button
+          type="submit"
+          className="bg-[#6E4213] text-white p-3 rounded-lg hover:bg-[#8d5e33] transition duration-150 disabled:bg-gray-400"
+          disabled={!input.trim()}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-6 h-6"
+          >
+            <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.52 60.52 0 0 0 18.44-5.9v-.413c0-1.721-.574-3.414-1.681-4.785z" />
+          </svg>
+        </button>
+      </div>
+    </form>
   );
 };
 

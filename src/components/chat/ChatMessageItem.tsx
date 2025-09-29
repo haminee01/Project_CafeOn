@@ -10,79 +10,74 @@ interface ChatMessage {
 
 interface ChatMessageItemProps {
   message: ChatMessage;
-  // 프로필 클릭 시 호출될 콜백 함수를 추가합니다. (상대방 ID를 전달)
-  onProfileClick?: (senderId: string, senderName: string) => void;
+  onProfileClick: (
+    senderId: string,
+    senderName: string,
+    event: React.MouseEvent<HTMLDivElement>
+  ) => void;
 }
 
 const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   message,
   onProfileClick,
 }) => {
-  const profileImage =
-    message.senderName === "Sunwon903"
-      ? "/images/profile-sunwon.png"
-      : "/images/profile-alice.png";
-
-  // 상대방 메시지일 때만 클릭 이벤트 핸들러를 정의합니다.
-  const handleProfileClick = () => {
-    if (!message.isMyMessage && onProfileClick) {
-      onProfileClick(message.senderId, message.senderName);
-    }
-  };
-
   return (
     <div
-      className={`mb-4 flex ${
-        message.isMyMessage ? "flex-row-reverse" : "flex-row"
-      } items-start`}
+      key={message.id}
+      className={`flex ${
+        message.isMyMessage ? "justify-end" : "justify-start"
+      }`}
     >
-      {/* 상대방 메시지일 경우에만 프로필 이미지와 닉네임 렌더링 */}
-      {!message.isMyMessage && (
+      <div
+        className={`flex items-start max-w-xs md:max-w-md ${
+          message.isMyMessage ? "flex-row-reverse space-x-reverse" : "space-x-3"
+        }`}
+      >
+        {/* 프로필 이미지/아이콘 */}
         <div
-          className="flex-shrink-0 mr-2 flex flex-col items-center cursor-pointer group"
-          onClick={handleProfileClick}
+          className={`w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center cursor-pointer transition duration-150 ${
+            message.isMyMessage ? "ml-2" : "mr-2"
+          }`}
+          onClick={(event) =>
+            onProfileClick(message.senderId, message.senderName, event)
+          }
         >
-          <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border-2 border-transparent group-hover:border-amber-500 transition duration-150">
-            {/* 프로필 이미지 (실제 이미지 경로로 대체 필요) */}
-            <img
-              src={profileImage}
-              alt={`${message.senderName} 프로필`}
-              className="w-full h-full object-cover"
-              // 이미지 로드 오류 방지용 placeholder
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src =
-                  "https://placehold.co/32x32/cccccc/333333?text=👤";
-              }}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5 text-amber-900"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a1.5 1.5 0 011.892-1.892L16.5 17.25M17.25 12a5.25 5.25 0 00-10.5 0h10.5z"
             />
-          </div>
-          <span className="mt-1 text-xs text-gray-500 group-hover:text-amber-600 transition duration-150">
+          </svg>
+        </div>
+
+        <div className="flex flex-col">
+          {/* 이름 */}
+          <span
+            className={`text-xs text-gray-500 mb-1 ${
+              message.isMyMessage ? "text-right" : "text-left"
+            }`}
+          >
             {message.senderName}
           </span>
 
-          {/* 1:1 채팅하기 버튼은 프로필 클릭 시 모달이 띄워지는 것으로 대체되므로 별도로 렌더링하지 않습니다. */}
-        </div>
-      )}
-
-      {/* 메시지 내용 버블 */}
-      <div
-        className={`flex flex-col ${
-          message.isMyMessage ? "items-end" : "items-start"
-        } max-w-[75%]`}
-      >
-        {/* 내 메시지일 경우에만 닉네임 렌더링 (상대방은 프로필 아래에 렌더링됨) */}
-        {message.isMyMessage && (
-          <span className="text-xs text-gray-500 mb-1">닉네임</span>
-        )}
-
-        <div
-          className={`rounded-lg p-2 text-sm ${
-            message.isMyMessage
-              ? "bg-[#A86E3C] text-white"
-              : "bg-gray-100 text-black border border-gray-200"
-          }`}
-        >
-          {message.content}
+          {/* 메시지 내용 */}
+          <div
+            className={`p-3 rounded-xl shadow-sm ${
+              message.isMyMessage
+                ? "bg-[#6E4213] text-white rounded-br-none"
+                : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
+            }`}
+          >
+            {message.content}
+          </div>
         </div>
       </div>
     </div>
