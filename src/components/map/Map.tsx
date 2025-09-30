@@ -201,6 +201,8 @@ function Map({ className = "" }: MapProps) {
                  background: white;
                  border-radius: 12px;
                  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                 outline: none;
+                 border: none;
                ">
                  <div style="margin-bottom: 12px;">
                    <h3 style="
@@ -251,6 +253,7 @@ function Map({ className = "" }: MapProps) {
                      cursor: pointer;
                      transition: all 0.2s ease;
                      box-shadow: 0 2px 4px rgba(110, 66, 19, 0.2);
+                     outline: none;
                    "
                    onmouseover="
                      this.style.backgroundColor='#C19B6C'; 

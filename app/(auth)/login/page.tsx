@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
+import Header from "@/components/common/Header";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -48,8 +49,10 @@ export default function LoginPage() {
   };
 
     return (
-    <div className="min-h-full flex items-center justify-center px-4 py-8">
-      <div className="max-w-2xl">
+    <div className="min-h-screen bg-white">
+      <Header />
+      <div className="min-h-full flex items-center justify-center px-4 py-8">
+        <div className="max-w-2xl w-full">
         {/* 로그인 카드 */}
         
           {/* 헤더 */}
@@ -173,7 +176,7 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
-        
+        </div>
       </div>
 
       {/* 비밀번호 재설정 모달 */}
