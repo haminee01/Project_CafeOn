@@ -12,7 +12,7 @@ const Footer = () => {
 
   return (
     <footer>
-      <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-16">
+      <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-8">
         <div className="border-b border-gray-50 mb-12"></div>
 
         <div className="flex justify-between items-start">

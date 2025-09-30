@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
+import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,22 +19,15 @@ export default function LoginPage() {
     router.push("/");
   };
 
-  const handleSocialLogin = (provider: string) => {
+  const handleSocialLogin = (providerId: string) => {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
+    const provider = socialProviders.find(p => p.id === providerId);
     
-    // 실제 OAuth URL로 리다이렉트 (콜백 페이지를 통해 처리)
-    switch (provider) {
-      case 'naver':
-        window.location.href = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=test&redirect_uri=${encodeURIComponent(`${baseUrl}/api/auth/naver/callback`)}&state=random_state`;
-        break;
-      case 'kakao':
-        window.location.href = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=test&redirect_uri=${encodeURIComponent(`${baseUrl}/api/auth/kakao/callback`)}`;
-        break;
-      case 'google':
-        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=test&redirect_uri=${encodeURIComponent(`${baseUrl}/api/auth/google/callback`)}&scope=openid email profile`;
-        break;
-      default:
-        console.log(`${provider} 로그인 시도`);
+    if (provider) {
+      const authUrl = generateSocialAuthUrl(provider, baseUrl);
+      window.location.href = authUrl;
+    } else {
+      console.log(`${providerId} 로그인 시도`);
     }
   };
 
@@ -45,7 +39,7 @@ export default function LoginPage() {
     router.push("/signup");
   };
 
-  return (
+    return (
     <div className="min-h-full flex items-center justify-center px-4 py-8">
       <div className="max-w-2xl">
         {/* 로그인 카드 */}
@@ -214,5 +208,5 @@ export default function LoginPage() {
         </div>
       )}
     </div>
-  );
-}
+    );
+  }

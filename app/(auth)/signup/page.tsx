@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
+import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function SignupPage() {
     confirmPassword: "",
   });
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -62,30 +65,69 @@ export default function SignupPage() {
       return;
     }
     // 회원가입 로직 구현
-    console.log("회원가입 데이터:", formData);
+    const signupData = {
+      ...formData,
+      profileImage: profileImage || null,
+    };
+    console.log("회원가입 데이터:", signupData);
     router.push("/");
   };
 
-  const handleSocialSignup = (provider: string) => {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
-    
-    // 실제 OAuth URL로 리다이렉트 (콜백 페이지를 통해 처리)
-    switch (provider) {
-      case 'naver':
-        window.location.href = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=test&redirect_uri=${encodeURIComponent(`${baseUrl}/api/auth/naver/callback`)}&state=random_state`;
-        break;
-      case 'kakao':
-        window.location.href = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=test&redirect_uri=${encodeURIComponent(`${baseUrl}/api/auth/kakao/callback`)}`;
-        break;
-      case 'google':
-        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=test&redirect_uri=${encodeURIComponent(`${baseUrl}/api/auth/google/callback`)}&scope=openid email profile`;
-        break;
-      default:
-        console.log(`${provider} 회원가입 시도`);
+  const handleProfileImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // 파일 크기 체크 (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('파일 크기는 5MB 이하여야 합니다.');
+        return;
+      }
+      
+      // 파일 타입 체크
+      if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 업로드 가능합니다.');
+        return;
+      }
+      
+      setProfileImage(file);
+      const previewUrl = URL.createObjectURL(file);
+      setProfileImagePreview(previewUrl);
     }
   };
 
-  return (
+  const handleRemoveProfileImage = () => {
+    setProfileImage(null);
+    if (profileImagePreview) {
+      URL.revokeObjectURL(profileImagePreview);
+      setProfileImagePreview(null);
+    }
+  };
+
+  const handleProfileImageClick = () => {
+    document.getElementById('profile-image-upload')?.click();
+  };
+
+  // 컴포넌트 언마운트 시 메모리 정리
+  useEffect(() => {
+    return () => {
+      if (profileImagePreview) {
+        URL.revokeObjectURL(profileImagePreview);
+      }
+    };
+  }, [profileImagePreview]);
+
+  const handleSocialSignup = (providerId: string) => {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
+    const provider = socialProviders.find(p => p.id === providerId);
+    
+    if (provider) {
+      const authUrl = generateSocialAuthUrl(provider, baseUrl);
+      window.location.href = authUrl;
+    } else {
+      console.log(`${providerId} 회원가입 시도`);
+    }
+  };
+
+    return (
     <div className="min-h-full flex items-center justify-center px-4 py-8">
       <div className="max-w-2xl w-full">
         {/* 헤더 */}
@@ -101,6 +143,60 @@ export default function SignupPage() {
 
         {/* 회원가입 폼 */}
         <form onSubmit={handleSignup} className="space-y-4">
+          {/* 프로필 사진 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              프로필 사진 (선택사항)
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <input
+                  id="profile-image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfileImageUpload}
+                  className="hidden"
+                />
+                <div
+                  onClick={handleProfileImageClick}
+                  className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors relative overflow-hidden"
+                >
+                  {profileImagePreview ? (
+                    <>
+                      <img
+                        src={profileImagePreview}
+                        alt="프로필 미리보기"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveProfileImage();
+                        }}
+                        className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </>
+                  ) : (
+                    <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600">
+                  {profileImagePreview ? "프로필 사진이 선택되었습니다." : "프로필 사진을 업로드하세요."}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {profileImagePreview ? "클릭하여 변경하거나 우측 × 버튼으로 제거하세요." : "클릭하여 사진을 선택하세요. (JPG, PNG 최대 5MB)"}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* 이름 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -220,5 +316,5 @@ export default function SignupPage() {
         </form>
       </div>
     </div>
-  );
-}
+    );
+  }

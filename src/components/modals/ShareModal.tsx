@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { socialSharePlatforms } from "@/data/modalData";
 
 interface ShareModalProps {
   onClose: () => void;
@@ -23,11 +24,11 @@ export default function ShareModal({ onClose, cafe }: ShareModalProps) {
     }
   };
 
-  const handleSocialShare = (platform: string) => {
+  const handleSocialShare = (platformId: string) => {
     const text = `${cafe.name} (${cafe.address})`;
     const url = "https://maps.app.goo.gl/WVyWeMFKACJHDn3x6";
     
-    switch (platform) {
+    switch (platformId) {
       case 'instagram':
         // Instagram은 직접 공유 API가 제한적이므로 클립보드에 복사
         navigator.clipboard.writeText(`${text} ${url}`);

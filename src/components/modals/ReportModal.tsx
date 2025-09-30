@@ -62,12 +62,7 @@ export default function ReportModal({ onClose }: ReportModalProps) {
 
           {/* 액션 버튼 */}
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-            >
-              취소
-            </button>
+            
             <button
               onClick={handleReport}
               className="flex-1 bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-medium"
