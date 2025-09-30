@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CafeReview } from "@/data/cafeDetails";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ReviewDetailModalProps {
   onClose: () => void;
@@ -12,6 +13,7 @@ interface ReviewDetailModalProps {
 }
 
 export default function ReviewDetailModal({ onClose, cafe, review }: ReviewDetailModalProps) {
+  useEscapeKey(onClose);
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);

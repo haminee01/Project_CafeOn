@@ -1,5 +1,6 @@
 "use client";
 
+import Header from "@/components/common/Header";
 import Map from "@/components/map/Map";
 import SearchBar from "@/components/common/SearchBar";
 import CafeCarousel from "@/components/cafes/CafeCarousel";
@@ -10,7 +11,7 @@ import Footer from "@/components/common/Footer";
 export default function HomePage() {
   return (
     <div className="min-h-screen px-20">
-      
+      <Header />
       <SearchBar />
 
       <Map className="mb-10" />

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CafeReview } from "@/data/cafeDetails";
 import Button from "@/components/common/Button";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ReviewWriteModalProps {
   onClose: () => void;
@@ -13,6 +14,7 @@ interface ReviewWriteModalProps {
 }
 
 export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWriteModalProps) {
+  useEscapeKey(onClose);
   const isEditMode = !!editReview;
   const [reviewContent, setReviewContent] = useState(editReview?.content || "");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);

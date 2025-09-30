@@ -4,12 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
+import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const router = useRouter();
+
+  // ESC 키 이벤트 처리
+  useEscapeKey(() => {
+    if (showPasswordReset) {
+      setShowPasswordReset(false);
+    }
+  });
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();

@@ -12,6 +12,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
+  const handleLogout = () => {
+    alert("로그아웃 되었습니다.");
+    // 실제 로그아웃 로직 구현
+  };
+
   const menuItems = [
     {
       name: "카페 관리",
@@ -36,15 +41,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 상단 헤더 */}
+    <div className="min-h-screen">
+      {/* 상단 헤더 - 로그인/로그아웃만 */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">CafeOn.</h1>
+              <h1 className="text-2xl font-bold text-primary">CafeOn.</h1>
             </div>
-            <button className="text-gray-600 hover:text-gray-900 text-sm">
+            <button 
+              onClick={handleLogout}
+              className="text-gray-600 hover:text-gray-900 text-base"
+            >
               로그아웃
             </button>
           </div>
@@ -57,18 +65,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}>
           <div className="p-6">
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-gray-900">CafeOn.</h2>
-            </div>
+            
             
             <nav className="space-y-2">
               {menuItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center px-4 py-3 rounded-lg text-md font-medium transition-colors ${
                     pathname === item.href
-                      ? 'bg-blue-100 text-blue-700'
+                      ? 'text-primary font-bold'
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >

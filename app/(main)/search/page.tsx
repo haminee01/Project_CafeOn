@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import Header from "@/components/common/Header";
 import { mockCafes } from "@/data/mockCafes";
 import { Cafe } from "@/types/cafe";
 import SearchBar from "@/components/common/SearchBar";
@@ -144,7 +145,7 @@ export default function SearchResultsPage() {
 
   return (
     <div>
-      
+      <Header />
       <SearchBar
         value={searchQuery}
         onChange={setSearchQuery}

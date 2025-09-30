@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { socialSharePlatforms } from "@/data/modalData";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ShareModalProps {
   onClose: () => void;
@@ -12,6 +13,7 @@ interface ShareModalProps {
 }
 
 export default function ShareModal({ onClose, cafe }: ShareModalProps) {
+  useEscapeKey(onClose);
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = async () => {

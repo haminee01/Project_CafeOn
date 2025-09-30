@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Header from "@/components/common/Header";
 import Map from "@/components/map/Map";
 import { mockCafes } from "@/data/mockCafes";
 
@@ -28,6 +29,7 @@ export default function MapPage() {
 
   return (
     <div className="min-h-screen relative">
+      <Header />
       {/* 지도 (전체 화면) */}
       <Map className="h-screen" />
 

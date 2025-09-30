@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface SaveModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ interface SaveModalProps {
 }
 
 export default function SaveModal({ onClose, cafe }: SaveModalProps) {
+  useEscapeKey(onClose);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const categories = [

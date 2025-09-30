@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ChatRoomModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface ChatRoomModalProps {
 }
 
 export default function ChatRoomModal({ onClose, cafe }: ChatRoomModalProps) {
+  useEscapeKey(onClose);
   const [nickname, setNickname] = useState("Sunwon903");
 
   const handleJoin = () => {

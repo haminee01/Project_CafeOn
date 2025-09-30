@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Header from "@/components/common/Header";
 import { mockCafes } from "@/data/mockCafes";
 import { createCafeDetail, getSimilarCafes } from "@/data/cafeUtils";
 import CafeInfoSection from "app/(main)/cafes/[cafeId]/components/CafeInfoSection";
@@ -13,6 +14,7 @@ import ReportModal from "@/components/modals/ReportModal";
 import ReviewWriteModal from "@/components/modals/ReviewWriteModal";
 import SaveModal from "@/components/modals/SaveModal";
 import Footer from "@/components/common/Footer";
+import { useEscapeKey } from "../../../../src/hooks/useEscapeKey";
 
 interface CafeDetailPageProps {
   params: {
@@ -28,6 +30,18 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   const [showReviewWriteModal, setShowReviewWriteModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [editingReview, setEditingReview] = useState<any>(null);
+
+  // ESC 키 이벤트 처리
+  useEscapeKey(() => {
+    if (showShareModal) setShowShareModal(false);
+    else if (showChatModal) setShowChatModal(false);
+    else if (showReportModal) setShowReportModal(false);
+    else if (showReviewWriteModal) {
+      setShowReviewWriteModal(false);
+      setEditingReview(null);
+    }
+    else if (showSaveModal) setShowSaveModal(false);
+  });
 
   // mockCafes에서 카페 데이터 찾기
   const cafeData = mockCafes.find(c => c.cafe_id === params.cafeId);
@@ -59,6 +73,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
+      <Header />
       {/* 카페 메인 정보 섹션 */}
       <CafeInfoSection 
         cafe={cafe}

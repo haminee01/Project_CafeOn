@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ReportModalProps {
   onClose: () => void;
 }
 
 export default function ReportModal({ onClose }: ReportModalProps) {
+  useEscapeKey(onClose);
   const [reportedUserId, setReportedUserId] = useState("미운오리9214");
   const [reportReason, setReportReason] = useState("");
 
