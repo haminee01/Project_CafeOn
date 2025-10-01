@@ -1,10 +1,24 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
+import { usePrivateChatFlow } from "@/hooks/usePrivateChatFlow";
 import ChatMessageList from "./ChatMessageList";
 import ChatMessageInput from "./ChatMessageInput";
 import PrivateChatModal from "./PrivateChatModal";
+import ProfileMiniPopup from "../common/ProfileMiniPopup";
 
+export interface UserProfile {
+  id: string;
+  name: string;
+}
+
+export interface ProfileClickHandler {
+  (
+    senderId: string,
+    senderName: string,
+    event: React.MouseEvent<HTMLElement>
+  ): void;
+}
 interface ChatMessage {
   id: string;
   senderName: string;
@@ -13,20 +27,8 @@ interface ChatMessage {
   senderId: string;
 }
 
-interface Participant {
-  id: string;
-  name: string;
-}
+type Participant = UserProfile;
 
-interface ProfileClickHandler {
-  (
-    senderId: string,
-    senderName: string,
-    event: React.MouseEvent<HTMLDivElement>
-  ): void;
-}
-
-// --- 더미 데이터 ---
 const initialDummyMessages: ChatMessage[] = [
   {
     id: "2",
@@ -60,31 +62,32 @@ const initialDummyMessages: ChatMessage[] = [
   },
 ];
 
-// 현재 채팅방 참여자 더미 데이터
-const dummyParticipants: Participant[] = [
-  { id: "user-me", name: "닉네임" },
-  { id: "user-alice", name: "엘리스" },
-  { id: "user-sunwon", name: "Sunwon903" },
-  { id: "user-test1", name: "테스터1" },
-  { id: "user-test2", name: "테스터2" },
-  { id: "user-test3", name: "테스터3" },
-];
+const DUMMY_PROFILES: { [key: string]: UserProfile } = {
+  "user-me": { id: "user-me", name: "닉네임" },
+  "user-alice": { id: "user-alice", name: "엘리스" },
+  "user-sunwon": { id: "user-sunwon", name: "Sunwon903" },
+  "user-test1": { id: "user-test1", name: "테스터1" },
+  "user-test2": { id: "user-test2", name: "테스터2" },
+  "user-test3": { id: "user-test3", name: "테스터3" },
+};
 
-// 프로필 아이콘 플레이스홀더 헬퍼 컴포넌트
+const dummyParticipants: Participant[] = Object.values(DUMMY_PROFILES);
+
 const ProfileIcon: React.FC = () => (
   <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
     <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={1.5}
-      stroke="currentColor"
+      aria-hidden="true"
+      focusable="false"
+      data-prefix="fas"
+      data-icon="user"
       className="w-5 h-5 text-gray-600"
+      role="img"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 448 512"
     >
       <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a1.5 1.5 0 011.892-1.892L16.5 17.25M17.25 12a5.25 5.25 0 00-10.5 0h10.5z"
+        fill="currentColor"
+        d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"
       />
     </svg>
   </div>
@@ -101,19 +104,43 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(initialDummyMessages);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // 1. 알림 상태를 관리하는 State 추가 (기본값: 켜짐)
+  const [isNotificationOn, setIsNotificationOn] = useState(true);
 
-  // 미니 팝업 상태 (1:1 대화 시작 전 '대화하시겠습니까?' 팝업)
-  const [targetUserForPopup, setTargetUserForPopup] =
-    useState<Participant | null>(null);
-  const [popupPosition, setPopupPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
+  // Modal Box DOM을 참조하여 팝업 위치를 상대적으로 계산하기 위해 사용
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  // 1:1 채팅 모달 상태 (이 값이 채워지면 PrivateChatModal이 렌더링됨)
-  const [targetUserForPrivateChat, setTargetUserForPrivateChat] =
-    useState<Participant | null>(null);
+  const {
+    targetUserForPopup,
+    popupPosition,
+    targetUserForPrivateChat,
+    handleProfileClick,
+    handleStartPrivateChat,
+    closePrivateChatModal,
+    closePopup,
+  } = usePrivateChatFlow(
+    DUMMY_PROFILES,
+    modalRef as React.RefObject<HTMLElement>
+  );
 
+  // 사이드바 닫기
+  const closeSidebar = useCallback(() => {
+    setIsSidebarOpen(false);
+  }, []);
+
+  // 미니 팝업 닫기 핸들러 (usePrivateChatFlow의 closePopup 재사용)
+  // 모달 오버레이 클릭 핸들러: 미니 팝업 닫기 + 사이드바 닫기
+  const handleModalOverlayClick = () => {
+    closePopup();
+    closeSidebar();
+  };
+
+  // 메시지 리스트 영역 클릭 핸들러: 미니 팝업만 닫기
+  const handleListClick = () => {
+    closePopup();
+  };
+
+  // 그룹 채팅 메시지 전송 핸들러
   const handleSendMessage = (message: string) => {
     console.log("메시지 전송:", message);
 
@@ -128,71 +155,24 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     setMessages((prevMessages) => [...prevMessages, newMessage]);
   };
 
-  // 미니 팝업 닫기
-  const closePopup = useCallback(() => {
-    setTargetUserForPopup(null);
-    setPopupPosition(null);
-  }, []);
-
-  // 사이드바 닫기
-  const closeSidebar = useCallback(() => {
-    setIsSidebarOpen(false);
-  }, []);
-
-  // 1:1 채팅 모달 닫기
-  const closePrivateChatModal = useCallback(() => {
-    setTargetUserForPrivateChat(null);
-  }, []);
-
-  // 모달 오버레이 클릭 핸들러: 미니 팝업 닫기 + 사이드바 닫기
-  const handleModalOverlayClick = () => {
-    closePopup();
-    closeSidebar();
+  // 2. 알림 상태를 토글하는 Handler 추가
+  const handleToggleNotification = () => {
+    setIsNotificationOn((prev) => !prev);
   };
 
-  // 메시지 리스트 영역 클릭 핸들러: 미니 팝업만 닫기
-  const handleListClick = () => {
-    closePopup();
-  };
-
-  // 프로필 클릭 핸들러 (미니 팝업 열기)
-  const handleProfileClick: ProfileClickHandler = (
-    senderId,
-    senderName,
-    event
+  // 사이드바 내 프로필 클릭 시 동작 (handleProfileClick 재사용)
+  const handleSidebarProfileClick = (
+    user: Participant,
+    event: React.MouseEvent<HTMLDivElement>
   ) => {
-    event.stopPropagation();
-
-    if (senderId === "user-me") {
-      closePopup();
-      return;
+    if (user.id !== "user-me") {
+      handleProfileClick(
+        user.id,
+        user.name,
+        event as unknown as React.MouseEvent<HTMLElement>
+      );
+      closeSidebar();
     }
-
-    if (targetUserForPopup && targetUserForPopup.id === senderId) {
-      closePopup();
-      return;
-    }
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    const modalBox = event.currentTarget.closest(".modal-box") as HTMLElement;
-
-    // 모달 박스 내부에서의 상대적인 위치 계산
-    const modalRect = modalBox.getBoundingClientRect();
-
-    // X 좌표: 프로필 이미지의 오른쪽 끝(modal 기준) + 약간의 여백(8px)을 추가
-    const x = rect.right + 8 - modalRect.left;
-    // Y 좌표: 프로필 이미지의 중앙(modal 기준)을 기준으로 팝업 중앙 정렬
-    const y = rect.top + rect.height / 2 - modalRect.top;
-
-    setTargetUserForPopup({ id: senderId, name: senderName });
-    setPopupPosition({ x, y });
-    closeSidebar();
-  };
-
-  // 1:1 대화 시작 버튼 클릭 핸들러 (미니 팝업에서 호출)
-  const handleStartPrivateChat = (user: Participant) => {
-    closePopup(); // 미니 팝업 닫기
-    setTargetUserForPrivateChat(user); // 1:1 채팅 모달 열기
   };
 
   return (
@@ -203,6 +183,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     >
       {/* Modal Box (단체 채팅방) */}
       <div
+        ref={modalRef}
         className="modal-box relative flex h-[70vh] w-[90%] flex-col rounded-xl bg-white shadow-2xl md:h-[80vh] md:w-[60%] lg:h-[75vh] lg:w-1/2 xl:w-1/3 max-w-lg overflow-hidden transition-all duration-300"
         onClick={(e) => e.stopPropagation()}
       >
@@ -214,17 +195,18 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
             <span className="text-sm font-medium text-gray-600 px-3 py-1 rounded-full bg-amber-50">
               <span className="inline-block mr-1">
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
+                  aria-hidden="true"
+                  focusable="false"
+                  data-prefix="fas"
+                  data-icon="user"
                   className="w-4 h-4 inline-block align-text-top"
+                  role="img"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 448 512"
                 >
                   <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a1.5 1.5 0 011.892-1.892L16.5 17.25M17.25 12a5.25 5.25 0 00-10.5 0h10.5z"
+                    fill="currentColor"
+                    d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"
                   />
                 </svg>
               </span>
@@ -238,20 +220,21 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
                 closePopup();
                 setIsSidebarOpen((prev) => !prev);
               }}
-              className="text-amber-900 hover:text-amber-700 p-2 rounded-full hover:bg-amber-100 transition duration-150"
+              className="text-gray-600 p-2 rounded-full transition duration-150"
             >
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
+                aria-hidden="true"
+                focusable="false"
+                data-prefix="fas"
+                data-icon="bars"
                 className="h-6 w-6"
+                role="img"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 448 512"
               >
                 <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                  fill="currentColor"
+                  d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"
                 />
               </svg>
             </button>
@@ -261,6 +244,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition duration-150"
             >
+              {/* 3. 모달 닫기 아이콘 */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -279,10 +263,10 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
           </div>
         </header>
 
-        {/* Chat Messages List (분리된 컴포넌트 사용) */}
+        {/* Chat Messages List (usePrivateChatFlow의 핸들러 전달) */}
         <ChatMessageList
           messages={messages}
-          onProfileClick={handleProfileClick}
+          onProfileClick={handleProfileClick as ProfileClickHandler}
           onListClick={handleListClick}
         />
 
@@ -312,6 +296,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
                 onClick={closeSidebar}
                 className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition"
               >
+                {/* 닫기 버튼 아이콘은 유지 */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -343,17 +328,12 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
                         ? "cursor-pointer hover:bg-gray-100"
                         : ""
                     }`}
-                    onClick={(e) => {
-                      if (user.id !== "user-me") {
-                        // 사이드바 내에서 프로필 클릭 시 미니 팝업 열기
-                        handleProfileClick(
-                          user.id,
-                          user.name,
-                          e as unknown as React.MouseEvent<HTMLDivElement>
-                        );
-                        closeSidebar();
-                      }
-                    }}
+                    onClick={(e) =>
+                      handleSidebarProfileClick(
+                        user,
+                        e as unknown as React.MouseEvent<HTMLDivElement>
+                      )
+                    }
                   >
                     <ProfileIcon />
                     <span className="font-medium text-gray-800">
@@ -366,8 +346,16 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
 
             {/* 하단 액션 버튼 */}
             <div className="p-4 mt-auto border-t flex space-x-2">
-              <button className="w-full px-4 py-2 bg-[#8d5e33] text-white rounded-lg shadow-md hover:bg-[#6E4213] transition text-sm">
-                알림끄기
+              {/* 3. 알림 토글 버튼 수정 */}
+              <button
+                onClick={handleToggleNotification}
+                className={`w-full px-4 py-2 rounded-lg shadow-md transition text-sm ${
+                  isNotificationOn
+                    ? "bg-[#8d5e33] text-white hover:bg-[#6E4213]" // ON 상태 색상
+                    : "bg-gray-400 text-[#6E4213] hover:bg-gray-500" // OFF 상태 색상
+                }`}
+              >
+                {isNotificationOn ? "알림끄기" : "알림켜기"}
               </button>
               <button className="w-full px-4 py-2 bg-gray-200 text-[#6E4213] rounded-lg shadow-md hover:bg-gray-300 transition text-sm">
                 나가기
@@ -376,36 +364,15 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
           </div>
         </div>
 
-        {/* 프로필 클릭 시 나타나는 미니 팝업 (모달 박스 내부 상대 위치) */}
-        {targetUserForPopup && popupPosition && (
-          <div
-            className="absolute p-3 bg-white border border-gray-300 rounded-lg shadow-xl z-50 transform -translate-y-1/2"
-            style={{
-              left: `${popupPosition.x}px`,
-              top: `${popupPosition.y}px`,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="font-semibold mb-2 text-sm whitespace-nowrap text-gray-800">
-              {targetUserForPopup.name} 님과 대화하시겠습니까?
-            </p>
-            <button
-              onClick={() => handleStartPrivateChat(targetUserForPopup)}
-              className="w-full px-4 py-1 text-sm bg-[#6E4213] text-white rounded-md hover:bg-[#8d5e33] transition"
-            >
-              1:1 대화하기
-            </button>
-            <button
-              onClick={closePopup}
-              className="mt-1 w-full text-gray-500 hover:text-gray-700 text-sm"
-            >
-              닫기
-            </button>
-          </div>
-        )}
+        <ProfileMiniPopup
+          targetUserForPopup={targetUserForPopup}
+          popupPosition={popupPosition}
+          handleStartPrivateChat={handleStartPrivateChat}
+          closePopup={closePopup}
+        />
       </div>
 
-      {/* 1:1 채팅 모달 (PrivateChatModal) */}
+      {/* 1:1 채팅 모달 (PrivateChatModal) - usePrivateChatFlow의 상태 사용 */}
       {targetUserForPrivateChat && (
         <PrivateChatModal
           targetUser={targetUserForPrivateChat}
