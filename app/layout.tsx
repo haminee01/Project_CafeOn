@@ -8,14 +8,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const API_KEY = "AIzaSyDC7KBOscL2BuX2h9iy9XrRBVmxi9q1GQU";
+  const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
   return (
     <html lang="ko">
       <body className="min-h-screen" suppressHydrationWarning={true}>
-        <main>
-          {children}
-        </main>
+        <main>{children}</main>
 
         {/* Google Maps API 스크립트 */}
         <GoogleMapsLoader apiKey={API_KEY} />

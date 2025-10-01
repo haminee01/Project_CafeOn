@@ -15,7 +15,7 @@ export const socialProviders: SocialProvider[] = [
     color: "#03C75A",
     icon: "N",
     authUrl: "https://nid.naver.com/oauth2.0/authorize",
-    callbackPath: "/api/auth/naver/callback"
+    callbackPath: "/api/auth/naver/callback",
   },
   {
     id: "kakao",
@@ -23,7 +23,7 @@ export const socialProviders: SocialProvider[] = [
     color: "#FEE500",
     icon: "TALK",
     authUrl: "https://kauth.kakao.com/oauth/authorize",
-    callbackPath: "/api/auth/kakao/callback"
+    callbackPath: "/api/auth/kakao/callback",
   },
   {
     id: "google",
@@ -31,22 +31,22 @@ export const socialProviders: SocialProvider[] = [
     color: "#FFFFFF",
     icon: "google",
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-    callbackPath: "/api/auth/google/callback"
-  }
+    callbackPath: "/api/auth/google/callback",
+  },
 ];
 
 // OAuth 스코프 정보
 export const oauthScopes = {
   naver: ["name", "email", "nickname"],
   kakao: ["profile", "account_email"],
-  google: ["openid", "email", "profile"]
+  google: ["openid", "email", "profile"],
 };
 
 // 소셜 로그인 버튼 스타일
 export const socialButtonStyles = {
   naver: "bg-[#03C75A] hover:bg-[#02B34A] text-white",
   kakao: "bg-[#FEE500] hover:bg-[#E6CF00] text-[#3C1E1E]",
-  google: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
+  google: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300",
 };
 
 // 소셜 로그인 아이콘 SVG (문자열로 저장)
@@ -71,34 +71,40 @@ export const socialIcons = {
   </svg>`,
   kakao: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 3c5.799 0 10.5 3.664 10.5 8.185 0 4.52-4.701 8.184-10.5 8.184a13.5 13.5 0 0 1-1.727-.11L6.526 21.83c-.434.434-.75.434-1.184 0-.434-.434-.434-.75 0-1.184l3.747-3.747c-2.436-1.436-4.085-3.664-4.085-6.184C5.004 6.664 9.201 3 12 3z"/>
-  </svg>`
+  </svg>`,
 };
 
 // 소셜 로그인 URL 생성 함수
-export function generateSocialAuthUrl(provider: SocialProvider, baseUrl: string): string {
+export function generateSocialAuthUrl(
+  provider: SocialProvider,
+  baseUrl: string
+): string {
   const params = new URLSearchParams();
-  
+
   switch (provider.id) {
     case "naver":
       params.append("response_type", "code");
-      params.append("client_id", "test");
+      params.append("client_id", process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "");
       params.append("redirect_uri", `${baseUrl}${provider.callbackPath}`);
       params.append("state", "random_state");
       break;
-      
+
     case "kakao":
       params.append("response_type", "code");
-      params.append("client_id", "test");
+      params.append("client_id", process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID || "");
       params.append("redirect_uri", `${baseUrl}${provider.callbackPath}`);
       break;
-      
+
     case "google":
       params.append("response_type", "code");
-      params.append("client_id", "test");
+      params.append(
+        "client_id",
+        process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
+      );
       params.append("redirect_uri", `${baseUrl}${provider.callbackPath}`);
       params.append("scope", oauthScopes.google.join(" "));
       break;
   }
-  
+
   return `${provider.authUrl}?${params.toString()}`;
 }
