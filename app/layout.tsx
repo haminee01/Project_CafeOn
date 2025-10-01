@@ -1,3 +1,4 @@
+import Script from "next/script";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import GoogleMapsLoader from "@/components/map/GoogleMapsLoader";
@@ -14,6 +15,12 @@ export default function RootLayout({
     <html lang="ko">
       <body className="min-h-screen" suppressHydrationWarning={true}>
         <main>{children}</main>
+
+        {/* Kakao SDK for sharing */}
+        <Script
+          src="https://t1.kakaocdn.net/kakao_js_sdk/v1/kakao.min.js"
+          strategy="afterInteractive"
+        />
 
         {/* Google Maps API 스크립트 */}
         <GoogleMapsLoader apiKey={API_KEY} />

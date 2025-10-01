@@ -22,7 +22,6 @@ interface CafeDetailPageProps {
   };
 }
 
-
 export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
@@ -39,15 +38,14 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
     else if (showReviewWriteModal) {
       setShowReviewWriteModal(false);
       setEditingReview(null);
-    }
-    else if (showSaveModal) setShowSaveModal(false);
+    } else if (showSaveModal) setShowSaveModal(false);
   });
 
   // mockCafes에서 카페 데이터 찾기
-  const cafeData = mockCafes.find(c => c.cafe_id === params.cafeId);
-  
+  const cafeData = mockCafes.find((c) => c.cafe_id === params.cafeId);
+
   // 기본값으로 문래 마이스페이스 사용 (cafe_id: "33")
-  const defaultCafe = mockCafes.find(c => c.cafe_id === "33") || mockCafes[0];
+  const defaultCafe = mockCafes.find((c) => c.cafe_id === "33") || mockCafes[0];
   const selectedCafe = cafeData || defaultCafe;
 
   // 카페 상세 정보 생성
@@ -75,8 +73,11 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
     <div className="min-h-screen bg-white">
       <Header />
       {/* 카페 메인 정보 섹션 */}
-      <CafeInfoSection 
+      <CafeInfoSection
         cafe={cafe}
+        cafeId={params.cafeId}
+        latitude={selectedCafe.latitude}
+        longitude={selectedCafe.longitude}
         onChatRoom={handleChatRoom}
         onShare={handleShare}
         onSave={handleSave}
@@ -87,7 +88,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       <CafeFeaturesSection cafe={cafe} />
 
       {/* 리뷰 섹션 */}
-      <ReviewSection 
+      <ReviewSection
         reviews={cafe.reviews}
         onReportReview={handleReportReview}
         onWriteReview={handleWriteReview}
@@ -98,16 +99,28 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       <SimilarCafesSection similarCafes={similarCafes} />
 
       {/* 모달들 */}
-      {showShareModal && <ShareModal onClose={() => setShowShareModal(false)} cafe={cafe} />}
-      {showChatModal && <ChatRoomModal onClose={() => setShowChatModal(false)} cafe={cafe} />}
-      {showReportModal && <ReportModal onClose={() => setShowReportModal(false)} />}
-      {showSaveModal && <SaveModal onClose={() => setShowSaveModal(false)} cafe={cafe} />}
+      {showShareModal && (
+        <ShareModal
+          onClose={() => setShowShareModal(false)}
+          cafe={cafe}
+          cafeId={params.cafeId}
+        />
+      )}
+      {showChatModal && (
+        <ChatRoomModal onClose={() => setShowChatModal(false)} cafe={cafe} />
+      )}
+      {showReportModal && (
+        <ReportModal onClose={() => setShowReportModal(false)} />
+      )}
+      {showSaveModal && (
+        <SaveModal onClose={() => setShowSaveModal(false)} cafe={cafe} />
+      )}
       {showReviewWriteModal && (
-        <ReviewWriteModal 
+        <ReviewWriteModal
           onClose={() => {
             setShowReviewWriteModal(false);
             setEditingReview(null);
-          }} 
+          }}
           cafe={cafe}
           editReview={editingReview}
         />
@@ -115,5 +128,5 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
 
       <Footer />
     </div>
-    );
-  }
+  );
+}
