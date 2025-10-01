@@ -5,16 +5,13 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
-import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/common/Header";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
-  const [error, setError] = useState("");
   const router = useRouter();
-  const { login, isLoading } = useAuth();
 
   // ESC 키 이벤트 처리
   useEscapeKey(() => {
@@ -23,29 +20,24 @@ export default function LoginPage() {
     }
   });
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
-    if (!email.trim() || !password.trim()) {
-      setError("이메일과 비밀번호를 입력해주세요.");
-      return;
-    }
-
-    const result = await login(email, password);
-
-    if (result.success) {
-      router.push("/");
-    } else {
-      setError(result.message || "로그인에 실패했습니다.");
-    }
+    // 로그인 로직 구현
+    console.log("로그인 시도:", { email, password });
+    // 임시로 메인 페이지로 이동
+    router.push("/");
   };
 
   const handleSocialLogin = (providerId: string) => {
-    // 백엔드 OAuth2 소셜 로그인 엔드포인트로 리다이렉트 (백엔드 스펙에 맞춤)
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const authUrl = `${baseUrl}/oauth2/authorization/${providerId}`;
-    window.location.href = authUrl;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
+    const provider = socialProviders.find(p => p.id === providerId);
+    
+    if (provider) {
+      const authUrl = generateSocialAuthUrl(provider, baseUrl);
+      window.location.href = authUrl;
+    } else {
+      console.log(`${providerId} 로그인 시도`);
+    }
   };
 
   const handlePasswordReset = () => {
@@ -56,31 +48,23 @@ export default function LoginPage() {
     router.push("/signup");
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-white">
       <Header />
       <div className="min-h-full flex items-center justify-center px-4 py-8">
         <div className="max-w-2xl w-full">
-          {/* 로그인 카드 */}
-
+        {/* 로그인 카드 */}
+        
           {/* 헤더 */}
           <div className="text-center my-12">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              카페 OFF 상태, 로그인
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">카페 OFF 상태, 로그인</h1>
             <p className="text-gray-600 text-base leading-relaxed">
-              당신의 무드에 맞는 완벽한 카페를 쉽고 빠르게 발견하기 위해
-              로그인하세요.
+              당신의 무드에 맞는 완벽한 카페를 쉽고 빠르게 발견하기 위해 로그인하세요.
             </p>
           </div>
 
           {/* 로그인 폼 */}
           <form onSubmit={handleLogin} className="space-y-3">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
             {/* 이메일 입력 */}
             <div>
               <input
@@ -91,7 +75,6 @@ export default function LoginPage() {
                 placeholder="이메일을 입력하세요"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 required
-                disabled={isLoading}
               />
             </div>
 
@@ -106,7 +89,6 @@ export default function LoginPage() {
                   placeholder="비밀번호를 입력하세요"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                   required
-                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -124,9 +106,8 @@ export default function LoginPage() {
               color="primary"
               size="md"
               className="w-full"
-              disabled={isLoading}
             >
-              {isLoading ? "로그인 중..." : "로그인"}
+              로그인
             </Button>
 
             {/* 회원가입 버튼 */}
@@ -144,7 +125,9 @@ export default function LoginPage() {
           {/* 소셜 로그인 */}
           <div className="mt-8">
             <div className="text-center mb-4">
-              <p className="text-sm text-gray-600">SNS 계정으로 로그인</p>
+              <p className="text-sm text-gray-600">
+                SNS 계정으로 로그인
+              </p>
               <p className="text-xs text-gray-500 mt-1">
                 로그인하면 서비스 이용약관에 동의하는 것으로 간주됩니다.
               </p>
@@ -200,21 +183,18 @@ export default function LoginPage() {
       {showPasswordReset && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              비밀번호 재설정
-            </h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">비밀번호 재설정</h2>
             <p className="text-gray-600 mb-6">
-              가입하신 이메일 주소를 입력하시면 비밀번호 재설정 링크를
-              보내드립니다.
+              가입하신 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.
             </p>
-
+            
             <form className="space-y-4">
               <input
                 type="email"
                 placeholder="이메일 주소"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
               />
-
+              
               <div className="flex gap-3">
                 <Button
                   type="button"
@@ -239,5 +219,5 @@ export default function LoginPage() {
         </div>
       )}
     </div>
-  );
-}
+    );
+  }

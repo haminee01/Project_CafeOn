@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Header from "@/components/common/Header";
 import { mockCafes } from "@/data/mockCafes";
@@ -10,6 +10,7 @@ import CategoryFilter from "app/(main)/search/components/CategoryFilter";
 import CafeGrid from "@/components/cafes/CafeGrid";
 import Pagination from "@/components/common/Pagination";
 import Footer from "@/components/common/Footer";
+
 
 const categories = [
   "분위기",
@@ -39,7 +40,7 @@ const getItemsPerPage = () => {
   return 2; // 기본: 2x1 그리드
 };
 
-function SearchContent() {
+export default function SearchResultsPage() {
   const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -195,22 +196,5 @@ function SearchContent() {
       </div>
       <Footer />
     </div>
-  );
-}
-
-export default function SearchResultsPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-lg text-gray-600">검색 중...</p>
-          </div>
-        </div>
-      }
-    >
-      <SearchContent />
-    </Suspense>
   );
 }

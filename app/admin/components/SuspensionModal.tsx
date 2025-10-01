@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Button from "@/components/common/Button";
-import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useEscapeKey } from "@/src/hooks/useEscapeKey";
 
 interface SuspensionModalProps {
   isOpen: boolean;
@@ -12,12 +12,12 @@ interface SuspensionModalProps {
   onCancel: () => void;
 }
 
-export default function SuspensionModal({
-  isOpen,
-  memberName,
-  isSuspending,
-  onConfirm,
-  onCancel,
+export default function SuspensionModal({ 
+  isOpen, 
+  memberName, 
+  isSuspending, 
+  onConfirm, 
+  onCancel 
 }: SuspensionModalProps) {
   useEscapeKey(onCancel);
   const [reason, setReason] = useState("");
@@ -52,11 +52,15 @@ export default function SuspensionModal({
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none mb-6"
             />
             <div className="flex gap-3 justify-end">
-              <Button color="gray" size="md" onClick={handleCancel}>
+              <Button 
+                color="gray" 
+                size="md"
+                onClick={handleCancel}
+              >
                 취소
               </Button>
-              <Button
-                color="primary"
+              <Button 
+                color="primary" 
                 size="md"
                 onClick={handleConfirm}
                 disabled={!reason.trim()}
@@ -68,14 +72,21 @@ export default function SuspensionModal({
         ) : (
           <>
             <p className="text-gray-600 mb-6">
-              <span className="font-medium">"{memberName}"</span> 회원의 정지를
-              해제하시겠습니까?
+              <span className="font-medium">"{memberName}"</span> 회원의 정지를 해제하시겠습니까?
             </p>
             <div className="flex gap-3 justify-end">
-              <Button color="gray" size="md" onClick={handleCancel}>
+              <Button 
+                color="gray" 
+                size="md"
+                onClick={handleCancel}
+              >
                 취소
               </Button>
-              <Button color="primary" size="md" onClick={handleConfirm}>
+              <Button 
+                color="primary" 
+                size="md"
+                onClick={handleConfirm}
+              >
                 해제
               </Button>
             </div>
