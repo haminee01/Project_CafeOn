@@ -283,9 +283,9 @@ export default function MypageMainPage() {
             </div>
             <Button
               size="sm"
-              color="secondary"
+              color="primary"
               onClick={handleOpenKeywordModal}
-              className="mt-2 hover:bg-[#6E4213]"
+              className="mt-2 hover:bg-[#C19B6C]"
             >
               선호 키워드 변경
             </Button>
