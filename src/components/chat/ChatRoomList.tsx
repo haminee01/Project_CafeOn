@@ -1,6 +1,9 @@
+// src/components/chat/ChatRoomList.tsx
+
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import ChatRoomItem from "./ChatRoomItem";
 
 interface ChatRoom {
@@ -32,10 +35,10 @@ const dummyChatRooms: ChatRoom[] = [
 ];
 
 const ChatRoomList: React.FC = () => {
+  const router = useRouter();
+
   const handleRoomClick = (roomId: string) => {
-    // 채팅방 상세 페이지로 이동하는 로직
-    console.log(`Navigating to chat room: ${roomId}`);
-    // 실제 프로젝트에서는 Next.js의 useRouter를 사용해 페이지 이동
+    router.push(`/mypage/chats/${roomId}`);
   };
 
   return (

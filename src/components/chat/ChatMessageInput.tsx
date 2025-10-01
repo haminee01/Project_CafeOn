@@ -2,12 +2,13 @@
 
 import React, { useState } from "react";
 
-interface ChatMessageInputProps {
+interface ChatMessageInputProps extends React.HTMLAttributes<HTMLFormElement> {
   onSendMessage: (message: string) => void;
 }
 
 const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
   onSendMessage,
+  className,
 }) => {
   const [input, setInput] = useState("");
 
@@ -22,7 +23,7 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-4 border-t border-gray-200 bg-white flex items-center shadow-md"
+      className={`p-4 border-t border-gray-200 bg-white flex items-center shadow-md ${className}`}
     >
       <input
         type="text"

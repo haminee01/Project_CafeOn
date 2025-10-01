@@ -1,9 +1,9 @@
 import React from "react";
-import ChatRoomList from "../../../../src/components/chat/ChatRoomList";
+import ChatRoomList from "@/components/chat/ChatRoomList";
 
 const ChatListPage = () => {
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-full w-full bg-white">
       <ChatRoomList />
     </div>
   );
