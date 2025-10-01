@@ -60,32 +60,39 @@ function Map({ className = "" }: MapProps) {
   useEffect(() => {
     // API 로드 성공/실패 시 호출될 이벤트 리스너 함수 정의
     const handleGoogleMapsLoaded = () => {
-      setIsApiLoaded(true);
+      console.log("Google Maps API loaded event received");
 
-      // API 로드 완료 후에도 Map 생성자가 준비되지 않았을 수 있으므로,
-      // 작은 시간차를 두고 상태를 false->true로 토글하여 useEffect #2를 강제 재시도하도록 유도
-      setTimeout(() => {
-        if ((window as any).google?.maps?.Map) {
-          setIsApiLoaded(false);
-          setTimeout(() => setIsApiLoaded(true), 10);
+      // API가 완전히 로드될 때까지 대기
+      const checkApiReady = () => {
+        if (
+          (window as any).google?.maps?.Map &&
+          (window as any).google?.maps?.Marker
+        ) {
+          console.log("Google Maps API fully ready");
+          setIsApiLoaded(true);
         } else {
-          setTimeout(() => {
-            if ((window as any).google?.maps?.Map) {
-              setIsApiLoaded(false);
-              setTimeout(() => setIsApiLoaded(true), 10);
-            }
-          }, 100);
+          console.log("Google Maps API not fully ready, retrying...");
+          setTimeout(checkApiReady, 100);
         }
-      }, 200);
+      };
+
+      // 즉시 확인 후 재시도
+      checkApiReady();
     };
 
     const handleGoogleMapsError = (e: any) => {
       setIsApiLoaded(false);
     };
 
-    if ((window as any).google?.maps) {
+    // 이미 API가 로드되어 있는지 확인
+    if (
+      (window as any).google?.maps?.Map &&
+      (window as any).google?.maps?.Marker
+    ) {
+      console.log("Google Maps API already loaded");
       setIsApiLoaded(true);
     } else {
+      console.log("Waiting for Google Maps API to load...");
       (window as any).addEventListener(
         "googleMapsLoaded",
         handleGoogleMapsLoaded
@@ -135,8 +142,11 @@ function Map({ className = "" }: MapProps) {
       try {
         // API 생성자 준비 최종 확인
         if (!(window as any).google?.maps?.Map) {
+          console.error("Google Maps API not fully loaded");
           throw new Error("Google Maps API not fully loaded");
         }
+
+        console.log("Creating Google Maps instance...");
 
         const center = {
           lat: randomDistrict.latitude,
@@ -158,6 +168,51 @@ function Map({ className = "" }: MapProps) {
             ],
           }
         );
+
+        console.log("Google Maps instance created successfully");
+
+        // 더미 지도인 경우 카페 마커들을 더미 지도 위에 표시
+        if (mapRef.current?.innerHTML.includes("지도 미리보기")) {
+          const cafes = mockCafes.slice(0, 5); // 처음 5개 카페만 표시
+          cafes.forEach((cafe, index) => {
+            const marker = document.createElement("div");
+            marker.style.cssText = `
+              position: absolute;
+              width: 24px;
+              height: 32px;
+              background: url('data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 7.5 12 20 12 20s12-12.5 12-20c0-6.627-5.373-12-12-12z" fill="#6E4213"/>
+                  <circle cx="12" cy="12" r="6" fill="white"/>
+                </svg>
+              `)}') no-repeat center;
+              background-size: contain;
+              cursor: pointer;
+              transform: translate(-50%, -100%);
+              transition: transform 0.2s ease;
+            `;
+
+            // 더미 좌표 (실제 좌표 대신 지도 내 임의 위치)
+            const x = 20 + index * 15 + Math.random() * 20;
+            const y = 30 + index * 10 + Math.random() * 20;
+            marker.style.left = `${x}%`;
+            marker.style.top = `${y}%`;
+
+            marker.addEventListener("mouseenter", () => {
+              marker.style.transform = "translate(-50%, -100%) scale(1.1)";
+            });
+
+            marker.addEventListener("mouseleave", () => {
+              marker.style.transform = "translate(-50%, -100%) scale(1)";
+            });
+
+            marker.addEventListener("click", () => {
+              router.push(`/cafes/${cafe.cafe_id}`);
+            });
+
+            mapRef.current?.appendChild(marker);
+          });
+        }
 
         mapInstance.current = map;
 
@@ -335,6 +390,18 @@ function Map({ className = "" }: MapProps) {
       } catch (err) {
         console.error("Map creation failed:", err);
         setIsMounted(false);
+
+        // API 로딩 실패 시 재시도 로직
+        if (
+          err instanceof Error &&
+          err.message.includes("Google Maps API not fully loaded")
+        ) {
+          console.log("Retrying map creation in 1 second...");
+          setTimeout(() => {
+            setIsApiLoaded(false);
+            setTimeout(() => setIsApiLoaded(true), 100);
+          }, 1000);
+        }
       }
     });
 

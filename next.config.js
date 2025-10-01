@@ -1,23 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 하이드레이션 경고 완화
-  reactStrictMode: true,
+  // workspace root 경고 해결
+  outputFileTracingRoot: __dirname,
 
-  // 브라우저 확장 프로그램으로 인한 속성 불일치 무시
-  experimental: {
-    // optimizeCss 옵션은 Next.js 15에서 기본적으로 비활성화됨
+  // 환경 변수 설정
+  env: {
+    CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
 
-  // 개발 모드에서 하이드레이션 경고 필터링
-  ...(process.env.NODE_ENV === "development" && {
-    webpack: (config, { dev }) => {
-      if (dev) {
-        // 개발 모드에서만 하이드레이션 경고 무시
-        config.ignoreWarnings = [/hydration/, /suppressHydrationWarning/];
-      }
-      return config;
-    },
-  }),
+  // 이미지 최적화 설정
+  images: {
+    domains: ["images.unsplash.com", "via.placeholder.com"],
+  },
+
+  // 실험적 기능
+  experimental: {
+    // 필요시 실험적 기능 활성화
+  },
 };
 
 module.exports = nextConfig;

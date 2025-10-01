@@ -1,45 +1,64 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
-export default function CallbackPage() {
+function CallbackContent() {
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading"
+  );
+  const [message, setMessage] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('');
-  const [provider, setProvider] = useState('');
 
   useEffect(() => {
-    const handleCallback = () => {
-      const code = searchParams.get('code');
-      const error = searchParams.get('error');
-      const providerParam = searchParams.get('provider');
+    const handleCallback = async () => {
+      try {
+        const token = searchParams.get("token");
+        const error = searchParams.get("error");
 
-      if (error) {
-        setStatus('error');
-        setMessage('로그인 중 오류가 발생했습니다.');
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
-        return;
-      }
+        if (error) {
+          setStatus("error");
+          setMessage("소셜 로그인에 실패했습니다.");
+          return;
+        }
 
-      if (code) {
-        setStatus('success');
-        setProvider(providerParam || '소셜');
-        setMessage(`${providerParam || '소셜'} 로그인이 완료되었습니다!`);
-        
-        // 3초 후 홈페이지로 이동
-        setTimeout(() => {
-          router.push('/');
-        }, 3000);
-      } else {
-        setStatus('error');
-        setMessage('인증 정보를 받지 못했습니다.');
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
+        if (token) {
+          // 토큰을 파싱하여 사용자 정보 추출
+          try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            const userData = {
+              userId: payload.sub || payload.userId,
+              email: payload.email,
+              nickname: payload.nickname || payload.name,
+              role: payload.role || "USER",
+            };
+
+            // 토큰을 로컬스토리지에 저장
+            localStorage.setItem("accessToken", token);
+            localStorage.setItem("refreshToken", token); // 소셜 로그인의 경우 같은 토큰 사용
+
+            setStatus("success");
+            setMessage("로그인 성공! 메인 페이지로 이동합니다.");
+
+            // 2초 후 메인 페이지로 리다이렉트
+            setTimeout(() => {
+              router.push("/");
+            }, 2000);
+          } catch (parseError) {
+            console.error("토큰 파싱 오류:", parseError);
+            setStatus("error");
+            setMessage("로그인 처리 중 오류가 발생했습니다.");
+          }
+        } else {
+          setStatus("error");
+          setMessage("인증 정보를 받아올 수 없습니다.");
+        }
+      } catch (error) {
+        console.error("콜백 처리 오류:", error);
+        setStatus("error");
+        setMessage("로그인 처리 중 오류가 발생했습니다.");
       }
     };
 
@@ -47,85 +66,53 @@ export default function CallbackPage() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="max-w-md w-full text-center px-4">
-        {status === 'loading' && (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="text-center">
+        {status === "loading" && (
           <>
-            <div className="mb-8">
-              <div className="animate-spin rounded-full h-20 w-20 border-4 border-primary border-t-transparent mx-auto"></div>
-            </div>
-            <h1 className="text-3xl font-bold text-primary mb-4">CafeOn.</h1>
-            <p className="text-lg text-gray-600 leading-relaxed">
-              로그인 처리 중입니다.<br />
-              잠시만 기다려주세요.
-            </p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">로그인 처리 중...</p>
           </>
         )}
 
-        {status === 'success' && (
+        {status === "success" && (
           <>
-            <div className="mb-8">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <svg
-                  className="w-10 h-10 text-primary"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-primary mb-4">CafeOn.</h1>
-            <p className="text-lg text-gray-600 leading-relaxed mb-6">
-              {message}
-            </p>
-            <p className="text-sm text-gray-500">
-              잠시 후 홈페이지로 이동합니다...
-            </p>
+            <div className="text-green-500 text-5xl mb-4">✓</div>
+            <p className="text-lg text-gray-600 mb-2">로그인 성공!</p>
+            <p className="text-sm text-gray-500">{message}</p>
           </>
         )}
 
-        {status === 'error' && (
+        {status === "error" && (
           <>
-            <div className="mb-8">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-                <svg
-                  className="w-10 h-10 text-red-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-primary mb-4">CafeOn.</h1>
-            <p className="text-lg text-gray-600 leading-relaxed mb-6">
-              {message}
-            </p>
-            <p className="text-sm text-gray-500 mb-8">
-              잠시 후 로그인 페이지로 이동합니다...
-            </p>
+            <div className="text-red-500 text-5xl mb-4">✗</div>
+            <p className="text-lg text-gray-600 mb-4">{message}</p>
             <button
-              onClick={() => router.push('/login')}
-              className="inline-block bg-primary text-white py-3 px-8 rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+              onClick={() => router.push("/login")}
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
-              로그인 페이지로 이동
+              로그인 페이지로 돌아가기
             </button>
           </>
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">로딩 중...</p>
+          </div>
+        </div>
+      }
+    >
+      <CallbackContent />
+    </Suspense>
   );
 }
