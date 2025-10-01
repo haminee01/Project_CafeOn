@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/components/common/Button";
+import Pagination from "@/components/common/Pagination";
 
 // 임시 리뷰 데이터 구조
 const mockReviews = [
@@ -125,7 +126,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
       viewBox="0 0 20 20"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.176 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.381-1.81.588-1-81h3.462a1 1 0 00.95-.69l1.07-3.292z"></path>
+      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.176 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"></path>
     </svg>
   );
 
@@ -157,13 +158,12 @@ const DeleteSuccessToast = ({
       onClose();
     }, 2000);
 
-    // 컴포넌트 unmount 시 타이머 해제
     return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
     <div
-      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#999999] text-white p-6 rounded-lg shadow-2xl z-50 text-center transition-opacity duration-300"
+      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#999999] text-white p-4 rounded-lg shadow-2xl z-50 text-center transition-opacity duration-300"
       style={{ minWidth: "100px" }}
     >
       <p>{message}</p>
@@ -272,58 +272,6 @@ const ReviewItem = ({
   );
 };
 
-// 페이지네이션 컴포넌트
-const Pagination = ({
-  totalPages,
-  currentPage,
-  onPageChange,
-}: {
-  totalPages: number;
-  currentPage: number;
-  onPageChange: (page: number) => void;
-}) => {
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-
-  return (
-    <nav className="flex justify-center items-center space-x-2 mt-8">
-      {/* 이전 버튼 */}
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-      >
-        이전
-      </button>
-
-      {/* 페이지 번호 */}
-      <div className="flex space-x-1">
-        {pages.map((page) => (
-          <button
-            key={page}
-            onClick={() => onPageChange(page)}
-            className={`w-10 h-10 rounded-full text-sm font-semibold transition-colors ${
-              page === currentPage
-                ? "bg-[#6E4213] text-white"
-                : "text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            {page}
-          </button>
-        ))}
-      </div>
-
-      {/* 다음 버튼 */}
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-      >
-        다음
-      </button>
-    </nav>
-  );
-};
-
 /*마이페이지 내 작성 리뷰 화면*/
 export default function MyReviewsPage() {
   const [reviews, setReviews] = useState(mockReviews);
@@ -353,10 +301,7 @@ export default function MyReviewsPage() {
       prevReviews.filter((review) => review.id !== id)
     );
 
-    // 3. 페이지네이션 조정 로직: 현재 페이지의 마지막 리뷰를 삭제했을 경우 이전 페이지로 이동
-    // (currentReviews는 아직 업데이트 전이므로, reviews 상태 업데이트 후 다음 렌더링 시 반영됨)
-    // 이 로직은 currentReviews.length가 1일 때 (즉, 현재 페이지의 마지막 리뷰) 작동합니다.
-    // reviews 상태가 업데이트될 때 totalPages도 다시 계산됩니다.
+    // 3. 페이지네이션 조정 로직
     if (currentReviews.length === 1 && totalPages > 1 && currentPage > 1) {
       setCurrentPage(currentPage - 1);
     }
