@@ -43,7 +43,7 @@ const ChatRoomList: React.FC = () => {
 
   return (
     <div className="w-full">
-      <h1 className="p-4 text-2xl font-bold border-b border-gray-200">
+      <h1 className="p-4 text-2xl font-bold border-b border-[#CDCDCD]">
         채팅방 목록
       </h1>
       {dummyChatRooms.map((room) => (

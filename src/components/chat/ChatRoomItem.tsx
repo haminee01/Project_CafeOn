@@ -16,7 +16,7 @@ const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`flex items-center space-x-4 p-4 cursor-pointer hover:bg-gray-50 border-b border-gray-200 ${
+      className={`flex items-center space-x-4 p-4 cursor-pointer hover:bg-gray-50 border-b border-[#CDCDCD] ${
         isUnread ? "bg-gray-100" : ""
       }`}
     >

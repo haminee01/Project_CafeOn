@@ -253,7 +253,7 @@ const ChatRoomList: React.FC<{
 }> = ({ activeRoomId, onRoomClick }) => {
   return (
     <div className="w-full bg-white">
-      <h1 className="p-4 text-2xl font-bold border-b border-gray-200 text-gray-800">
+      <h1 className="p-4 text-2xl font-bold border-b border-[#CDCDCD] text-gray-800">
         채팅방 목록
       </h1>
       {DUMMY_CHAT_ROOMS.map((room) => (
@@ -265,7 +265,7 @@ const ChatRoomList: React.FC<{
                 ? "bg-[#F5F5F5] border-r-4 border-[#6E4213]"
                 : ""
             }
-            p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition duration-150
+            p-4 border-b border-[#CDCDCD] hover:bg-gray-50 cursor-pointer transition duration-150
           `}
           onClick={() => onRoomClick(room.id)}
         >
