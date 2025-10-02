@@ -8,6 +8,7 @@ import {
   faBookmark,
   faCommentDots,
   faClock,
+  faQuestionCircle,
 } from "@fortawesome/free-regular-svg-icons";
 
 // 아이콘 컴포넌트 정의
@@ -19,6 +20,9 @@ const icons = {
     <FontAwesomeIcon icon={faCommentDots} className="w-5 h-5" />
   ), // 채팅방
   Clock: () => <FontAwesomeIcon icon={faClock} className="w-5 h-5" />, // 히스토리
+  QuestionRegular: () => (
+    <FontAwesomeIcon icon={faQuestionCircle} className="w-5 h-5" />
+  ), // 나의 문의 내역
 };
 
 const navItems = [
@@ -27,16 +31,16 @@ const navItems = [
   { name: "북마크", href: "/mypage/bookmarks", iconKey: "User" },
   { name: "채팅방", href: "/mypage/chats", iconKey: "MessageSquare" },
   { name: "히스토리", href: "/mypage/history", iconKey: "Clock" },
+  { name: "나의 문의 내역", href: "/mypage/qna", iconKey: "QuestionRegular" },
 ];
 
 export default function MypageSidebar() {
-  const pathname = usePathname(); // 현재 경로를 가져오는 훅 사용
+  const pathname = usePathname();
 
   return (
     <nav className="w-64 flex-shrink-0 p-6 border-r border-[#CDCDCD] bg-white">
       <ul className="space-y-1">
         {navItems.map((item) => {
-          // 현재 경로(pathname)와 메뉴 아이템의 href를 비교하여 활성화 여부 결정
           const isActive = pathname === item.href;
           const IconComponent = icons[item.iconKey as keyof typeof icons];
 
