@@ -10,8 +10,8 @@ export interface PostListItem {
   title: string;
   author: string; // 작성자
   created_at: string; // "YYYY-MM-DD HH:MM:SS" 형식
-  views: number | null; // null 허용 (백엔드에서 null이 올 수 있음)
-  likes: number | null; // null 허용 (백엔드에서 null이 올 수 있음)
+  views: number; // 조회수
+  likes: number; // 좋아요 수
   comments: number; // 댓글 수
 }
 

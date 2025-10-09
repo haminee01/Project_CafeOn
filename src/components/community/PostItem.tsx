@@ -47,9 +47,16 @@ export default function PostItem({ post }: PostItemProps) {
             <span>좋아요: {post.likes?.toLocaleString() || 0}</span>
           </div>
           <span>
-            {post.created_at ? post.created_at.substring(0, 10) : "날짜 없음"}
-          </span>{" "}
-          {/* 날짜만 표시 */}
+            {post.created_at
+              ? new Date(post.created_at).toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "날짜 없음"}
+          </span>
         </div>
       </div>
     </Link>

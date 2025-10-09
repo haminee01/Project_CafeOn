@@ -27,10 +27,20 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 export type CommentListResponse = Comment[];
 
 // **[추가/수정된 부분]** 백엔드 API의 실제 응답 구조를 정의 (Spring Pageable 응답)
+interface BackendPostListItem {
+  id: number;
+  type: string;
+  title: string;
+  authorNickname: string; // 백엔드에서 전송하는 필드명
+  createdAt: string; // 백엔드에서 전송하는 필드명
+  viewCount: number; // 백엔드에서 전송하는 필드명
+  // likes와 comments는 백엔드에서 별도로 계산해서 전송해야 함
+}
+
 interface BackendPostListResponse {
   message: string;
   data: {
-    content: PostListItem[]; // 실제 게시글 리스트
+    content: BackendPostListItem[]; // 실제 게시글 리스트
     totalPages: number; // 총 페이지 수
     totalElements: number;
     number: number; // 현재 페이지 (0부터 시작)
@@ -87,8 +97,20 @@ export const getPosts = async (
     };
   } // 3. 데이터를 프론트엔드 구조로 매핑하여 반환
 
+  // 백엔드 응답을 프론트엔드 형식으로 변환
+  const transformedPosts: PostListItem[] = data.content.map((backendPost) => ({
+    id: backendPost.id,
+    type: backendPost.type as PostListItem["type"],
+    title: backendPost.title,
+    author: backendPost.authorNickname, // authorNickname -> author로 매핑
+    created_at: backendPost.createdAt, // createdAt -> created_at으로 매핑
+    views: backendPost.viewCount, // viewCount -> views로 매핑
+    likes: 0, // 아직 백엔드에서 구현되지 않음
+    comments: 0, // 아직 백엔드에서 구현되지 않음
+  }));
+
   const transformedData: PostListResponse = {
-    posts: data.content,
+    posts: transformedPosts,
     pages: data.totalPages,
   };
 
