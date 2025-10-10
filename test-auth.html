@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auth API 테스트</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        border-bottom: 3px solid #4caf50;
+        padding-bottom: 10px;
+      }
+      .test-section {
+        margin: 30px 0;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 5px;
+      }
+      .test-section h2 {
+        color: #4caf50;
+        margin-top: 0;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+      }
+      button {
+        background: #4caf50;
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 10px 5px 10px 0;
+      }
+      button:hover {
+        background: #45a049;
+      }
+      .result {
+        margin-top: 20px;
+        padding: 15px;
+        background: #e8f5e9;
+        border-left: 4px solid #4caf50;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+      .error {
+        background: #ffebee;
+        border-left-color: #f44336;
+      }
+      .status {
+        display: inline-block;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        margin: 10px 0;
+      }
+      .status.success {
+        background: #4caf50;
+        color: white;
+      }
+      .status.error {
+        background: #f44336;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔐 Auth API 연결 테스트</h1>
+      <p><strong>백엔드 URL:</strong> http://localhost:8080</p>
+
+      <!-- 회원가입 테스트 -->
+      <div class="test-section">
+        <h2>1. 회원가입 (Signup)</h2>
+        <input
+          type="email"
+          id="signup-email"
+          placeholder="이메일"
+          value="test@example.com"
+        />
+        <input
+          type="password"
+          id="signup-password"
+          placeholder="비밀번호"
+          value="test1234"
+        />
+        <input
+          type="text"
+          id="signup-nickname"
+          placeholder="닉네임"
+          value="테스트유저"
+        />
+        <button onclick="testSignup()">회원가입 테스트</button>
+        <div id="signup-result"></div>
+      </div>
+
+      <!-- 로그인 테스트 -->
+      <div class="test-section">
+        <h2>2. 로그인 (Login)</h2>
+        <input
+          type="email"
+          id="login-email"
+          placeholder="이메일"
+          value="test@example.com"
+        />
+        <input
+          type="password"
+          id="login-password"
+          placeholder="비밀번호"
+          value="test1234"
+        />
+        <button onclick="testLogin()">로그인 테스트</button>
+        <div id="login-result"></div>
+      </div>
+
+      <!-- 토큰 갱신 테스트 -->
+      <div class="test-section">
+        <h2>3. 토큰 갱신 (Refresh Token)</h2>
+        <p>먼저 로그인하여 refresh token을 받으세요</p>
+        <input type="text" id="refresh-token" placeholder="Refresh Token" />
+        <button onclick="testRefresh()">토큰 갱신 테스트</button>
+        <div id="refresh-result"></div>
+      </div>
+
+      <!-- API 상태 확인 -->
+      <div class="test-section">
+        <h2>4. API 서버 상태 확인</h2>
+        <button onclick="checkServerStatus()">서버 상태 확인</button>
+        <div id="status-result"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE_URL = "http://localhost:8080";
+
+      // 회원가입 테스트
+      async function testSignup() {
+        const email = document.getElementById("signup-email").value;
+        const password = document.getElementById("signup-password").value;
+        const nickname = document.getElementById("signup-nickname").value;
+        const resultDiv = document.getElementById("signup-result");
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, password, nickname }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            resultDiv.innerHTML = `
+                        <div class="status success">✅ 성공</div>
+                        <div class="result">
+${JSON.stringify(data, null, 2)}
+                        </div>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <div class="status error">❌ 실패</div>
+                        <div class="result error">
+${JSON.stringify(data, null, 2)}
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="status error">❌ 에러</div>
+                    <div class="result error">
+네트워크 에러: ${error.message}
+백엔드 서버가 실행 중인지 확인하세요.
+                    </div>
+                `;
+        }
+      }
+
+      // 로그인 테스트
+      async function testLogin() {
+        const email = document.getElementById("login-email").value;
+        const password = document.getElementById("login-password").value;
+        const resultDiv = document.getElementById("login-result");
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.data && data.data.refreshToken) {
+            // refresh token 자동 입력
+            document.getElementById("refresh-token").value =
+              data.data.refreshToken;
+
+            resultDiv.innerHTML = `
+                        <div class="status success">✅ 성공</div>
+                        <div class="result">
+${JSON.stringify(data, null, 2)}
+
+📝 Refresh Token이 자동으로 입력되었습니다!
+                        </div>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <div class="status error">❌ 실패</div>
+                        <div class="result error">
+${JSON.stringify(data, null, 2)}
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="status error">❌ 에러</div>
+                    <div class="result error">
+네트워크 에러: ${error.message}
+                    </div>
+                `;
+        }
+      }
+
+      // 토큰 갱신 테스트
+      async function testRefresh() {
+        const refreshToken = document.getElementById("refresh-token").value;
+        const resultDiv = document.getElementById("refresh-result");
+
+        if (!refreshToken) {
+          resultDiv.innerHTML = `
+                    <div class="status error">❌ 실패</div>
+                    <div class="result error">
+Refresh Token을 입력하세요.
+먼저 로그인을 해주세요.
+                    </div>
+                `;
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${refreshToken}`,
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            resultDiv.innerHTML = `
+                        <div class="status success">✅ 성공</div>
+                        <div class="result">
+${JSON.stringify(data, null, 2)}
+                        </div>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <div class="status error">❌ 실패</div>
+                        <div class="result error">
+${JSON.stringify(data, null, 2)}
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="status error">❌ 에러</div>
+                    <div class="result error">
+네트워크 에러: ${error.message}
+                    </div>
+                `;
+        }
+      }
+
+      // 서버 상태 확인
+      async function checkServerStatus() {
+        const resultDiv = document.getElementById("status-result");
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api-docs`, {
+            method: "GET",
+          });
+
+          if (response.ok) {
+            resultDiv.innerHTML = `
+                        <div class="status success">✅ 연결 성공</div>
+                        <div class="result">
+백엔드 서버가 정상적으로 실행 중입니다!
+URL: ${API_BASE_URL}
+Swagger UI: ${API_BASE_URL}/api-docs
+
+포트 8080에서 정상 응답을 받았습니다.
+                        </div>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <div class="status error">⚠️ 경고</div>
+                        <div class="result">
+서버가 응답했지만 상태 코드가 ${response.status}입니다.
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="status error">❌ 연결 실패</div>
+                    <div class="result error">
+백엔드 서버에 연결할 수 없습니다.
+에러: ${error.message}
+
+확인사항:
+1. 백엔드 서버가 실행 중인가요?
+2. 포트 8080이 열려 있나요?
+3. CORS 설정이 올바른가요?
+                    </div>
+                `;
+        }
+      }
+
+      // 페이지 로드 시 자동으로 서버 상태 확인
+      window.onload = () => {
+        checkServerStatus();
+      };
+    </script>
+  </body>
+</html>

@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { IoNotificationsOutline } from "react-icons/io5";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
+  const { isAuthenticated, user, logout } = useAuth();
+
   return (
     <header>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
@@ -30,15 +35,37 @@ const Header = () => {
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link
-              href="/mypage"
-              className="text-gray-800 font-normal text-base"
-            >
-              마이페이지
-            </Link>
-            <Link href="/login" className="text-gray-800 font-normal text-base">
-              로그인
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/mypage"
+                  className="text-gray-800 font-normal text-base"
+                >
+                  마이페이지
+                </Link>
+                <button
+                  onClick={logout}
+                  className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/mypage"
+                  className="text-gray-800 font-normal text-base"
+                >
+                  마이페이지
+                </Link>
+                <Link
+                  href="/login"
+                  className="text-gray-800 font-normal text-base"
+                >
+                  로그인
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
