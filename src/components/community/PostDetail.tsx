@@ -7,6 +7,7 @@ import { useState } from "react";
 import { togglePostLike, deletePostMutator } from "@/api/community";
 import { useRouter } from "next/navigation";
 import ReportModal from "@/components/modals/ReportModal";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PostDetailProps {
   post: PostDetailType;
@@ -25,12 +26,27 @@ const PostTypeMap: Record<
 export default function PostDetail({ post }: PostDetailProps) {
   const typeInfo = PostTypeMap[post.type] || PostTypeMap.GENERAL;
   const router = useRouter();
+  const { user, isLoggedIn, currentUserId } = useAuth();
 
   // 좋아요 상태 관리를 위한 state
   const [currentLikes, setCurrentLikes] = useState(post.likes || 0);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(post.likedByMe || false);
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+
+  // 작성자 여부 확인 (JWT 토큰의 sub 필드로 사용자 ID 비교)
+  // 백엔드에서 authorId를 제공하지 않으므로 임시로 작성자명으로 비교
+  const isAuthor = isLoggedIn && user?.username === post.author;
+
+  // 디버깅용 로그
+  console.log("PostDetail Debug:", {
+    isLoggedIn,
+    currentUserId,
+    postAuthorId: post.author_id,
+    isAuthor,
+    postAuthor: post.author,
+    currentUsername: user?.username,
+  });
 
   // 실제 좋아요/취소 핸들러
   const handleLike = async () => {
@@ -39,8 +55,20 @@ export default function PostDetail({ post }: PostDetailProps) {
     setIsLikeLoading(true);
     try {
       const response = await togglePostLike(post.id);
-      setCurrentLikes(response.likes);
-      setIsLiked(response.liked);
+      console.log("좋아요 응답:", response);
+
+      // 안전하게 상태 업데이트 (응답 구조에 맞게 수정)
+      if (response?.data && typeof response.data.likes === "number") {
+        setCurrentLikes(response.data.likes);
+      } else if (response && typeof response.likes === "number") {
+        setCurrentLikes(response.likes);
+      }
+
+      if (response?.data && typeof response.data.liked === "boolean") {
+        setIsLiked(response.data.liked);
+      } else if (response && typeof response.liked === "boolean") {
+        setIsLiked(response.liked);
+      }
     } catch (error) {
       console.error("좋아요 처리 실패:", error);
       alert("좋아요 처리에 실패했습니다.");
@@ -63,7 +91,7 @@ export default function PostDetail({ post }: PostDetailProps) {
     }
   };
 
-  // TODO: 실제 구현 시에는 작성자만 수정/삭제 버튼을 볼 수 있도록 로직 추가 필요
+  // 작성자 여부에 따른 버튼 표시 로직 구현됨
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -81,10 +109,18 @@ export default function PostDetail({ post }: PostDetailProps) {
 
         <div className="flex justify-between items-center text-sm text-gray-500 mt-3">
           <div className="space-x-4">
-            <span>작성자: **{post.author || "익명"}**</span>
+            <span>작성자: {post.author || "익명"}</span>
             <span>
               작성일:{" "}
-              {post.created_at ? post.created_at.substring(0, 10) : "날짜 없음"}
+              {post.created_at
+                ? new Date(post.created_at).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "날짜 없음"}
             </span>
           </div>
           <div className="space-x-4">
@@ -141,31 +177,41 @@ export default function PostDetail({ post }: PostDetailProps) {
               }
             />
           </svg>
-          <span className="font-semibold">{currentLikes.toLocaleString()}</span>
+          <span className="font-semibold">
+            {(currentLikes || 0).toLocaleString()}
+          </span>
         </button>
 
         {/* 수정/삭제/신고 버튼 */}
         <div className="space-x-3">
-          {/* PUT /api/posts/{id} */}
-          <Link href={`/community/${post.id}/edit`}>
-            <button className="text-gray-600 hover:text-[#999999] transition-colors">
-              수정
+          {/* 작성자인 경우: 수정/삭제 버튼만 표시 */}
+          {isAuthor && (
+            <>
+              {/* PUT /api/posts/{id} */}
+              <Link href={`/community/${post.id}/edit`}>
+                <button className="text-gray-600 hover:text-[#999999] transition-colors">
+                  수정
+                </button>
+              </Link>
+              {/* DELETE /api/posts/{id} */}
+              <button
+                onClick={handleDelete}
+                className="text-gray-600 hover:text-red-500 transition-colors"
+              >
+                삭제
+              </button>
+            </>
+          )}
+
+          {/* 로그인한 사용자가 작성자가 아닌 경우: 신고 버튼만 표시 */}
+          {isLoggedIn && !isAuthor && (
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="text-gray-600 hover:text-orange-500 transition-colors"
+            >
+              신고
             </button>
-          </Link>
-          {/* DELETE /api/posts/{id} */}
-          <button
-            onClick={handleDelete}
-            className="text-gray-600 hover:text-red-500 transition-colors"
-          >
-            삭제
-          </button>
-          {/* 신고하기 버튼 */}
-          <button
-            onClick={() => setShowReportModal(true)}
-            className="text-gray-600 hover:text-orange-500 transition-colors"
-          >
-            신고
-          </button>
+          )}
         </div>
       </div>
 

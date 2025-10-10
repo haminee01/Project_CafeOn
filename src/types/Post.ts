@@ -8,7 +8,8 @@ export interface PostListItem {
   id: number;
   type: PostType;
   title: string;
-  author: string; // 작성자
+  author: string; // 작성자 이름
+  author_id?: number; // 작성자 ID (인증 확인용)
   created_at: string; // "YYYY-MM-DD HH:MM:SS" 형식
   views: number; // 조회수
   likes: number; // 좋아요 수
@@ -19,7 +20,7 @@ export interface PostListItem {
 export interface PostDetail extends PostListItem {
   content: string; // 글 내용
   Images: string[]; // 이미지 URL 배열 (백엔드 API 명세에 맞춤)
-  // views와 likes는 PostListItem에서 상속받음 (number | null)
+  likedByMe: boolean; // 내가 좋아요 했는지 여부
 }
 
 /** 게시글 목록 API 응답 전체 타입 */
@@ -62,10 +63,15 @@ export interface PostDeleteResponse {
 
 /** 게시글 좋아요 응답 타입 */
 export interface PostLikeResponse {
-  postId: number;
+  postId?: number;
   liked: boolean;
   likes: number;
   message: string;
+  data?: {
+    postId: number;
+    liked: boolean;
+    likes: number;
+  };
 }
 
 /** 댓글 타입 */

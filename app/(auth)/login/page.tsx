@@ -20,18 +20,50 @@ export default function LoginPage() {
     }
   });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 로그인 로직 구현
-    console.log("로그인 시도:", { email, password });
-    // 임시로 메인 페이지로 이동
-    router.push("/");
+
+    try {
+      // 로그인 API 호출
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // 토큰 저장
+        localStorage.setItem("accessToken", data.data.token);
+
+        // 사용자 정보 저장 (임시로 테스트 사용자 정보)
+        const userInfo = {
+          id: "91d728c6-86b3-4d1d-965c-c9bcf62fe0de",
+          username: "테스트",
+          email: email,
+        };
+        localStorage.setItem("userInfo", JSON.stringify(userInfo));
+
+        console.log("로그인 성공:", data);
+        router.push("/");
+      } else {
+        const errorData = await response.json();
+        console.error("로그인 실패:", errorData);
+        alert("로그인에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("로그인 오류:", error);
+      alert("로그인 중 오류가 발생했습니다.");
+    }
   };
 
   const handleSocialLogin = (providerId: string) => {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
-    const provider = socialProviders.find(p => p.id === providerId);
-    
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
+    const provider = socialProviders.find((p) => p.id === providerId);
+
     if (provider) {
       const authUrl = generateSocialAuthUrl(provider, baseUrl);
       window.location.href = authUrl;
@@ -48,18 +80,21 @@ export default function LoginPage() {
     router.push("/signup");
   };
 
-    return (
+  return (
     <div className="min-h-screen bg-white">
       <Header />
       <div className="min-h-full flex items-center justify-center px-4 py-8">
         <div className="max-w-2xl w-full">
-        {/* 로그인 카드 */}
-        
+          {/* 로그인 카드 */}
+
           {/* 헤더 */}
           <div className="text-center my-12">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">카페 OFF 상태, 로그인</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              카페 OFF 상태, 로그인
+            </h1>
             <p className="text-gray-600 text-base leading-relaxed">
-              당신의 무드에 맞는 완벽한 카페를 쉽고 빠르게 발견하기 위해 로그인하세요.
+              당신의 무드에 맞는 완벽한 카페를 쉽고 빠르게 발견하기 위해
+              로그인하세요.
             </p>
           </div>
 
@@ -101,12 +136,7 @@ export default function LoginPage() {
             </div>
 
             {/* 로그인 버튼 */}
-            <Button
-              type="submit"
-              color="primary"
-              size="md"
-              className="w-full"
-            >
+            <Button type="submit" color="primary" size="md" className="w-full">
               로그인
             </Button>
 
@@ -125,9 +155,7 @@ export default function LoginPage() {
           {/* 소셜 로그인 */}
           <div className="mt-8">
             <div className="text-center mb-4">
-              <p className="text-sm text-gray-600">
-                SNS 계정으로 로그인
-              </p>
+              <p className="text-sm text-gray-600">SNS 계정으로 로그인</p>
               <p className="text-xs text-gray-500 mt-1">
                 로그인하면 서비스 이용약관에 동의하는 것으로 간주됩니다.
               </p>
@@ -183,18 +211,21 @@ export default function LoginPage() {
       {showPasswordReset && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">비밀번호 재설정</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              비밀번호 재설정
+            </h2>
             <p className="text-gray-600 mb-6">
-              가입하신 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.
+              가입하신 이메일 주소를 입력하시면 비밀번호 재설정 링크를
+              보내드립니다.
             </p>
-            
+
             <form className="space-y-4">
               <input
                 type="email"
                 placeholder="이메일 주소"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
               />
-              
+
               <div className="flex gap-3">
                 <Button
                   type="button"
@@ -219,5 +250,5 @@ export default function LoginPage() {
         </div>
       )}
     </div>
-    );
-  }
+  );
+}

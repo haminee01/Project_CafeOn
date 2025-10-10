@@ -34,7 +34,9 @@ interface BackendPostListItem {
   authorNickname: string; // 백엔드에서 전송하는 필드명
   createdAt: string; // 백엔드에서 전송하는 필드명
   viewCount: number; // 백엔드에서 전송하는 필드명
-  // likes와 comments는 백엔드에서 별도로 계산해서 전송해야 함
+  likeCount: number; // 백엔드에서 전송하는 필드명
+  commentCount: number; // 백엔드에서 전송하는 필드명
+  likedByMe: boolean; // 백엔드에서 전송하는 필드명
 }
 
 interface BackendPostListResponse {
@@ -46,6 +48,31 @@ interface BackendPostListResponse {
     number: number; // 현재 페이지 (0부터 시작)
     size: number; // 페이지 크기 // 기타 Pageable 정보...
   } | null; // data가 null일 수 있음을 처리
+}
+
+// 백엔드 PostDetail API 응답 구조
+interface BackendPostDetailResponse {
+  id: number;
+  title: string;
+  content: string;
+  authorNickname: string;
+  type: string;
+  viewCount: number;
+  images: Array<{
+    id: number;
+    originalFileName: string;
+    storedFileName: string;
+    imageUrl: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+  likeCount: number;
+  likedByMe: boolean;
+}
+
+interface BackendPostDetailApiResponse {
+  message: string;
+  data: BackendPostDetailResponse;
 }
 
 // PostDetailResponse는 PostDetail 타입을 사용
@@ -105,8 +132,8 @@ export const getPosts = async (
     author: backendPost.authorNickname, // authorNickname -> author로 매핑
     created_at: backendPost.createdAt, // createdAt -> created_at으로 매핑
     views: backendPost.viewCount, // viewCount -> views로 매핑
-    likes: 0, // 아직 백엔드에서 구현되지 않음
-    comments: 0, // 아직 백엔드에서 구현되지 않음
+    likes: backendPost.likeCount, // likeCount -> likes로 매핑
+    comments: backendPost.commentCount, // commentCount -> comments로 매핑
   }));
 
   const transformedData: PostListResponse = {
@@ -128,7 +155,26 @@ export const getPostDetail = async (
 
   console.log(`[API] Fetching post ${postId}`);
 
-  return fetcher<PostDetailResponse>(url);
+  const backendResponse = await fetcher<BackendPostDetailApiResponse>(url);
+
+  // 백엔드 응답을 프론트엔드 형식으로 변환
+  const backendData = backendResponse.data;
+
+  const transformedData: PostDetailResponse = {
+    id: backendData.id,
+    type: backendData.type as PostDetailType["type"],
+    title: backendData.title,
+    author: backendData.authorNickname, // authorNickname -> author로 매핑
+    created_at: backendData.createdAt, // createdAt -> created_at으로 매핑
+    views: backendData.viewCount, // viewCount -> views로 매핑
+    likes: backendData.likeCount, // likeCount -> likes로 매핑
+    comments: 0, // 댓글 수는 별도 API로 조회
+    content: backendData.content,
+    Images: backendData.images.map((img) => img.imageUrl), // 이미지 URL 배열로 변환
+    likedByMe: backendData.likedByMe,
+  };
+
+  return transformedData;
 };
 
 /**
@@ -160,7 +206,7 @@ export async function createPostMutator(
 ): Promise<PostCreateResponse> {
   const formData = new FormData();
 
-  // 게시글 데이터를 JSON으로 추가
+  // 게시글 데이터를 JSON으로 추가 (백엔드 @RequestPart 구조에 맞춤)
   formData.append(
     "postRequestDTO",
     JSON.stringify({
@@ -192,11 +238,73 @@ export async function createPostMutator(
   console.log("게시글 작성 API 호출:", {
     url: fullUrl,
     hasToken: !!authToken,
+    tokenPreview: authToken ? authToken.substring(0, 20) + "..." : null,
     formDataEntries: Array.from(formData.entries()).map(([key, value]) => ({
       key,
       value: value instanceof File ? `File: ${value.name}` : value,
     })),
   });
+
+  // 이미지가 없으면 JSON API 사용
+  if (!arg.Image || arg.Image.length === 0) {
+    console.log("이미지 없음 - JSON API 사용");
+
+    const jsonResponse = await fetch(fullUrl, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: arg.title,
+        content: arg.content,
+        type: arg.type,
+      }),
+    });
+
+    console.log("JSON API 응답:", {
+      status: jsonResponse.status,
+      statusText: jsonResponse.statusText,
+      ok: jsonResponse.ok,
+    });
+
+    if (!jsonResponse.ok) {
+      let errorMessage = "게시글 작성 실패";
+      let errorDetail = "";
+
+      try {
+        const errorData = await jsonResponse.json();
+        errorMessage = errorData.message || errorMessage;
+        errorDetail = JSON.stringify(errorData);
+      } catch {
+        const responseText = await jsonResponse.text();
+        errorMessage = `HTTP ${jsonResponse.status}: ${jsonResponse.statusText}`;
+        errorDetail = responseText;
+      }
+
+      console.error("JSON API 에러 상세:", {
+        status: jsonResponse.status,
+        statusText: jsonResponse.statusText,
+        errorMessage,
+        errorDetail,
+      });
+
+      throw new Error(errorMessage);
+    }
+
+    const result = await jsonResponse.json();
+    console.log("JSON API 게시글 작성 성공:", result);
+
+    if (result.data) {
+      const postData = result.data;
+      return {
+        id: postData.id,
+        message: result.message || "게시글이 작성되었습니다.",
+      };
+    }
+
+    return result;
+  }
 
   const response = await fetch(fullUrl, {
     method: "POST",
@@ -260,40 +368,64 @@ export async function updatePostMutator(
     arg: PostUpdateRequest;
   }
 ): Promise<PostUpdateResponse> {
-  const formData = new FormData();
-
-  // 게시글 데이터를 JSON으로 추가
-  formData.append(
-    "postRequestDTO",
-    JSON.stringify({
-      title: arg.title,
-      content: arg.content,
-      type: arg.type,
-    })
-  );
-
-  // 이미지 파일들 추가
-  if (arg.image && arg.image.length > 0) {
-    arg.image.forEach((file) => {
-      formData.append("image", file);
-    });
-  }
-
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
   const authToken = localStorage.getItem("accessToken");
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
 
   if (authToken) {
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
-  const response = await fetch(fullUrl, {
-    method: "PUT",
-    headers,
-    body: formData,
-  });
+  // 이미지가 있는 경우 FormData 사용, 없는 경우 JSON 사용
+  const hasImages = arg.image && arg.image.length > 0;
+
+  let response: Response;
+
+  if (hasImages) {
+    // 이미지가 있는 경우 FormData 사용
+    const formData = new FormData();
+
+    // 게시글 데이터를 JSON으로 추가 (백엔드 @RequestPart 구조에 맞춤)
+    formData.append(
+      "postRequestDTO",
+      JSON.stringify({
+        title: arg.title,
+        content: arg.content,
+        type: arg.type,
+      })
+    );
+
+    // 이미지 파일들 추가
+    arg.image?.forEach((file) => {
+      formData.append("image", file);
+    });
+
+    // FormData 사용 시 Content-Type 헤더 제거 (브라우저가 자동 설정)
+    delete headers["Content-Type"];
+
+    response = await fetch(fullUrl, {
+      method: "PUT",
+      headers,
+      body: formData,
+    });
+  } else {
+    // 이미지가 없는 경우 JSON으로만 전송
+    const requestBody = {
+      title: arg.title,
+      content: arg.content,
+      type: arg.type,
+    };
+
+    response = await fetch(fullUrl, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(requestBody),
+    });
+  }
 
   if (!response.ok) {
     let errorMessage = "게시글 수정 실패";
@@ -342,7 +474,19 @@ export async function deletePostMutator(
     throw new Error(errorMessage);
   }
 
-  return response.json();
+  // 응답이 비어있거나 JSON이 아닐 수 있으므로 안전하게 처리
+  try {
+    const responseText = await response.text();
+    if (responseText) {
+      return JSON.parse(responseText);
+    } else {
+      // 빈 응답인 경우 기본 메시지 반환
+      return { message: "게시글이 삭제되었습니다." };
+    }
+  } catch {
+    // JSON 파싱 실패 시 기본 메시지 반환
+    return { message: "게시글이 삭제되었습니다." };
+  }
 }
 
 /**

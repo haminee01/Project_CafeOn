@@ -50,11 +50,16 @@ export default function PostWriteForm({
 
     try {
       // 1. 데이터 객체 구성
+      // 유효한 이미지만 필터링
+      const validImages = images.filter(
+        (file) => file && file.size > 0 && file.type.startsWith("image/")
+      );
+
       const postData = {
         title,
         type,
         content,
-        Image: images.length > 0 ? images : undefined,
+        Image: validImages.length > 0 ? validImages : undefined,
       };
 
       let response;
@@ -90,13 +95,30 @@ export default function PostWriteForm({
   const handleImageAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
+
+      // 유효한 이미지 파일만 필터링
+      const validFiles = files.filter(
+        (file) =>
+          file &&
+          file.size > 0 &&
+          file.type.startsWith("image/") &&
+          file.size <= 10 * 1024 * 1024 // 10MB 제한
+      );
+
       // 최대 3장 제한
-      if (files.length > 3) {
+      if (validFiles.length > 3) {
         setError("이미지는 최대 3장까지 첨부할 수 있습니다.");
         return;
       }
-      setImages(files);
-      setError(null);
+
+      // 유효하지 않은 파일이 있으면 경고
+      if (validFiles.length < files.length) {
+        setError("일부 파일이 유효하지 않아 제외되었습니다.");
+      } else {
+        setError(null);
+      }
+
+      setImages(validFiles);
     }
   };
 
@@ -173,8 +195,17 @@ export default function PostWriteForm({
         />
 
         {images.length > 0 && (
-          <div className="mt-3 text-sm text-gray-600">
-            첨부된 파일: {images.map((file) => file.name).join(", ")}
+          <div className="mt-3">
+            <div className="text-sm text-gray-600">
+              첨부된 파일: {images.map((file) => file.name).join(", ")}
+            </div>
+            <button
+              type="button"
+              onClick={() => setImages([])}
+              className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+            >
+              이미지 제거
+            </button>
           </div>
         )}
       </div>
