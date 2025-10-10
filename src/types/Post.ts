@@ -82,6 +82,9 @@ export interface Comment {
   likes: number;
   created_at: string;
   replies: Comment[];
+  likedByMe?: boolean;
+  parent_id?: number | null;
+  children?: Comment[];
 }
 
 /** 댓글 작성 요청 타입 */
@@ -92,8 +95,18 @@ export interface CommentCreateRequest {
 
 /** 댓글 작성 응답 타입 */
 export interface CommentCreateResponse {
-  id: number;
+  id?: number;
   message: string;
+  data?: {
+    commentId: number;
+    content: string;
+    authorName: string;
+    createdAt: string;
+    likeCount: number;
+    likedByMe: boolean;
+    parentId: number | null;
+    children: any[];
+  };
 }
 
 /** 댓글 수정 응답 타입 */
@@ -108,10 +121,15 @@ export interface CommentDeleteResponse {
 
 /** 댓글 좋아요 응답 타입 */
 export interface CommentLikeResponse {
-  commentId: number;
+  commentId?: number;
   liked: boolean;
   likes: number;
   message: string;
+  data?: {
+    commentId: number;
+    liked: boolean;
+    likes: number;
+  };
 }
 
 /** 신고하기 요청 타입 */

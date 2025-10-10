@@ -9,22 +9,37 @@ import { createCommentMutator, getComments } from "@/api/community";
 interface CommentSectionProps {
   postId: number;
   initialComments: Comment[];
+  onCommentsChange?: (comments: Comment[]) => void;
 }
 
 export default function CommentSection({
   postId,
   initialComments,
+  onCommentsChange,
 }: CommentSectionProps) {
   // 실제 API 호출 시에는 SWR 등으로 댓글 목록 상태 관리
   const [comments, setComments] = useState(initialComments);
   const [newCommentContent, setNewCommentContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 댓글과 대댓글을 모두 포함한 총 댓글 수 계산
+  const calculateTotalComments = (comments: Comment[]): number => {
+    let total = 0;
+    comments.forEach((comment) => {
+      total += 1; // 댓글 자체
+      if (comment.replies && comment.replies.length > 0) {
+        total += comment.replies.length; // 대댓글들
+      }
+    });
+    return total;
+  };
+
   // 댓글 목록 새로고침 함수
   const refreshComments = async () => {
     try {
       const updatedComments = await getComments(postId);
       setComments(updatedComments);
+      onCommentsChange?.(updatedComments);
     } catch (error) {
       console.error("댓글 목록 새로고침 실패:", error);
     }
@@ -40,11 +55,33 @@ export default function CommentSection({
         content: newCommentContent,
       });
 
-      // 댓글 목록 새로고침
-      await refreshComments();
-      setNewCommentContent("");
-
       console.log("댓글 작성 성공:", response);
+
+      // 새 댓글을 상태에 직접 추가 (API 응답에서 받은 데이터 사용)
+      if (response?.data) {
+        const newComment: Comment = {
+          id: response.data.commentId,
+          content: response.data.content,
+          author: response.data.authorName,
+          created_at: response.data.createdAt,
+          likes: response.data.likeCount,
+          replies: [],
+          likedByMe: response.data.likedByMe,
+          parent_id: response.data.parentId,
+          children: response.data.children || [],
+        };
+
+        setComments((prev) => {
+          const updatedComments = [...prev, newComment];
+          onCommentsChange?.(updatedComments);
+          return updatedComments;
+        });
+      } else {
+        // Fallback: 전체 새로고침
+        await refreshComments();
+      }
+
+      setNewCommentContent("");
     } catch (error) {
       console.error("댓글 작성 실패:", error);
       alert("댓글 작성에 실패했습니다.");
@@ -56,7 +93,7 @@ export default function CommentSection({
   return (
     <div id="comment-section">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        {comments.length}개의 댓글
+        {calculateTotalComments(comments)}개의 댓글
       </h2>
 
       {/* 1. 새 댓글 작성 폼 */}

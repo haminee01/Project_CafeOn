@@ -177,6 +177,30 @@ export const getPostDetail = async (
   return transformedData;
 };
 
+// 백엔드 댓글 응답 구조
+interface BackendComment {
+  commentId: number;
+  parentId: number | null;
+  postId: number;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  children: BackendComment[];
+  likeCount: number;
+  likedByMe: boolean;
+}
+
+interface BackendCommentListResponse {
+  message: string;
+  data: {
+    content: BackendComment[];
+    totalElements: number;
+    totalPages: number;
+    first: boolean;
+    last: boolean;
+  };
+}
+
 /**
  * GET /api/posts/{id}/comments - 특정 게시글 댓글 목록 조회
  * @param postId 댓글을 조회할 게시글 ID
@@ -184,8 +208,60 @@ export const getPostDetail = async (
 export const getComments = async (
   postId: number
 ): Promise<CommentListResponse> => {
-  const url = `/api/posts/${postId}/comments`; // 댓글 목록을 가져오는 fetcher 사용
-  return fetcher<CommentListResponse>(url);
+  const url = `/api/posts/${postId}/comments`;
+
+  console.log(`[API] Fetching comments for post ${postId}`);
+
+  try {
+    const backendResponse = await fetcher<BackendCommentListResponse>(url);
+    console.log("댓글 목록 응답:", backendResponse);
+
+    // 백엔드 응답을 프론트엔드 형식으로 변환
+    const commentsData = backendResponse.data?.content || [];
+    console.log("댓글 데이터:", commentsData);
+
+    const transformedComments: Comment[] = commentsData.map(
+      (backendComment) => ({
+        id: backendComment.commentId,
+        author: backendComment.authorName,
+        content: backendComment.content,
+        likes: backendComment.likeCount,
+        created_at: backendComment.createdAt,
+        replies:
+          backendComment.children?.map((child) => ({
+            id: child.commentId,
+            author: child.authorName,
+            content: child.content,
+            likes: child.likeCount,
+            created_at: child.createdAt,
+            replies: [],
+            likedByMe: child.likedByMe,
+            parent_id: child.parentId,
+            children: [],
+          })) || [],
+        likedByMe: backendComment.likedByMe,
+        parent_id: backendComment.parentId,
+        children:
+          backendComment.children?.map((child) => ({
+            id: child.commentId,
+            author: child.authorName,
+            content: child.content,
+            likes: child.likeCount,
+            created_at: child.createdAt,
+            replies: [],
+            likedByMe: child.likedByMe,
+            parent_id: child.parentId,
+            children: [],
+          })) || [],
+      })
+    );
+
+    console.log("변환된 댓글 목록:", transformedComments);
+    return transformedComments;
+  } catch (error) {
+    console.error("댓글 목록 조회 실패:", error);
+    throw error;
+  }
 };
 
 /**
@@ -511,6 +587,14 @@ export async function createCommentMutator(
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
+  console.log("댓글 작성 API 요청:", {
+    url: fullUrl,
+    method: "POST",
+    headers,
+    body: JSON.stringify(arg),
+    arg,
+  });
+
   const response = await fetch(fullUrl, {
     method: "POST",
     headers,
@@ -707,6 +791,14 @@ export const createReport = async (
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
+  console.log("신고 API 요청:", {
+    url: fullUrl,
+    method: "POST",
+    headers,
+    body: JSON.stringify(reportData),
+    reportData,
+  });
+
   const response = await fetch(fullUrl, {
     method: "POST",
     headers,
@@ -724,5 +816,7 @@ export const createReport = async (
     throw new Error(errorMessage);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log("신고 API 응답:", result);
+  return result;
 };

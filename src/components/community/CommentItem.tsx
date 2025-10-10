@@ -11,10 +11,7 @@ import {
   getComments,
 } from "@/api/community";
 import ReportModal from "@/components/modals/ReportModal";
-
-const MOCK_CURRENT_USER = {
-  username: "현재 사용자",
-};
+import { useAuth } from "@/hooks/useAuth";
 
 interface TemporaryAlertProps {
   message: string;
@@ -39,8 +36,10 @@ export default function CommentItem({
   isReply = false,
   onCommentUpdated,
 }: CommentItemProps) {
+  const { user, isLoggedIn } = useAuth();
   const [showReplyForm, setShowReplyForm] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(comment.likedByMe || false);
+  const [currentLikes, setCurrentLikes] = useState(comment.likes || 0);
   const [isEditing, setIsEditing] = useState(false);
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [replyContent, setReplyContent] = useState("");
@@ -50,9 +49,11 @@ export default function CommentItem({
   const [editedContent, setEditedContent] = useState(comment.content);
 
   const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
   const commentRef = useRef<HTMLDivElement>(null);
 
-  const isMyComment = comment.author === MOCK_CURRENT_USER.username;
+  // 작성자 여부 확인 (로그인한 사용자와 댓글 작성자 비교)
+  const isMyComment = isLoggedIn && user?.username === comment.author;
 
   const handleLike = async () => {
     if (isLikeLoading) return;
@@ -60,7 +61,17 @@ export default function CommentItem({
     setIsLikeLoading(true);
     try {
       const response = await toggleCommentLike(comment.id);
-      setIsLiked(response.liked);
+      console.log("댓글 좋아요 응답:", response);
+
+      // 응답 구조에 따라 상태 업데이트
+      if (response?.data && typeof response.data.liked === "boolean") {
+        setIsLiked(response.data.liked);
+        setCurrentLikes(response.data.likes);
+      } else if (response && typeof response.liked === "boolean") {
+        setIsLiked(response.liked);
+        setCurrentLikes(response.likes);
+      }
+
       // 댓글 목록 새로고침
       if (onCommentUpdated) {
         onCommentUpdated();
@@ -94,10 +105,11 @@ export default function CommentItem({
       });
 
       setDisplayContent(editedContent);
+      setAlertMessage("댓글이 수정되었습니다.");
       setShowAlert(true);
       setTimeout(() => {
         setShowAlert(false);
-      }, 2000);
+      }, 3000);
 
       if (onCommentUpdated) {
         onCommentUpdated();
@@ -114,11 +126,25 @@ export default function CommentItem({
   const handleDelete = async () => {
     if (window.confirm("정말로 이 댓글/대댓글을 삭제하시겠습니까?")) {
       try {
-        await deleteCommentMutator(postId, comment.id);
-        alert("댓글이 삭제되었습니다.");
-        if (onCommentUpdated) {
-          onCommentUpdated();
-        }
+        // 먼저 알림 표시
+        setAlertMessage("댓글이 삭제되었습니다.");
+        setShowAlert(true);
+
+        // 알림을 3초간 보여준 후 삭제 실행
+        setTimeout(async () => {
+          try {
+            await deleteCommentMutator(postId, comment.id);
+            setShowAlert(false);
+
+            if (onCommentUpdated) {
+              onCommentUpdated();
+            }
+          } catch (error) {
+            console.error("댓글 삭제 실패:", error);
+            setShowAlert(false);
+            alert("댓글 삭제에 실패했습니다.");
+          }
+        }, 2000);
       } catch (error) {
         console.error("댓글 삭제 실패:", error);
         alert("댓글 삭제에 실패했습니다.");
@@ -130,11 +156,27 @@ export default function CommentItem({
     if (!replyContent.trim()) return;
 
     try {
-      await createCommentMutator(postId, {
+      console.log("대댓글 작성 요청:", {
+        postId,
         content: replyContent,
         parent_comment_id: comment.id,
+        commentId: comment.id,
       });
 
+      // 여러 필드명을 시도해보기
+      const requestData = {
+        content: replyContent,
+        parent_comment_id: comment.id,
+        parentCommentId: comment.id,
+        parentId: comment.id,
+        parentComment: comment.id,
+      };
+
+      console.log("대댓글 요청 데이터:", requestData);
+
+      await createCommentMutator(postId, requestData as any);
+
+      console.log("대댓글 작성 성공");
       setReplyContent("");
       setShowReplyForm(false);
 
@@ -174,7 +216,7 @@ export default function CommentItem({
 
   return (
     <>
-      {showAlert && <TemporaryAlert message="댓글이 수정되었습니다." />}
+      {showAlert && <TemporaryAlert message={alertMessage} />}
 
       <div
         ref={commentRef}
@@ -205,39 +247,16 @@ export default function CommentItem({
           <div className="flex space-x-2 text-sm text-gray-500">
             {!isEditing && (
               <>
+                {/* 답글 버튼은 모든 댓글에 표시 */}
                 <button
                   onClick={() => setShowReplyForm((prev) => !prev)}
                   className="hover:text-[#6E4213]"
                 >
                   답글
                 </button>
-                <button
-                  onClick={() => setShowReportModal(true)}
-                  className="hover:text-orange-500"
-                >
-                  신고
-                </button>
-              </>
-            )}
 
-            {isMyComment && (
-              <>
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleSaveEdit}
-                      className="hover:text-green-600"
-                    >
-                      저장
-                    </button>
-                    <button
-                      onClick={handleEditClick}
-                      className="hover:text-[#999999]"
-                    >
-                      취소
-                    </button>
-                  </>
-                ) : (
+                {/* 작성자인 경우: 수정/삭제 버튼 표시 */}
+                {isMyComment ? (
                   <>
                     <button
                       onClick={handleEditClick}
@@ -252,7 +271,33 @@ export default function CommentItem({
                       삭제
                     </button>
                   </>
+                ) : (
+                  /* 작성자가 아닌 경우: 신고 버튼 표시 */
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="hover:text-orange-500"
+                  >
+                    신고
+                  </button>
                 )}
+              </>
+            )}
+
+            {/* 수정 모드일 때 저장/취소 버튼 */}
+            {isEditing && (
+              <>
+                <button
+                  onClick={handleSaveEdit}
+                  className="hover:text-green-600"
+                >
+                  저장
+                </button>
+                <button
+                  onClick={handleEditClick}
+                  className="hover:text-gray-600"
+                >
+                  취소
+                </button>
               </>
             )}
           </div>
@@ -292,7 +337,7 @@ export default function CommentItem({
                 }
               />
             </svg>
-            <span>{comment.likes + (isLiked ? 1 : 0)}</span>
+            <span>{currentLikes}</span>
           </button>
         </div>
 
@@ -337,6 +382,7 @@ export default function CommentItem({
                 comment={reply}
                 postId={postId}
                 isReply={true}
+                onCommentUpdated={onCommentUpdated}
               />
             ))}
           </div>
