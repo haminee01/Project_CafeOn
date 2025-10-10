@@ -3,21 +3,9 @@
 import React, { useState } from "react";
 import ChatMessageList from "./ChatMessageList";
 import ChatMessageInput from "./ChatMessageInput";
-
-export interface UserProfile {
-  id: string;
-  name: string;
-}
-
-interface ChatMessage {
-  id: string;
-  senderName: string;
-  content: string;
-  isMyMessage: boolean;
-  senderId: string;
-}
-
-type Participant = UserProfile;
+import ChatSidebar from "./ChatSidebar";
+import ProfileIcon from "./ProfileIcon";
+import { ChatMessage, UserProfile, Participant } from "@/types/chat";
 
 interface PrivateChatModalProps {
   targetUser: {
@@ -26,27 +14,6 @@ interface PrivateChatModalProps {
   };
   onClose: () => void;
 }
-
-// 프로필 아이콘 컴포넌트
-const ProfileIcon: React.FC = () => (
-  <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      data-prefix="fas"
-      data-icon="user"
-      className="w-5 h-5 text-gray-600"
-      role="img"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 448 512"
-    >
-      <path
-        fill="currentColor"
-        d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"
-      />
-    </svg>
-  </div>
-);
 
 // --- 더미 데이터 (1:1 대화 예시) ---
 const initialPrivateMessages: ChatMessage[] = [
@@ -227,86 +194,20 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
 
         <ChatMessageInput onSendMessage={handleSendMessage} />
 
-        {/* 사이드바 (참여자 목록) 오버레이 */}
+        {/* 사이드바 */}
         {isSidebarOpen && (
-          <div
-            className="absolute inset-0 bg-black bg-opacity-20 z-30"
-            onClick={closeSidebar}
+          <ChatSidebar
+            participants={dummyParticipants}
+            currentUserId={myProfile.id}
+            isNotificationOn={isNotificationOn}
+            onToggleNotification={handleToggleNotification}
+            onClose={closeSidebar}
+            onProfileClick={() => {}} // 1:1 채팅에서는 별도 동작 없음
+            onLeave={() => console.log("나가기")}
+            title="대화 상세 정보"
+            subtitle="참여자"
           />
         )}
-
-        {/* 사이드바 본체 */}
-        <div
-          className={`absolute inset-y-0 right-0 w-64 bg-white shadow-2xl transition-transform duration-300 ease-in-out z-40 ${
-            isSidebarOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex flex-col h-full border-l border-gray-200">
-            {/* 사이드바 헤더 */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-bold">대화 상세 정보</h3>
-              <button
-                onClick={closeSidebar}
-                className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="h-6 w-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {/* 참여자 목록 리스트 */}
-            <div className="p-4 flex-1 overflow-y-auto">
-              <p className="text-sm font-semibold mb-3 text-gray-600">
-                참여자 ({dummyParticipants.length})
-              </p>
-              <div className="space-y-3">
-                {dummyParticipants.map((user) => (
-                  <div
-                    key={user.id}
-                    className={`flex items-center space-x-3 p-2 rounded-md transition duration-150 cursor-pointer hover:bg-gray-100`}
-                    onClick={handleSidebarProfileClick}
-                  >
-                    <ProfileIcon />
-                    <span className="font-medium text-gray-800">
-                      {user.name} {user.id === myProfile.id ? "(나)" : ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 하단 액션 버튼 */}
-            <div className="p-4 mt-auto border-t flex space-x-2">
-              {/* 3. 알림 토글 버튼 수정 */}
-              <button
-                onClick={handleToggleNotification}
-                className={`w-full px-4 py-2 rounded-lg shadow-md transition text-sm ${
-                  isNotificationOn
-                    ? "bg-[#8d5e33] text-white hover:bg-[#6E4213]" // ON 상태 색상
-                    : "bg-gray-400 text-[#6E4213] hover:bg-gray-500" // OFF 상태 색상
-                }`}
-              >
-                {isNotificationOn ? "알림끄기" : "알림켜기"}
-              </button>
-              <button className="w-full px-4 py-2 bg-gray-200 text-[#6E4213] rounded-lg shadow-md hover:bg-gray-300 transition text-sm">
-                나가기
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
