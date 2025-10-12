@@ -1,27 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Pagination from "@/components/common/Pagination";
-
-// --- [ 데이터 정의 및 상수 ] ---
-
-// Mock 데이터 생성 (총 50개의 항목)
-const createMockInquiries = () => {
-  return Array.from({ length: 50 }, (_, i) => ({
-    id: i + 1,
-    // 문의 제목
-    title: `팔랑멜라또 문의 ${i + 1}: 환불 절차 관련하여 문의드립니다.`,
-    // 문의 내용 (아코디언으로 펼쳐질 부분)
-    content: `안녕하세요. 주문하신 상품의 환불 절차는 영업일 기준 3일 이내에 처리되며, 자세한 내용은 첨부된 문서를 확인해 주십시오. [문의 번호: #A${
-      i + 1
-    }B]`,
-    // 답글 개수
-    replyCount: (i % 5) + 1,
-    date: `2024-05-${String((i % 30) + 1).padStart(2, "0")}`,
-  }));
-};
-
-const mockInquiryData = createMockInquiries();
+import {
+  useMyQuestions,
+  MyQuestion,
+  QuestionStatus,
+  QuestionVisibility,
+} from "@/hooks/useMyQuestions";
+import { useAuth } from "@/hooks/useAuth";
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -31,9 +19,14 @@ const ITEMS_PER_PAGE = 10;
 interface InquiryContentProps {
   currentPage: number;
   onPageChange: (page: number) => void;
+  keyword: string;
 }
 
-const InquiryContent = ({ currentPage, onPageChange }: InquiryContentProps) => {
+const InquiryContent = ({
+  currentPage,
+  onPageChange,
+  keyword,
+}: InquiryContentProps) => {
   // 현재 열려 있는 문의 항목의 ID를 저장합니다.
   const [openItemId, setOpenItemId] = useState<number | null>(null);
 
@@ -42,32 +35,94 @@ const InquiryContent = ({ currentPage, onPageChange }: InquiryContentProps) => {
     setOpenItemId((prevId) => (prevId === itemId ? null : itemId));
   };
 
-  const totalItems = mockInquiryData;
-  const totalPages = Math.ceil(totalItems.length / ITEMS_PER_PAGE);
+  // API 호출
+  const { questions, totalPages, isLoading, error, refetch } = useMyQuestions({
+    page: currentPage - 1, // API는 0부터 시작
+    size: ITEMS_PER_PAGE,
+    keyword: keyword || undefined,
+  });
 
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentItems = totalItems.slice(startIndex, endIndex);
+  // 상태 표시 함수들
+  const getStatusText = (status: QuestionStatus) => {
+    switch (status) {
+      case QuestionStatus.PENDING:
+        return "답변 대기";
+      case QuestionStatus.ANSWERED:
+        return "답변 완료";
+      default:
+        return "알 수 없음";
+    }
+  };
+
+  const getStatusColor = (status: QuestionStatus) => {
+    switch (status) {
+      case QuestionStatus.PENDING:
+        return "text-orange-600 bg-orange-100";
+      case QuestionStatus.ANSWERED:
+        return "text-green-600 bg-green-100";
+      default:
+        return "text-gray-600 bg-gray-100";
+    }
+  };
+
+  const getVisibilityText = (visibility: QuestionVisibility) => {
+    return visibility === QuestionVisibility.PUBLIC ? "공개" : "비공개";
+  };
+
+  // 로딩 상태 표시
+  if (isLoading) {
+    return (
+      <div className="py-8 text-center text-gray-500">
+        문의 내역을 불러오는 중...
+      </div>
+    );
+  }
+
+  // 에러 상태 표시
+  if (error) {
+    return (
+      <div className="py-8 text-center">
+        <div className="text-red-600 mb-2">오류가 발생했습니다.</div>
+        <div className="text-gray-500 mb-4">{error}</div>
+        <button
+          onClick={refetch}
+          className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
       {/* 문의 내역 리스트 표시 */}
       <div className="p-0">
         <ul className="space-y-0 divide-y divide-[#999999] border-t border-[#999999]">
-          {currentItems.length > 0 ? (
-            currentItems.map((item) => (
+          {questions.length > 0 ? (
+            questions.map((item) => (
               <li key={item.id} className="text-base text-gray-800">
                 {/* 제목 및 토글 영역 */}
                 <button
                   onClick={() => handleToggle(item.id)}
                   className="w-full flex justify-between items-center py-4 px-0 text-left hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center space-x-3">
                     {/* 문의 제목 */}
                     <span className="font-semibold">{item.title}</span>
-                    {/* 답글 개수 */}
-                    <span className="text-sm text-gray-500 ml-2">
-                      ({item.replyCount})
+
+                    {/* 상태 배지 */}
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
+                        item.status
+                      )}`}
+                    >
+                      {getStatusText(item.status)}
+                    </span>
+
+                    {/* 가시성 배지 */}
+                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-600">
+                      {getVisibilityText(item.visibility)}
                     </span>
                   </div>
 
@@ -90,15 +145,28 @@ const InquiryContent = ({ currentPage, onPageChange }: InquiryContentProps) => {
 
                 {/* 내용 영역 (열렸을 때만 표시) */}
                 {openItemId === item.id && (
-                  <div className="bg-gray-50 p-4 border-t border-[#CDCDCD] text-gray-700 whitespace-pre-wrap">
-                    {item.content}
+                  <div className="bg-gray-50 p-4 border-t border-[#CDCDCD] text-gray-700">
+                    <div className="mb-3">
+                      <div className="text-sm text-gray-500 mb-1">
+                        작성자: {item.authorNickname}
+                      </div>
+                      <div className="text-sm text-gray-500 mb-2">
+                        작성일:{" "}
+                        {new Date(item.createdAt).toLocaleDateString("ko-KR")}
+                      </div>
+                    </div>
+                    <div className="whitespace-pre-wrap">
+                      {item.content || "문의 내용을 불러오는 중..."}
+                    </div>
                   </div>
                 )}
               </li>
             ))
           ) : (
             <div className="py-8 text-center text-gray-500">
-              문의 내역이 없습니다.
+              {keyword
+                ? `"${keyword}"에 대한 검색 결과가 없습니다.`
+                : "문의 내역이 없습니다."}
             </div>
           )}
         </ul>
@@ -120,6 +188,12 @@ const InquiryContent = ({ currentPage, onPageChange }: InquiryContentProps) => {
 
 export default function InquiryHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const router = useRouter();
+
+  // 인증 상태 확인
+  const { isLoggedIn, isLoading: authLoading } = useAuth();
 
   // 페이지 변경 핸들러
   const handlePageChange = (page: number) => {
@@ -128,10 +202,50 @@ export default function InquiryHistoryPage() {
     }
   };
 
-  const handleRegisterClick = () => {
-    // 문의 등록 페이지로 이동하는 로직
-    alert("문의 등록 페이지로 이동합니다.");
+  // 검색 핸들러
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchKeyword(inputValue);
+    setCurrentPage(1); // 검색 시 첫 페이지로 이동
   };
+
+  // 검색어 초기화
+  const handleClearSearch = () => {
+    setInputValue("");
+    setSearchKeyword("");
+    setCurrentPage(1);
+  };
+
+  const handleRegisterClick = () => {
+    // 문의 등록 페이지로 이동
+    router.push("/mypage/qna/create");
+  };
+
+  // 인증 로딩 중
+  if (authLoading) {
+    return (
+      <div className="p-8 bg-white min-h-full flex items-center justify-center">
+        <div className="text-gray-500">로딩 중...</div>
+      </div>
+    );
+  }
+
+  // 로그인하지 않은 경우
+  if (!isLoggedIn) {
+    return (
+      <div className="p-8 bg-white min-h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-500 mb-4">로그인이 필요합니다.</div>
+          <button
+            onClick={() => (window.location.href = "/login")}
+            className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+          >
+            로그인하기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 bg-white min-h-full">
@@ -146,10 +260,44 @@ export default function InquiryHistoryPage() {
         </button>
       </header>
 
+      {/* 검색 영역 */}
+      <div className="mb-6">
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="문의 제목으로 검색..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6E4213] focus:border-transparent"
+          />
+          <button
+            type="submit"
+            className="bg-[#6E4213] text-white px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+          >
+            검색
+          </button>
+          {searchKeyword && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+            >
+              초기화
+            </button>
+          )}
+        </form>
+        {searchKeyword && (
+          <div className="mt-2 text-sm text-gray-600">
+            검색어: "{searchKeyword}"
+          </div>
+        )}
+      </div>
+
       {/* 문의 내역 리스트 및 페이지네이션 */}
       <InquiryContent
         currentPage={currentPage}
         onPageChange={handlePageChange}
+        keyword={searchKeyword}
       />
     </div>
   );
