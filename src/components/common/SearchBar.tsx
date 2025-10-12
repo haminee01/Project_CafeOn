@@ -1,24 +1,44 @@
 import { FaSearch } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SearchBarProps {
   placeholder?: string;
+  placeholders?: string[];
   value?: string;
   onChange?: (value: string) => void;
   onSearch?: (value: string) => void;
   disabled?: boolean;
+  animatePlaceholder?: boolean;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = "검색어를 입력하세요",
+  placeholders,
   value = "",
   onChange,
   onSearch,
   disabled = false,
+  animatePlaceholder = false,
 }) => {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState(value);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholder);
+
+  // placeholder 애니메이션 효과
+  useEffect(() => {
+    if (!animatePlaceholder || !placeholders || placeholders.length === 0) {
+      return;
+    }
+
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % placeholders.length;
+      setCurrentPlaceholder(placeholders[currentIndex]);
+    }, 2000); // 2초마다 변경
+
+    return () => clearInterval(interval);
+  }, [animatePlaceholder, placeholders]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -56,11 +76,11 @@ const SearchBar: React.FC<SearchBarProps> = ({
           value={searchValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
-          placeholder={placeholder}
+          placeholder={currentPlaceholder}
           disabled={disabled}
           className="w-full border border-primary rounded-full px-3 py-2 placeholder-gray-400 focus:outline-none
         focus:ring-0
-        focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+        focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
         />
         <button
           onClick={handleSearch}
