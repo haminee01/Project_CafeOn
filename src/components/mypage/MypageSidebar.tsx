@@ -1,23 +1,24 @@
 // src/components/MypageSidebar.jsx
 
 import { usePathname } from "next/navigation";
+
 import {
-  FaUser,
-  FaPenToSquare,
-  FaBookmark,
-  FaCommentDots,
-  FaClock,
-} from "react-icons/fa6";
-import { FaQuestionCircle } from "react-icons/fa";
+  HiOutlineUser,
+  HiOutlinePencilSquare,
+  HiOutlineBookmark,
+  HiOutlineChatBubbleLeftRight,
+  HiOutlineClock,
+  HiOutlineQuestionMarkCircle,
+} from "react-icons/hi2";
 
 // 아이콘 컴포넌트 정의
 const icons = {
-  Settings: () => <FaUser className="w-5 h-5" />, // 회원정보
-  BookOpen: () => <FaPenToSquare className="w-5 h-5" />, // 내가 작성한 리뷰
-  User: () => <FaBookmark className="w-5 h-5" />, // 북마크
-  MessageSquare: () => <FaCommentDots className="w-5 h-5" />, // 채팅방
-  Clock: () => <FaClock className="w-5 h-5" />, // 히스토리
-  QuestionRegular: () => <FaQuestionCircle className="w-5 h-5" />, // 나의 문의 내역
+  Settings: () => <HiOutlineUser className="w-5 h-5" />, // 회원정보
+  BookOpen: () => <HiOutlinePencilSquare className="w-5 h-5" />, // 내가 작성한 리뷰
+  User: () => <HiOutlineBookmark className="w-5 h-5" />, // 북마크
+  MessageSquare: () => <HiOutlineChatBubbleLeftRight className="w-5 h-5" />, // 채팅방
+  Clock: () => <HiOutlineClock className="w-5 h-5" />, // 히스토리
+  QuestionRegular: () => <HiOutlineQuestionMarkCircle className="w-5 h-5" />, // 나의 문의 내역
 };
 
 const navItems = [
