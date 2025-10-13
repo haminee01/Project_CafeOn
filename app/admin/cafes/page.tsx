@@ -71,28 +71,25 @@ export default function AdminCafesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-1">
       {/* 페이지 헤더 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">카페 관리</h1>
-        <Button color="primary" size="md">
-          등록
-        </Button>
-      </div>
 
       {/* 검색바 */}
-      
+      <div className="flex flex-col items-center">
         <div className="w-full max-w-4/5">
           <SearchBar
-            placeholder="카페명, 주소, 설명으로 검색..."
+            
             value={searchTerm}
             onChange={handleSearchChange}
+            onSearch={handleSearchChange}
           />
         </div>
-        
-        <div className="text-sm text-gray-500">
-          총 {filteredCafes.length}개 카페
-        </div>
+      </div>
+
+      {/* 카페 개수 */}
+      <div className="text-sm text-gray-500 mb-4">
+        총 {filteredCafes.length}개 카페
+      </div>
 
       {/* 카페 그리드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -148,8 +145,7 @@ export default function AdminCafesPage() {
             </h3>
             <p className="text-gray-600 mb-6">
               <span className="font-medium">"{cafeToDelete?.name}"</span> 카페를 정말 삭제하시겠습니까?
-              <br />
-              이 작업은 되돌릴 수 없습니다.
+              
             </p>
             <div className="flex gap-3 justify-end">
               <Button 

@@ -49,16 +49,18 @@ const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   const handleSearch = () => {
-    // 검색어가 있든 없든 search 페이지로 이동
-    if (searchValue.trim()) {
-      // 검색어가 있으면 URL 파라미터로 전달
-      router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
-    } else {
-      // 검색어가 없으면 파라미터 없이 search 페이지로 이동
-      router.push("/search");
-    }
     if (onSearch) {
+      // onSearch가 제공되면 페이지 이동 없이 검색만 실행
       onSearch(searchValue);
+    } else {
+      // onSearch가 없으면 기존 동작 (search 페이지로 이동)
+      if (searchValue.trim()) {
+        // 검색어가 있으면 URL 파라미터로 전달
+        router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+      } else {
+        // 검색어가 없으면 파라미터 없이 search 페이지로 이동
+        router.push("/search");
+      }
     }
   };
 

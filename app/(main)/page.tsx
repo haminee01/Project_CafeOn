@@ -25,6 +25,7 @@ const searchPlaceholders = [
 ];
 
 export default function HomePage() {
+
   return (
     <div className="min-h-screen px-20">
       <Header />
@@ -37,9 +38,9 @@ export default function HomePage() {
 
       <div>
         <CafeCarousel
-          cafes={mockCafes.slice(8, 16)}
+          cafes={mockCafes.slice(0, 8)}
           title="요즘 뜨고 있는 카페"
-          description="최근 사람들이 많이 찾는 카페를 엄선했어요."
+          description="최근 사람들이 많이 찾는 카페를 엄선했습니다."
           showAllButton={true}
         />
       </div>
@@ -48,16 +49,25 @@ export default function HomePage() {
         <CafeCarousel
           cafes={mockCafes.slice(8, 16)}
           title="찜 많은 카페"
-          description="찜이 많은 카페를 만나보세요."
+          description="다른 사람들이 찜해둔 카페들 입니다."
           showAllButton={true}
         />
       </div>
 
       <div>
         <CafeCarousel
-          cafes={mockCafes.slice(8, 16)}
-          title="회원님 맞춤 카페"
-          description="회원님, 이런 카페들은 어떤가요? 회원님의 취향을 반영한 카페들입니다."
+          cafes={mockCafes.slice(16, 24)}
+          title="이런 카페는 어때요?"
+          description="추천 드리는 카페입니다."
+          showAllButton={true}
+        />
+      </div>
+
+      <div>
+        <CafeCarousel
+          cafes={mockCafes.slice(24, 32)}
+          title="---님 맞춤 카페"
+          description="---님, 이런 카페들은 어떤가요? -님의 취향을 반영한 카페들 입니다."
           showAllButton={true}
         />
       </div>

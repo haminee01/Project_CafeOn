@@ -149,3 +149,127 @@ export async function getCafeDetailWithLocation(
     throw error;
   }
 }
+
+// ==================== Admin Inquiries API ====================
+
+// 관리자 문의 목록 조회
+export async function getAdminInquiries(params?: {
+  page?: number;
+  size?: number;
+  keyword?: string;
+  status?: string;
+}) {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.page !== undefined) queryParams.append("page", params.page.toString());
+    if (params?.size !== undefined) queryParams.append("size", params.size.toString());
+    if (params?.keyword) queryParams.append("keyword", params.keyword);
+    if (params?.status) queryParams.append("status", params.status);
+
+    const url = `${API_BASE_URL}/api/admin/inquiries${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error("관리자 권한이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `문의 목록 조회 실패 (${response.status})`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Admin 문의 목록 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 관리자 문의 상세 조회
+export async function getAdminInquiryDetail(id: number) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/admin/inquiries/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("문의 상세 조회 실패");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Admin 문의 상세 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 관리자 답변 목록 조회
+export async function getAdminInquiryAnswers(inquiryId: number) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/inquiries/${inquiryId}/answers`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("답변 목록 조회 실패");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Admin 답변 목록 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 관리자 답변 작성
+export async function createAdminInquiryAnswer(inquiryId: number, content: string) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/inquiries/${inquiryId}/answers`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ content }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("답변 작성 실패");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Admin 답변 작성 API 호출 실패:", error);
+    throw error;
+  }
+}
