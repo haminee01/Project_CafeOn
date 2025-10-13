@@ -1,26 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-// 가시성 enum
-export enum QuestionVisibility {
-  PUBLIC = "PUBLIC",
-  PRIVATE = "PRIVATE",
-}
-
-// 문의 등록 요청 타입
-export interface CreateQuestionRequest {
-  title: string;
-  content: string;
-  visibility: QuestionVisibility;
-}
-
-// 문의 등록 응답 타입
-export interface CreateQuestionResponse {
+// 문의 상세 응답 타입
+export interface MyQuestionDetailResponse {
   id: number;
   title: string;
   content: string;
   authorNickname: string;
   createdAt: string;
-  visibility: QuestionVisibility;
+  updatedAt: string;
+  status: "PENDING" | "ANSWERED";
+  visibility: "PUBLIC" | "PRIVATE";
 }
 
 // 백엔드 ApiResponse 구조
@@ -30,28 +19,27 @@ interface ApiResponse<T> {
   success?: boolean;
 }
 
-export const useCreateQuestion = () => {
+export const useMyQuestionDetail = (questionId: number | null) => {
+  const [question, setQuestion] = useState<MyQuestionDetailResponse | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createQuestion = async (
-    questionData: CreateQuestionRequest
-  ): Promise<CreateQuestionResponse | null> => {
+  const fetchQuestionDetail = async () => {
+    if (!questionId) {
+      setQuestion(null);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const token = localStorage.getItem("accessToken");
-      console.log("🔍 토큰 확인:", token ? "토큰 존재" : "토큰 없음");
 
-      if (!token) {
+      if (!token || token === "null" || token === "undefined") {
         throw new Error("로그인이 필요합니다.");
-      }
-
-      // 토큰이 "null" 문자열인지 확인
-      if (token === "null" || token === "undefined") {
-        console.log("🔍 잘못된 토큰 값:", token);
-        throw new Error("유효하지 않은 토큰입니다. 다시 로그인해주세요.");
       }
 
       // 토큰 만료 시간 확인
@@ -61,13 +49,6 @@ export const useCreateQuestion = () => {
         const currentTime = Math.floor(Date.now() / 1000);
         const expirationTime = decoded.exp;
 
-        console.log("🔍 토큰 만료 시간:", new Date(expirationTime * 1000));
-        console.log("🔍 현재 시간:", new Date(currentTime * 1000));
-        console.log(
-          "🔍 토큰 만료 여부:",
-          currentTime >= expirationTime ? "만료됨" : "유효함"
-        );
-
         if (currentTime >= expirationTime) {
           throw new Error("토큰이 만료되었습니다. 다시 로그인해주세요.");
         }
@@ -75,9 +56,8 @@ export const useCreateQuestion = () => {
         console.log("🔍 토큰 디코딩 실패:", e);
       }
 
-      const url = "http://localhost:8080/api/qna/questions";
-      console.log("🔍 API 호출 URL:", url);
-      console.log("🔍 요청 데이터:", questionData);
+      const url = `http://localhost:8080/api/my/questions/${questionId}`;
+      console.log("🔍 문의 상세 조회 URL:", url);
 
       const headers = {
         Authorization: `Bearer ${token}`,
@@ -85,28 +65,17 @@ export const useCreateQuestion = () => {
         Accept: "application/json",
       };
 
-      console.log("🔍 요청 헤더:", {
-        ...headers,
-        Authorization: `Bearer ${token.substring(0, 20)}...`, // 토큰 일부만 로깅
-      });
-
       const response = await fetch(url, {
-        method: "POST",
+        method: "GET",
         headers: headers,
         credentials: "include",
-        body: JSON.stringify(questionData),
       });
 
       console.log("🔍 응답 상태:", response.status);
-      console.log(
-        "🔍 응답 헤더:",
-        Object.fromEntries(response.headers.entries())
-      );
 
       if (!response.ok) {
         const errorText = await response.text();
         console.log("🔍 에러 응답 내용:", errorText);
-        console.log("🔍 에러 응답 길이:", errorText.length);
 
         // JSON 응답 파싱 시도
         try {
@@ -123,36 +92,46 @@ export const useCreateQuestion = () => {
           throw new Error("인증이 필요합니다.");
         } else if (response.status === 403) {
           throw new Error("접근 권한이 없습니다.");
-        } else if (response.status === 400) {
-          throw new Error("요청 데이터가 올바르지 않습니다.");
+        } else if (response.status === 404) {
+          throw new Error("존재하지 않는 문의입니다.");
         } else {
-          throw new Error(`문의 등록에 실패했습니다. (${response.status})`);
+          throw new Error(
+            `문의 상세 조회에 실패했습니다. (${response.status})`
+          );
         }
       }
 
       const responseText = await response.text();
       console.log("🔍 원본 응답 텍스트:", responseText);
 
-      const apiResponse: ApiResponse<CreateQuestionResponse> =
+      const apiResponse: ApiResponse<MyQuestionDetailResponse> =
         JSON.parse(responseText);
       console.log("🔍 파싱된 API 응답 데이터:", apiResponse);
 
-      return apiResponse.data;
+      setQuestion(apiResponse.data);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
       setError(errorMessage);
-      console.error("문의 등록 실패:", err);
-      return null;
+      console.error("문의 상세 조회 실패:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchQuestionDetail();
+  }, [questionId]);
+
+  const refetch = () => {
+    fetchQuestionDetail();
+  };
+
   return {
-    createQuestion,
+    question,
     isLoading,
     error,
+    refetch,
     clearError: () => setError(null),
   };
 };

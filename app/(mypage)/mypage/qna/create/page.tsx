@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import QuestionForm from "@/components/qna/QuestionForm";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/common/Toast";
 
 export default function CreateQuestionPage() {
   const router = useRouter();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
+  const { showToast, ToastContainer } = useToast();
 
   const handleSuccess = () => {
     // 등록 성공 시 문의 목록 페이지로 이동
@@ -71,7 +73,14 @@ export default function CreateQuestionPage() {
       </div>
 
       {/* 문의 등록 폼 */}
-      <QuestionForm onSuccess={handleSuccess} onCancel={handleCancel} />
+      <QuestionForm
+        onSuccess={handleSuccess}
+        onCancel={handleCancel}
+        showToast={showToast}
+      />
+
+      {/* 토스트 컨테이너 */}
+      <ToastContainer />
     </div>
   );
 }

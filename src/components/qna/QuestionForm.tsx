@@ -10,11 +10,13 @@ import {
 interface QuestionFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  showToast?: (message: string, type?: "success" | "error" | "info") => void;
 }
 
 export default function QuestionForm({
   onSuccess,
   onCancel,
+  showToast,
 }: QuestionFormProps) {
   const [formData, setFormData] = useState<CreateQuestionRequest>({
     title: "",
@@ -46,19 +48,31 @@ export default function QuestionForm({
 
     // 유효성 검사
     if (!formData.title.trim()) {
-      alert("문의 제목을 입력해주세요.");
+      if (showToast) {
+        showToast("문의 제목을 입력해주세요.", "error");
+      } else {
+        alert("문의 제목을 입력해주세요.");
+      }
       return;
     }
 
     if (!formData.content.trim()) {
-      alert("문의 내용을 입력해주세요.");
+      if (showToast) {
+        showToast("문의 내용을 입력해주세요.", "error");
+      } else {
+        alert("문의 내용을 입력해주세요.");
+      }
       return;
     }
 
     const result = await createQuestion(formData);
 
     if (result) {
-      alert("문의가 성공적으로 등록되었습니다.");
+      if (showToast) {
+        showToast("문의가 성공적으로 등록되었습니다.", "success");
+      } else {
+        alert("문의가 성공적으로 등록되었습니다.");
+      }
       // 폼 초기화
       setFormData({
         title: "",

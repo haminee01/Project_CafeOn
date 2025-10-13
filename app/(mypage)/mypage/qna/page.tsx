@@ -27,12 +27,11 @@ const InquiryContent = ({
   onPageChange,
   keyword,
 }: InquiryContentProps) => {
-  // 현재 열려 있는 문의 항목의 ID를 저장합니다.
-  const [openItemId, setOpenItemId] = useState<number | null>(null);
+  const router = useRouter();
 
-  // 아코디언 토글 핸들러
-  const handleToggle = (itemId: number) => {
-    setOpenItemId((prevId) => (prevId === itemId ? null : itemId));
+  // 문의 상세 페이지로 이동
+  const handleQuestionClick = (questionId: number) => {
+    router.push(`/mypage/qna/${questionId}`);
   };
 
   // API 호출
@@ -102,14 +101,16 @@ const InquiryContent = ({
           {questions.length > 0 ? (
             questions.map((item) => (
               <li key={item.id} className="text-base text-gray-800">
-                {/* 제목 및 토글 영역 */}
+                {/* 문의 항목 클릭 영역 */}
                 <button
-                  onClick={() => handleToggle(item.id)}
+                  onClick={() => handleQuestionClick(item.id)}
                   className="w-full flex justify-between items-center py-4 px-0 text-left hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 flex-1">
                     {/* 문의 제목 */}
-                    <span className="font-semibold">{item.title}</span>
+                    <span className="font-semibold text-left flex-1">
+                      {item.title}
+                    </span>
 
                     {/* 상태 배지 */}
                     <span
@@ -126,40 +127,25 @@ const InquiryContent = ({
                     </span>
                   </div>
 
+                  {/* 작성일 정보 */}
+                  <div className="text-sm text-gray-500 ml-4">
+                    {new Date(item.createdAt).toLocaleDateString("ko-KR")}
+                  </div>
+
                   {/* 화살표 아이콘 */}
                   <svg
-                    className={`w-5 h-5 transition-transform duration-300 text-gray-400 ${
-                      openItemId === item.id ? "transform rotate-180" : ""
-                    }`}
+                    className="w-5 h-5 text-gray-400 ml-2"
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
                     <path
                       fillRule="evenodd"
-                      d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z"
+                      d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
                       clipRule="evenodd"
                     />
                   </svg>
                 </button>
-
-                {/* 내용 영역 (열렸을 때만 표시) */}
-                {openItemId === item.id && (
-                  <div className="bg-gray-50 p-4 border-t border-[#CDCDCD] text-gray-700">
-                    <div className="mb-3">
-                      <div className="text-sm text-gray-500 mb-1">
-                        작성자: {item.authorNickname}
-                      </div>
-                      <div className="text-sm text-gray-500 mb-2">
-                        작성일:{" "}
-                        {new Date(item.createdAt).toLocaleDateString("ko-KR")}
-                      </div>
-                    </div>
-                    <div className="whitespace-pre-wrap">
-                      {item.content || "문의 내용을 불러오는 중..."}
-                    </div>
-                  </div>
-                )}
               </li>
             ))
           ) : (
@@ -254,7 +240,7 @@ export default function InquiryHistoryPage() {
         <h1 className="text-2xl font-bold">나의 문의 내역</h1>
         <button
           onClick={handleRegisterClick}
-          className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+          className="bg-[#999999] text-white text-sm px-4 py-2 rounded-md hover:bg-[#C19B6C] transition-colors"
         >
           등록
         </button>
