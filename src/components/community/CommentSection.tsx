@@ -1,7 +1,7 @@
 // src/components/community/CommentSection.tsx
 "use client";
 
-import { Comment } from "@/types/Post";
+import { MyComment as Comment } from "@/types/Post";
 import { useState } from "react";
 import CommentItem from "./CommentItem";
 import { createCommentMutator, getComments } from "@/api/community";
@@ -29,8 +29,8 @@ export default function CommentSection({
     let total = 0;
     comments.forEach((comment) => {
       total += 1; // 댓글 자체
-      if (comment.replies && comment.replies.length > 0) {
-        total += comment.replies.length; // 대댓글들
+      if (comment.children && comment.children.length > 0) {
+        total += comment.children.length; // 대댓글들
       }
     });
     return total;
@@ -41,7 +41,10 @@ export default function CommentSection({
     try {
       const updatedComments = await getComments(postId);
       setComments(updatedComments);
-      onCommentsChange?.(updatedComments);
+      // 상태 업데이트 후 콜백 호출을 setTimeout으로 분리
+      setTimeout(() => {
+        onCommentsChange?.(updatedComments);
+      }, 0);
     } catch (error) {
       console.error("댓글 목록 새로고침 실패:", error);
     }
@@ -64,10 +67,10 @@ export default function CommentSection({
         const newComment: Comment = {
           id: response.data.commentId,
           content: response.data.content,
+          postTitle: "", // 댓글 작성 시에는 빈 문자열
           author: response.data.authorName,
-          created_at: response.data.createdAt,
+          createdAt: response.data.createdAt,
           likes: response.data.likeCount,
-          replies: [],
           likedByMe: response.data.likedByMe,
           parent_id: response.data.parentId,
           children: response.data.children || [],
@@ -75,7 +78,10 @@ export default function CommentSection({
 
         setComments((prev) => {
           const updatedComments = [...prev, newComment];
-          onCommentsChange?.(updatedComments);
+          // 상태 업데이트 후 콜백 호출을 useEffect로 분리
+          setTimeout(() => {
+            onCommentsChange?.(updatedComments);
+          }, 0);
           return updatedComments;
         });
       } else {

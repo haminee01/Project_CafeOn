@@ -1,7 +1,7 @@
 // src/components/community/CommentItem.tsx
 "use client";
 
-import { Comment } from "@/types/Post";
+import { MyComment as Comment } from "@/types/Post";
 import { useState, useRef, useEffect } from "react";
 import {
   toggleCommentLike,
@@ -243,7 +243,9 @@ export default function CommentItem({
               )}
             </span>
             <span className="text-sm text-gray-500">
-              {comment.created_at.substring(0, 16)}
+              {comment.createdAt
+                ? comment.createdAt.substring(0, 16)
+                : "날짜 없음"}
             </span>
           </div>
           <div className="flex space-x-2 text-sm text-gray-500">
@@ -376,9 +378,9 @@ export default function CommentItem({
         )}
 
         {/* 대댓글 목록 재귀적으로 렌더링 */}
-        {comment.replies && comment.replies.length > 0 && (
+        {comment.children && comment.children.length > 0 && (
           <div className="mt-2 space-y-2">
-            {comment.replies.map((reply) => (
+            {comment.children.map((reply: Comment) => (
               <CommentItem
                 key={reply.id}
                 comment={reply}
