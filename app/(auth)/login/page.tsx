@@ -6,12 +6,14 @@ import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
 import Header from "@/components/common/Header";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const router = useRouter();
+  const { showToast } = useToastContext();
 
   // ESC 키 이벤트 처리
   useEscapeKey(() => {
@@ -52,11 +54,11 @@ export default function LoginPage() {
       } else {
         const errorData = await response.json();
         console.error("로그인 실패:", errorData);
-        alert("로그인에 실패했습니다.");
+        showToast("로그인에 실패했습니다.", "error");
       }
     } catch (error) {
       console.error("로그인 오류:", error);
-      alert("로그인 중 오류가 발생했습니다.");
+      showToast("로그인 중 오류가 발생했습니다.", "error");
     }
   };
 

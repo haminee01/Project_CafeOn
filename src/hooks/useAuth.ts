@@ -12,15 +12,6 @@ const decodeToken = (token: string): Partial<User> | null => {
     const payload = token.split(".")[1];
     const decoded = JSON.parse(atob(payload));
 
-    console.log("JWT 토큰 디코딩 결과:", {
-      sub: decoded.sub,
-      userId: decoded.userId,
-      role: decoded.role,
-      nickname: decoded.nickname,
-      username: decoded.username,
-      email: decoded.email,
-    });
-
     // JWT에 nickname이 있으면 사용, 없으면 기본값 사용
     const userId = decoded.sub;
     const username = decoded.nickname || decoded.username || "사용자";

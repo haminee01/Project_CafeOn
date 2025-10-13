@@ -127,7 +127,7 @@ export default function CommunityMainPage() {
     );
   }
 
-  if (error || !data) {
+  if (error) {
     return (
       <>
         <Header />
@@ -147,6 +147,9 @@ export default function CommunityMainPage() {
       </>
     );
   }
+
+  // 데이터가 없을 때 기본값 설정
+  const displayData = data || { posts: [], pages: 0 };
 
   return (
     <>
@@ -200,9 +203,9 @@ export default function CommunityMainPage() {
         </div>
 
         <CommunityList
-          posts={data.posts}
+          posts={displayData.posts}
           initialPage={currentPage}
-          totalPages={data.pages}
+          totalPages={displayData.pages}
           onPageChange={handlePageChange}
         />
       </main>

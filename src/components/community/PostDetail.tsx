@@ -8,6 +8,7 @@ import { togglePostLike, deletePostMutator } from "@/api/community";
 import { useRouter } from "next/navigation";
 import ReportModal from "@/components/modals/ReportModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface PostDetailProps {
   post: PostDetailType;
@@ -27,6 +28,7 @@ export default function PostDetail({ post }: PostDetailProps) {
   const typeInfo = PostTypeMap[post.type] || PostTypeMap.GENERAL;
   const router = useRouter();
   const { user, isLoggedIn, currentUserId } = useAuth();
+  const { showToast } = useToastContext();
 
   // 좋아요 상태 관리를 위한 state
   const [currentLikes, setCurrentLikes] = useState(post.likes || 0);
@@ -37,16 +39,6 @@ export default function PostDetail({ post }: PostDetailProps) {
   // 작성자 여부 확인 (JWT 토큰의 sub 필드로 사용자 ID 비교)
   // 백엔드에서 authorId를 제공하지 않으므로 임시로 작성자명으로 비교
   const isAuthor = isLoggedIn && user?.username === post.author;
-
-  // 디버깅용 로그
-  console.log("PostDetail Debug:", {
-    isLoggedIn,
-    currentUserId,
-    postAuthorId: post.author_id,
-    isAuthor,
-    postAuthor: post.author,
-    currentUsername: user?.username,
-  });
 
   // 실제 좋아요/취소 핸들러
   const handleLike = async () => {
@@ -71,7 +63,7 @@ export default function PostDetail({ post }: PostDetailProps) {
       }
     } catch (error) {
       console.error("좋아요 처리 실패:", error);
-      alert("좋아요 처리에 실패했습니다.");
+      showToast("좋아요 처리에 실패했습니다.", "error");
     } finally {
       setIsLikeLoading(false);
     }
@@ -83,11 +75,11 @@ export default function PostDetail({ post }: PostDetailProps) {
 
     try {
       await deletePostMutator(post.id);
-      alert("게시글이 삭제되었습니다.");
+      showToast("게시글이 삭제되었습니다.", "success");
       router.push("/community");
     } catch (error) {
       console.error("게시글 삭제 실패:", error);
-      alert("게시글 삭제에 실패했습니다.");
+      showToast("게시글 삭제에 실패했습니다.", "error");
     }
   };
 

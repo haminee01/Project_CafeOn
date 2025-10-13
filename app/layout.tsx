@@ -2,6 +2,7 @@ import Script from "next/script";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import GoogleMapsLoader from "@/components/map/GoogleMapsLoader";
+import ToastProvider from "@/components/common/ToastProvider";
 import "./globals.css";
 
 export default function RootLayout({
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="min-h-screen" suppressHydrationWarning={true}>
-        <main>{children}</main>
+        <ToastProvider>
+          <main>{children}</main>
+        </ToastProvider>
 
         {/* Kakao SDK for sharing */}
         <Script

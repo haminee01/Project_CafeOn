@@ -12,6 +12,7 @@ import {
 } from "@/api/community";
 import ReportModal from "@/components/modals/ReportModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface TemporaryAlertProps {
   message: string;
@@ -37,6 +38,7 @@ export default function CommentItem({
   onCommentUpdated,
 }: CommentItemProps) {
   const { user, isLoggedIn } = useAuth();
+  const { showToast } = useToastContext();
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [isLiked, setIsLiked] = useState(comment.likedByMe || false);
   const [currentLikes, setCurrentLikes] = useState(comment.likes || 0);
@@ -118,7 +120,7 @@ export default function CommentItem({
       setIsEditing(false);
     } catch (error) {
       console.error("댓글 수정 실패:", error);
-      alert("댓글 수정에 실패했습니다.");
+      showToast("댓글 수정에 실패했습니다.", "error");
     }
   };
 
@@ -142,12 +144,12 @@ export default function CommentItem({
           } catch (error) {
             console.error("댓글 삭제 실패:", error);
             setShowAlert(false);
-            alert("댓글 삭제에 실패했습니다.");
+            showToast("댓글 삭제에 실패했습니다.", "error");
           }
         }, 2000);
       } catch (error) {
         console.error("댓글 삭제 실패:", error);
-        alert("댓글 삭제에 실패했습니다.");
+        showToast("댓글 삭제에 실패했습니다.", "error");
       }
     }
   };
@@ -185,7 +187,7 @@ export default function CommentItem({
       }
     } catch (error) {
       console.error("답글 작성 실패:", error);
-      alert("답글 작성에 실패했습니다.");
+      showToast("답글 작성에 실패했습니다.", "error");
     }
   };
 

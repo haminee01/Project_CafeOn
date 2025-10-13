@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createReport } from "@/api/community";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface TemporaryAlertProps {
   message: string;
@@ -40,10 +41,11 @@ export default function ReportModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const { showToast } = useToastContext();
 
   const handleSubmit = async () => {
     if (!selectedReason) {
-      alert("신고 사유를 선택해주세요.");
+      showToast("신고 사유를 선택해주세요.", "error");
       return;
     }
 

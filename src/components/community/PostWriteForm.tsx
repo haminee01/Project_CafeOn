@@ -4,6 +4,7 @@ import { PostType } from "@/types/Post";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPostMutator, updatePostMutator } from "@/api/community";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 const CATEGORY_OPTIONS: { value: PostType; label: string }[] = [
   { value: "GENERAL", label: "일반" },
@@ -27,6 +28,7 @@ export default function PostWriteForm({
   postId: propPostId,
 }: PostWriteFormProps) {
   const router = useRouter();
+  const { showToast } = useToastContext();
 
   // 폼 상태 관리
   const [title, setTitle] = useState(initialData?.title || "");
@@ -70,6 +72,8 @@ export default function PostWriteForm({
         response = await updatePostMutator(apiEndpoint, { arg: postData });
         console.log("게시글 수정 성공:", response);
 
+        showToast("게시글이 수정되었습니다.", "success");
+
         // 수정 후 상세 페이지로 이동
         router.push(`/community/${targetPostId}`);
       } else {
@@ -78,14 +82,17 @@ export default function PostWriteForm({
         response = await createPostMutator(apiEndpoint, { arg: postData });
         console.log("게시글 작성 성공:", response);
 
+        showToast("게시글이 작성되었습니다.", "success");
+
         // 작성 후 상세 페이지로 이동
         router.push(`/community/${response.id}`);
       }
     } catch (error) {
       console.error("게시글 제출 오류:", error);
-      setError(
-        error instanceof Error ? error.message : "게시글 작성에 실패했습니다."
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : "게시글 작성에 실패했습니다.";
+      setError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setIsSubmitting(false);
     }

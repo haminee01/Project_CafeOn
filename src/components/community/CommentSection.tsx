@@ -5,6 +5,7 @@ import { Comment } from "@/types/Post";
 import { useState } from "react";
 import CommentItem from "./CommentItem";
 import { createCommentMutator, getComments } from "@/api/community";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface CommentSectionProps {
   postId: number;
@@ -21,6 +22,7 @@ export default function CommentSection({
   const [comments, setComments] = useState(initialComments);
   const [newCommentContent, setNewCommentContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToastContext();
 
   // 댓글과 대댓글을 모두 포함한 총 댓글 수 계산
   const calculateTotalComments = (comments: Comment[]): number => {
@@ -84,7 +86,7 @@ export default function CommentSection({
       setNewCommentContent("");
     } catch (error) {
       console.error("댓글 작성 실패:", error);
-      alert("댓글 작성에 실패했습니다.");
+      showToast("댓글 작성에 실패했습니다.", "error");
     } finally {
       setIsSubmitting(false);
     }
