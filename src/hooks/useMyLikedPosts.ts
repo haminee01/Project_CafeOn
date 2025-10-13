@@ -3,7 +3,7 @@ import {
   MyLikedPost,
   MyLikedPostsResponse,
   MyLikedPostsParams,
-} from "@/types/post";
+} from "@/types/Post";
 
 export const useMyLikedPosts = (params: MyLikedPostsParams = {}) => {
   const [likedPosts, setLikedPosts] = useState<MyLikedPost[]>([]);

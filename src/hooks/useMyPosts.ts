@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MyPost, MyPostsResponse, MyPostsParams } from "@/types/post";
+import { MyPost, MyPostsResponse, MyPostsParams } from "@/types/Post";
 
 export const useMyPosts = (params: MyPostsParams = {}) => {
   const [posts, setPosts] = useState<MyPost[]>([]);

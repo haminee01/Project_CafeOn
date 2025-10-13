@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MyComment, MyCommentsResponse, MyCommentsParams } from "@/types/post";
+import { MyComment, MyCommentsResponse, MyCommentsParams } from "@/types/Post";
 
 export const useMyComments = (params: MyCommentsParams = {}) => {
   const [comments, setComments] = useState<MyComment[]>([]);

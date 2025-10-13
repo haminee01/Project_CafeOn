@@ -16,6 +16,18 @@ const historyTabs = [
   { key: "replies", name: "내가 좋아요 한 댓글" },
 ];
 
+// 글 타입 옵션 정의
+const POST_TYPE_OPTIONS: {
+  value: string;
+  label: string;
+  color: string;
+}[] = [
+  { value: "", label: "전체", color: "bg-gray-500" },
+  { value: "GENERAL", label: "일반", color: "bg-[#6E4213]" },
+  { value: "QUESTION", label: "질문", color: "bg-[#C19B6C]" },
+  { value: "INFO", label: "정보", color: "bg-yellow-500" },
+];
+
 // Mock 데이터 생성 (총 50개의 항목) - 다른 탭용
 const createMockItems = (prefix: string) => {
   return Array.from({ length: 50 }, (_, i) => ({
@@ -120,9 +132,20 @@ const HistoryContent = ({
                     <h3 className="text-lg font-semibold text-gray-900 leading-tight">
                       {post.title}
                     </h3>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                      {post.type}
-                    </span>
+                    {(() => {
+                      const typeOption = POST_TYPE_OPTIONS.find(
+                        (option) => option.value === post.type
+                      );
+                      return (
+                        <span
+                          className={`text-xs text-white px-2 py-1 rounded-full ${
+                            typeOption?.color || "bg-gray-500"
+                          }`}
+                        >
+                          {typeOption?.label || post.type}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
@@ -196,13 +219,12 @@ const HistoryContent = ({
           {comments.length > 0 ? (
             comments.map((comment) => (
               <div
-                key={comment.id}
+                key={comment.commentId}
                 className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
               >
                 <div className="space-y-3">
-                  <div className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md">
-                    <span className="font-medium">원본 글:</span>{" "}
-                    {comment.postTitle}
+                  <div className="text-sm text-gray-600 bg-gray-50 border border-[#CDCDCD] rounded-lg px-3 py-2 rounded-md">
+                    <span className="font-medium">글 ID:</span> {comment.postId}
                   </div>
 
                   <div className="text-gray-900 leading-relaxed">
@@ -212,7 +234,7 @@ const HistoryContent = ({
                   <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-3">
                     <div className="flex items-center gap-1">
                       <span className="font-medium">좋아요:</span>
-                      <span>{comment.likes}</span>
+                      <span>{comment.likeCount}</span>
                     </div>
                     <div>
                       작성일: {new Date(comment.createdAt).toLocaleDateString()}
@@ -353,14 +375,14 @@ const HistoryContent = ({
           {likedComments.length > 0 ? (
             likedComments.map((comment) => (
               <div
-                key={comment.id}
+                key={comment.commentId}
                 className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
-                    <div className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md flex-1">
-                      <span className="font-medium">원본 글:</span>{" "}
-                      {comment.postTitle}
+                    <div className="text-sm text-gray-600 bg-gray-50 border border-[#CDCDCD] rounded-lg px-3 py-2 rounded-md flex-1">
+                      <span className="font-medium">글 ID:</span>{" "}
+                      {comment.postId}
                     </div>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">
                       좋아요한 댓글
@@ -374,7 +396,7 @@ const HistoryContent = ({
                   <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-3">
                     <div className="flex items-center gap-1">
                       <span className="font-medium">좋아요:</span>
-                      <span>{comment.likes}</span>
+                      <span>{comment.likeCount}</span>
                     </div>
                     <div>
                       작성일: {new Date(comment.createdAt).toLocaleDateString()}
