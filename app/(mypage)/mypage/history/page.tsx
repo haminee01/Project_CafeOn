@@ -2,16 +2,21 @@
 
 import { useState } from "react";
 import Pagination from "@/components/common/Pagination";
+import { useMyPosts } from "@/hooks/useMyPosts";
+import { useMyComments } from "@/hooks/useMyComments";
+import { useMyLikedPosts } from "@/hooks/useMyLikedPosts";
+import { useMyLikedComments } from "@/hooks/useMyLikedComments";
+import { useAuth } from "@/hooks/useAuth";
 
 // 탭 데이터 정의
 const historyTabs = [
   { key: "posts", name: "내가 남긴 글" },
   { key: "comments", name: "내가 남긴 댓글" },
-  { key: "replies", name: "내가 남긴 대댓글" },
-  { key: "likes", name: "내가 남긴 좋아요" },
+  { key: "likes", name: "내가 좋아요 한 글" },
+  { key: "replies", name: "내가 좋아요 한 댓글" },
 ];
 
-// Mock 데이터 생성 (총 50개의 항목)
+// Mock 데이터 생성 (총 50개의 항목) - 다른 탭용
 const createMockItems = (prefix: string) => {
   return Array.from({ length: 50 }, (_, i) => ({
     id: i + 1,
@@ -20,12 +25,7 @@ const createMockItems = (prefix: string) => {
   }));
 };
 
-const mockData: Record<string, ReturnType<typeof createMockItems>> = {
-  posts: createMockItems("글"),
-  comments: createMockItems("댓글"),
-  replies: createMockItems("대댓글"),
-  likes: createMockItems("좋아요"),
-};
+const mockData: Record<string, ReturnType<typeof createMockItems>> = {};
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -41,15 +41,370 @@ const HistoryContent = ({
   currentPage,
   onPageChange,
 }: HistoryContentProps) => {
-  // 1. 현재 활성화된 탭의 전체 데이터 가져오기
-  const totalItems = mockData[activeTab] || [];
-  const totalPages = Math.ceil(totalItems.length / ITEMS_PER_PAGE);
+  // 내가 쓴 글 탭인 경우 API 데이터 사용
+  const { posts, totalPages, isLoading, error } = useMyPosts({
+    page: currentPage - 1, // API는 0부터 시작하므로 -1
+    size: ITEMS_PER_PAGE,
+  });
 
-  // 2. 현재 페이지에 표시할 데이터 계산 (슬라이싱)
+  // 내가 쓴 댓글 탭인 경우 API 데이터 사용
+  const {
+    comments,
+    totalPages: commentTotalPages,
+    isLoading: commentIsLoading,
+    error: commentError,
+  } = useMyComments({
+    page: currentPage - 1, // API는 0부터 시작하므로 -1
+    size: ITEMS_PER_PAGE,
+  });
+
+  // 내가 좋아요한 글 탭인 경우 API 데이터 사용
+  const {
+    likedPosts,
+    totalPages: likedPostsTotalPages,
+    isLoading: likedPostsIsLoading,
+    error: likedPostsError,
+  } = useMyLikedPosts({
+    page: currentPage - 1, // API는 0부터 시작하므로 -1
+    size: ITEMS_PER_PAGE,
+  });
+
+  // 내가 좋아요한 댓글 탭인 경우 API 데이터 사용
+  const {
+    likedComments,
+    totalPages: likedCommentsTotalPages,
+    isLoading: likedCommentsIsLoading,
+    error: likedCommentsError,
+  } = useMyLikedComments({
+    page: currentPage - 1, // API는 0부터 시작하므로 -1
+    size: ITEMS_PER_PAGE,
+  });
+
+  // 다른 탭인 경우 Mock 데이터 사용
+  const totalItems = mockData[activeTab] || [];
+  const mockTotalPages = Math.ceil(totalItems.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentItems = totalItems.slice(startIndex, endIndex);
 
+  // 내가 쓴 글 탭 렌더링
+  if (activeTab === "posts") {
+    if (isLoading) {
+      return (
+        <div className="py-8 text-center text-gray-500">
+          내가 쓴 글을 불러오는 중...
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="py-8 text-center text-red-500">
+          오류가 발생했습니다: {error}
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {/* 내가 쓴 글 리스트 */}
+        <div className="space-y-4">
+          {posts.length > 0 ? (
+            posts.map((post) => (
+              <div
+                key={post.id}
+                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 leading-tight">
+                      {post.title}
+                    </h3>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      {post.type}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">작성자:</span>
+                      <span>{post.authorNickname}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">조회:</span>
+                      <span>{post.viewCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">좋아요:</span>
+                      <span>{post.likeCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">댓글:</span>
+                      <span>{post.commentCount}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-500 border-t border-gray-100 pt-3">
+                    작성일: {new Date(post.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-gray-500 text-lg">
+                내가 쓴 글이 없습니다.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 페이지네이션 */}
+        {totalPages > 1 && (
+          <Pagination
+            totalPages={totalPages}
+            currentPage={currentPage}
+            onPageChange={onPageChange}
+          />
+        )}
+      </>
+    );
+  }
+
+  // 내가 쓴 댓글 탭 렌더링
+  if (activeTab === "comments") {
+    if (commentIsLoading) {
+      return (
+        <div className="py-8 text-center text-gray-500">
+          내가 쓴 댓글을 불러오는 중...
+        </div>
+      );
+    }
+
+    if (commentError) {
+      return (
+        <div className="py-8 text-center text-red-500">
+          오류가 발생했습니다: {commentError}
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {/* 내가 쓴 댓글 리스트 */}
+        <div className="space-y-4">
+          {comments.length > 0 ? (
+            comments.map((comment) => (
+              <div
+                key={comment.id}
+                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md">
+                    <span className="font-medium">원본 글:</span>{" "}
+                    {comment.postTitle}
+                  </div>
+
+                  <div className="text-gray-900 leading-relaxed">
+                    {comment.content}
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-3">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">좋아요:</span>
+                      <span>{comment.likes}</span>
+                    </div>
+                    <div>
+                      작성일: {new Date(comment.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-gray-500 text-lg">
+                내가 쓴 댓글이 없습니다.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 페이지네이션 */}
+        {commentTotalPages > 1 && (
+          <Pagination
+            totalPages={commentTotalPages}
+            currentPage={currentPage}
+            onPageChange={onPageChange}
+          />
+        )}
+      </>
+    );
+  }
+
+  // 내가 좋아요한 글 탭 렌더링
+  if (activeTab === "likes") {
+    if (likedPostsIsLoading) {
+      return (
+        <div className="py-8 text-center text-gray-500">
+          내가 좋아요한 글을 불러오는 중...
+        </div>
+      );
+    }
+
+    if (likedPostsError) {
+      return (
+        <div className="py-8 text-center text-red-500">
+          오류가 발생했습니다: {likedPostsError}
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {/* 내가 좋아요한 글 리스트 */}
+        <div className="space-y-4">
+          {likedPosts.length > 0 ? (
+            likedPosts.map((post) => (
+              <div
+                key={post.id}
+                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 leading-tight">
+                      {post.title}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        좋아요한 글
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">작성자:</span>
+                      <span>{post.author}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">조회:</span>
+                      <span>{post.views}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">좋아요:</span>
+                      <span>{post.likes}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">댓글:</span>
+                      <span>{post.commentCount}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-500 border-t border-gray-100 pt-3">
+                    작성일: {new Date(post.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-gray-500 text-lg">
+                내가 좋아요한 글이 없습니다.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 페이지네이션 */}
+        {likedPostsTotalPages > 1 && (
+          <Pagination
+            totalPages={likedPostsTotalPages}
+            currentPage={currentPage}
+            onPageChange={onPageChange}
+          />
+        )}
+      </>
+    );
+  }
+
+  // 내가 좋아요한 댓글 탭 렌더링
+  if (activeTab === "replies") {
+    if (likedCommentsIsLoading) {
+      return (
+        <div className="py-8 text-center text-gray-500">
+          내가 좋아요한 댓글을 불러오는 중...
+        </div>
+      );
+    }
+
+    if (likedCommentsError) {
+      return (
+        <div className="py-8 text-center text-red-500">
+          오류가 발생했습니다: {likedCommentsError}
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {/* 내가 좋아요한 댓글 리스트 */}
+        <div className="space-y-4">
+          {likedComments.length > 0 ? (
+            likedComments.map((comment) => (
+              <div
+                key={comment.id}
+                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md flex-1">
+                      <span className="font-medium">원본 글:</span>{" "}
+                      {comment.postTitle}
+                    </div>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">
+                      좋아요한 댓글
+                    </span>
+                  </div>
+
+                  <div className="text-gray-900 leading-relaxed">
+                    {comment.content}
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-3">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">좋아요:</span>
+                      <span>{comment.likes}</span>
+                    </div>
+                    <div>
+                      작성일: {new Date(comment.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-gray-500 text-lg">
+                내가 좋아요한 댓글이 없습니다.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 페이지네이션 */}
+        {likedCommentsTotalPages > 1 && (
+          <Pagination
+            totalPages={likedCommentsTotalPages}
+            currentPage={currentPage}
+            onPageChange={onPageChange}
+          />
+        )}
+      </>
+    );
+  }
+
+  // 다른 탭 렌더링 (Mock 데이터 사용)
   return (
     <>
       {/* 탭 내용 표시 */}
@@ -72,9 +427,9 @@ const HistoryContent = ({
       </div>
 
       {/* 페이지네이션 컴포넌트 통합 */}
-      {totalPages > 1 && (
+      {mockTotalPages > 1 && (
         <Pagination
-          totalPages={totalPages}
+          totalPages={mockTotalPages}
           currentPage={currentPage}
           onPageChange={onPageChange}
         />
@@ -86,6 +441,7 @@ const HistoryContent = ({
 export default function HistoryPage() {
   const [activeTab, setActiveTab] = useState("posts");
   const [currentPage, setCurrentPage] = useState(1);
+  const { user } = useAuth();
 
   // 탭 변경 핸들러
   const handleTabChange = (key: string) => {
@@ -103,7 +459,9 @@ export default function HistoryPage() {
   return (
     <div className="p-8 bg-white min-h-full">
       {/* 닉네임님의 히스토리 헤더 */}
-      <h1 className="text-2xl font-bold mb-6">닉네임님의 히스토리</h1>
+      <h1 className="text-2xl font-bold mb-6">
+        {user?.username || "사용자"}님의 히스토리
+      </h1>
 
       {/* 탭 메뉴 */}
       <div className="border-b border-gray-300 mb-6">
