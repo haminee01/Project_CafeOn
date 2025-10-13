@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useCreateQuestion } from "@/hooks/useQnA";
 import { QuestionVisibility } from "@/types/qna";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/common/Toast";
 
 export default function CreateQuestionPage() {
   const router = useRouter();
   const { createQuestion, isLoading, error } = useCreateQuestion();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
+  const { showToast, ToastContainer } = useToast();
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -63,8 +65,10 @@ export default function CreateQuestionPage() {
     });
 
     if (result) {
-      alert("문의가 등록되었습니다.");
-      router.push(`/qna/${result.id}`);
+      showToast("문의가 등록되었습니다.", "success");
+      setTimeout(() => {
+        router.push(`/qna/${result.id}`);
+      }, 1000); // Toast가 표시된 후 페이지 이동
     }
   };
 
@@ -209,6 +213,7 @@ export default function CreateQuestionPage() {
           </div>
         </form>
       </div>
+      <ToastContainer />
     </div>
   );
 }
