@@ -202,11 +202,6 @@ export default function InquiryHistoryPage() {
     setCurrentPage(1);
   };
 
-  const handleRegisterClick = () => {
-    // 문의 등록 페이지로 이동
-    router.push("/mypage/qna/create");
-  };
-
   // 인증 로딩 중
   if (authLoading) {
     return (
@@ -235,15 +230,9 @@ export default function InquiryHistoryPage() {
 
   return (
     <div className="p-8 bg-white min-h-full">
-      {/* 헤더 영역: "나의 문의 내역" (왼쪽) 과 "등록" 버튼 (오른쪽) 배치 */}
-      <header className="flex justify-between items-center mb-6">
+      {/* 헤더 영역 */}
+      <header className="mb-6">
         <h1 className="text-2xl font-bold">나의 문의 내역</h1>
-        <button
-          onClick={handleRegisterClick}
-          className="bg-[#999999] text-white text-sm px-4 py-2 rounded-md hover:bg-[#C19B6C] transition-colors"
-        >
-          등록
-        </button>
       </header>
 
       {/* 검색 영역 */}
