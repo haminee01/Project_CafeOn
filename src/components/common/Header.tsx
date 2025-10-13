@@ -1,30 +1,23 @@
-import Link from 'next/link';
-import { IoNotificationsOutline } from 'react-icons/io5';
+import Link from "next/link";
+import { IoNotificationsOutline } from "react-icons/io5";
 
 const Header = () => {
   return (
     <header>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
         <div className="flex justify-between items-center h-16">
-          
           <div className="flex items-center space-x-4">
-            <Link 
-              href="/notification" 
+            <Link
+              href="/notification"
               className="text-gray-800 font-medium text-lg"
             >
               <IoNotificationsOutline className="w-6 h-6 text-gray-600" />
             </Link>
-            <Link 
-              href="/faq" 
-              className="text-gray-800 font-medium text-lg"
-            >
-              FAQ
+            <Link href="/qna" className="text-gray-800 font-medium text-lg">
+              QnA
             </Link>
-            <Link 
-              href="/" 
-              className="text-gray-800 font-medium text-lg"
-            >
-               ToCafe
+            <Link href="/" className="text-gray-800 font-medium text-lg">
+              ToCafe
             </Link>
           </div>
 
@@ -37,20 +30,13 @@ const Header = () => {
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link 
-              href="/mypage" 
-              className="text-gray-800 font-medium text-lg"
-            >
+            <Link href="/mypage" className="text-gray-800 font-medium text-lg">
               마이페이지
             </Link>
-            <Link 
-              href="/login" 
-              className="text-gray-800 font-medium text-lg"
-            >
+            <Link href="/login" className="text-gray-800 font-medium text-lg">
               로그인
             </Link>
           </div>
-
         </div>
       </div>
     </header>
