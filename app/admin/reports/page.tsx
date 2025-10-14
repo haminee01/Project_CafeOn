@@ -148,8 +148,6 @@ export default function AdminReportsPage() {
 
   const processReport = () => {
     // 실제로는 API 호출로 신고 처리
-    const action = deleteContent ? "삭제 처리" : "처리";
-    alert(`신고 처리가 완료되었습니다. (${action})`);
     setShowProcessModal(false);
     setShowDeleteConfirmModal(false);
     setShowDetailModal(false);

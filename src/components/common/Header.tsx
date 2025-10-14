@@ -27,7 +27,7 @@ const Header = () => {
           </div>
 
           <div className="flex-shrink-0">
-            <Link href="/">
+            <Link href="/" className="block">
               <h1 className="text-4xl font-bold text-primary cursor-pointer">
                 CafeOn.
               </h1>

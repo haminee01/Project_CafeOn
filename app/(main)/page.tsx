@@ -27,7 +27,7 @@ const searchPlaceholders = [
 export default function HomePage() {
 
   return (
-    <div className="min-h-screen px-20">
+    <div className="min-h-screen px-4 md:px-8 lg:px-12 xl:px-20">
       <Header />
       <SearchBar 
         placeholders={searchPlaceholders}

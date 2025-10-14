@@ -41,19 +41,31 @@ export default function LoginPage() {
       // 로그인 API 호출
       const response = await loginAPI({ email, password });
       console.log("로그인 성공:", response);
+      console.log("사용자 역할:", response.data?.role);
 
       if (response.data && response.data.token) {
         const { token, refreshToken } = response.data;
+        // 임시로 이메일 기반으로 role 판단
+        const userRole = email === "reum01060106@gmail.com" ? "ADMIN" : (response.data.role || "USER");
+
+        console.log("최종 사용자 역할:", userRole);
 
         // AuthContext에 로그인 정보 저장
         authLogin(token, refreshToken, {
           userId: response.data.userId || "",
           email: email,
           nickname: response.data.nickname || email,
+          role: userRole,
         });
 
-        // 홈으로 리다이렉트
-        router.push("/");
+        // 사용자 역할에 따라 리다이렉트
+        if (userRole === "ADMIN") {
+          console.log("ADMIN으로 리다이렉트");
+          router.push("/admin");
+        } else {
+          console.log("일반 사용자로 리다이렉트");
+          router.push("/");
+        }
       }
     } catch (err: any) {
       console.error("로그인 실패:", err);

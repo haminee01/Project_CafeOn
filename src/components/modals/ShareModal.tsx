@@ -49,7 +49,6 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("링크 복사 실패:", err);
-      alert("링크 복사에 실패했습니다.");
     }
   };
 
@@ -61,9 +60,6 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
       case "instagram":
         // Instagram은 직접 공유 API가 제한적이므로 클립보드에 복사
         navigator.clipboard.writeText(`${text}\n${url}`);
-        alert(
-          "링크가 클립보드에 복사되었습니다. Instagram에 붙여넣기 해주세요."
-        );
         break;
       case "kakao":
         // Kakao Talk 공유
@@ -79,17 +75,11 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
                 console.log("카카오 SDK 재초기화 완료");
               } catch (error) {
                 console.error("카카오 SDK 초기화 실패:", error);
-                alert(
-                  "카카오톡 공유 초기화에 실패했습니다. 링크가 클립보드에 복사됩니다."
-                );
                 navigator.clipboard.writeText(`${text}\n${url}`);
                 return;
               }
             } else {
               console.error("카카오 앱 키가 설정되지 않았습니다.");
-              alert(
-                "카카오톡 공유를 위해 앱 키를 설정해주세요. 링크가 클립보드에 복사되었습니다."
-              );
               navigator.clipboard.writeText(`${text}\n${url}`);
               return;
             }
@@ -121,18 +111,12 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
             console.log("카카오톡 공유 성공");
           } catch (error) {
             console.error("카카오톡 공유 실패:", error);
-            alert(
-              "카카오톡 공유에 실패했습니다. 링크가 클립보드에 복사됩니다."
-            );
             navigator.clipboard.writeText(`${text}\n${url}`);
           }
         } else {
           // Kakao SDK가 로드되지 않았으면 클립보드에 복사
           console.warn("Kakao SDK가 로드되지 않았습니다.");
           navigator.clipboard.writeText(`${text}\n${url}`);
-          alert(
-            "카카오톡 SDK가 로드되지 않았습니다. 링크가 클립보드에 복사되었습니다."
-          );
         }
         break;
       case "naver":

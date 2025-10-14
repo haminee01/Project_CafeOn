@@ -40,7 +40,7 @@ export default function AdminInquiriesPage() {
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  const [useMockData, setUseMockData] = useState(true);
+  const [useMockData, setUseMockData] = useState(false); // 기본값 false로 변경
   const itemsPerPage = 10;
 
   // Mock 데이터 (API 연동 전까지 사용)
@@ -86,7 +86,7 @@ export default function AdminInquiriesPage() {
     // 토큰이 있는 경우 API 호출 시도
     const token = localStorage.getItem("accessToken");
     
-    if (token && !useMockData) {
+    if (token) {
       try {
         const response = await getAdminInquiries({
           page: currentPage - 1,
@@ -96,12 +96,17 @@ export default function AdminInquiriesPage() {
         
         setInquiries(response.content || []);
         setTotalPages(response.totalPages || 1);
+        setUseMockData(false); // API 성공 시 Mock 모드 해제
         setLoading(false);
         return;
       } catch (error: any) {
         console.error("API 호출 실패, Mock 데이터 사용:", error);
+        setUseMockData(true); // API 실패 시 Mock 모드 활성화
         // API 실패 시 Mock 데이터로 폴백
       }
+    } else {
+      // 토큰이 없으면 Mock 모드
+      setUseMockData(true);
     }
     
     // Mock 데이터 사용

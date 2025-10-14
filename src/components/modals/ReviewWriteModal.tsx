@@ -24,11 +24,9 @@ export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWr
     if (isEditMode) {
       console.log('리뷰 수정:', reviewContent);
       // 실제 구현에서는 리뷰 수정 로직
-      alert('리뷰가 수정되었습니다.');
     } else {
       console.log('리뷰 작성:', reviewContent);
       // 실제 구현에서는 리뷰 작성 로직
-      alert('리뷰가 작성되었습니다.');
     }
     onClose();
   };
@@ -36,7 +34,6 @@ export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWr
   const handleDelete = () => {
     console.log('리뷰 삭제');
     // 실제 구현에서는 리뷰 삭제 로직
-    alert('리뷰가 삭제되었습니다.');
     onClose();
   };
 
