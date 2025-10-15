@@ -16,7 +16,10 @@ const Header = () => {
             <Link href="/qna" className="text-gray-800 font-medium text-lg">
               QnA
             </Link>
-            <Link href="/" className="text-gray-800 font-medium text-lg">
+            <Link
+              href="/community"
+              className="text-gray-800 font-medium text-lg"
+            >
               ToCafe
             </Link>
           </div>

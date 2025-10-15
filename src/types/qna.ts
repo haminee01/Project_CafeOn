@@ -29,10 +29,11 @@ export interface QuestionListItem {
 // 답변 정보
 export interface Answer {
   answerId: number;
-  adminNickname: string;
+  questionId: number;
+  adminNickname: string | null;
   content: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt: string | null;
 }
 
 // 문의 상세 정보

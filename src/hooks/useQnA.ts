@@ -274,7 +274,7 @@ export const useAnswerList = (questionId: number) => {
     try {
       const token = getAuthToken();
       const response = await fetch(
-        `${API_BASE_URL}/api/admin/inquiries/${questionId}/answers`,
+        `${API_BASE_URL}/api/qna/questions/${questionId}/answers`,
         {
           method: "GET",
           headers: {
@@ -286,11 +286,18 @@ export const useAnswerList = (questionId: number) => {
         }
       );
 
+      console.log("답변 API 응답 상태:", response.status);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error("답변 API 에러 응답:", errorText);
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
       }
 
       const apiResponse: ApiResponse<Answer[]> = await response.json();
+      console.log("답변 API 성공 응답:", apiResponse);
       setAnswers(apiResponse.data);
     } catch (err) {
       setError(

@@ -203,21 +203,22 @@ export default function QuestionDetailPage({
                     {/* 답변 메타 정보 */}
                     <div className="flex items-center justify-between text-sm text-gray-500 mb-4 pb-3 border-b border-gray-200">
                       <div className="flex items-center space-x-4">
-                        <span>관리자: {answer.adminNickname}</span>
+                        <span>관리자: {answer.adminNickname || "관리자"}</span>
                         <span>
                           작성일:{" "}
                           {new Date(answer.createdAt).toLocaleDateString(
                             "ko-KR"
                           )}
                         </span>
-                        {answer.updatedAt !== answer.createdAt && (
-                          <span>
-                            수정일:{" "}
-                            {new Date(answer.updatedAt).toLocaleDateString(
-                              "ko-KR"
-                            )}
-                          </span>
-                        )}
+                        {answer.updatedAt &&
+                          answer.updatedAt !== answer.createdAt && (
+                            <span>
+                              수정일:{" "}
+                              {new Date(answer.updatedAt).toLocaleDateString(
+                                "ko-KR"
+                              )}
+                            </span>
+                          )}
                       </div>
                     </div>
 
