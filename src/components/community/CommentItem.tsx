@@ -1,7 +1,7 @@
 // src/components/community/CommentItem.tsx
 "use client";
 
-import { MyComment as Comment } from "@/types/Post";
+import { Comment } from "@/types/Post";
 import { useState, useRef, useEffect } from "react";
 import {
   toggleCommentLike,
@@ -52,6 +52,7 @@ export default function CommentItem({
 
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [showAllReplies, setShowAllReplies] = useState(false);
   const commentRef = useRef<HTMLDivElement>(null);
 
   // 작성자 여부 확인 (로그인한 사용자와 댓글 작성자 비교)
@@ -66,12 +67,12 @@ export default function CommentItem({
       console.log("댓글 좋아요 응답:", response);
 
       // 응답 구조에 따라 상태 업데이트
-      if (response?.data && typeof response.data.liked === "boolean") {
-        setIsLiked(response.data.liked);
-        setCurrentLikes(response.data.likes);
-      } else if (response && typeof response.liked === "boolean") {
+      if (response && typeof response.liked === "boolean") {
         setIsLiked(response.liked);
-        setCurrentLikes(response.likes);
+        // 좋아요 수는 현재 상태에서 토글 (API에서 제공하지 않는 경우)
+        setCurrentLikes((prev) =>
+          response.liked ? prev + 1 : Math.max(0, prev - 1)
+        );
       }
 
       // 댓글 목록 새로고침
@@ -243,8 +244,14 @@ export default function CommentItem({
               )}
             </span>
             <span className="text-sm text-gray-500">
-              {comment.createdAt
-                ? comment.createdAt.substring(0, 16)
+              {comment.created_at
+                ? new Date(comment.created_at).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                 : "날짜 없음"}
             </span>
           </div>
@@ -380,7 +387,11 @@ export default function CommentItem({
         {/* 대댓글 목록 재귀적으로 렌더링 */}
         {comment.children && comment.children.length > 0 && (
           <div className="mt-2 space-y-2">
-            {comment.children.map((reply: Comment) => (
+            {/* 기본적으로 최대 1개의 대댓글만 표시 */}
+            {(showAllReplies
+              ? comment.children
+              : comment.children.slice(0, 1)
+            ).map((reply: Comment) => (
               <CommentItem
                 key={reply.id}
                 comment={reply}
@@ -389,6 +400,39 @@ export default function CommentItem({
                 onCommentUpdated={onCommentUpdated}
               />
             ))}
+
+            {/* 대댓글이 있을 때 항상 더보기 버튼 표시 */}
+            {comment.children.length > 0 && (
+              <div className="ml-8">
+                <button
+                  onClick={() => setShowAllReplies(!showAllReplies)}
+                  className="text-sm text-gray-500 hover:text-[#6E4213] flex items-center space-x-1"
+                >
+                  <span>
+                    {showAllReplies
+                      ? "대댓글 숨기기"
+                      : comment.children.length > 1
+                      ? `대댓글 ${comment.children.length - 1}개 더보기`
+                      : "대댓글 더보기"}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${
+                      showAllReplies ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 // src/components/community/CommentSection.tsx
 "use client";
 
-import { MyComment as Comment } from "@/types/Post";
+import { Comment } from "@/types/Post";
 import { useState } from "react";
 import CommentItem from "./CommentItem";
 import { createCommentMutator, getComments } from "@/api/community";
@@ -67,10 +67,10 @@ export default function CommentSection({
         const newComment: Comment = {
           id: response.data.commentId,
           content: response.data.content,
-          postTitle: "", // 댓글 작성 시에는 빈 문자열
           author: response.data.authorName,
-          createdAt: response.data.createdAt,
           likes: response.data.likeCount,
+          created_at: response.data.createdAt,
+          replies: [],
           likedByMe: response.data.likedByMe,
           parent_id: response.data.parentId,
           children: response.data.children || [],

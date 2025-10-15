@@ -12,6 +12,7 @@ import { useToastContext } from "@/components/common/ToastProvider";
 
 interface PostDetailProps {
   post: PostDetailType;
+  commentCount?: number;
 }
 
 // 카테고리 타입에 따른 색상/텍스트 매핑 (PostItem.tsx와 동일하게 유지)
@@ -24,7 +25,7 @@ const PostTypeMap: Record<
   INFO: { text: "정보", color: "bg-yellow-500" },
 };
 
-export default function PostDetail({ post }: PostDetailProps) {
+export default function PostDetail({ post, commentCount }: PostDetailProps) {
   const typeInfo = PostTypeMap[post.type] || PostTypeMap.GENERAL;
   const router = useRouter();
   const { user, isLoggedIn, currentUserId } = useAuth();
@@ -50,16 +51,12 @@ export default function PostDetail({ post }: PostDetailProps) {
       console.log("좋아요 응답:", response);
 
       // 안전하게 상태 업데이트 (응답 구조에 맞게 수정)
-      if (response?.data && typeof response.data.likes === "number") {
-        setCurrentLikes(response.data.likes);
-      } else if (response && typeof response.likes === "number") {
-        setCurrentLikes(response.likes);
-      }
-
-      if (response?.data && typeof response.data.liked === "boolean") {
-        setIsLiked(response.data.liked);
-      } else if (response && typeof response.liked === "boolean") {
+      if (response && typeof response.liked === "boolean") {
         setIsLiked(response.liked);
+        // 좋아요 수는 현재 상태에서 토글 (API에서 제공하지 않는 경우)
+        setCurrentLikes((prev) =>
+          response.liked ? prev + 1 : Math.max(0, prev - 1)
+        );
       }
     } catch (error) {
       console.error("좋아요 처리 실패:", error);
@@ -117,7 +114,9 @@ export default function PostDetail({ post }: PostDetailProps) {
           </div>
           <div className="space-x-4">
             <span>조회수: {post.views?.toLocaleString() || 0}</span>
-            <span>댓글: {post.comments?.toLocaleString() || 0}</span>
+            <span>
+              댓글: {(commentCount || post.comments || 0).toLocaleString()}
+            </span>
           </div>
         </div>
       </header>

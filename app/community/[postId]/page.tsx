@@ -125,7 +125,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
       <main className="max-w-4xl mx-auto p-4 pt-8 pb-20">
         {/* 1. 게시글 상세 내용 (PostDetail.tsx로 props 전달) */}
-        <PostDetail post={post} />
+        <PostDetail post={post} commentCount={post?.comments || 0} />
 
         <div className="my-10 border-t border-gray-200"></div>
 

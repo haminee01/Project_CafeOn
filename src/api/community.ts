@@ -476,7 +476,7 @@ export async function updatePostMutator(
     );
 
     // 이미지 파일들 추가
-    arg.image?.forEach((file) => {
+    arg.image?.forEach((file: File) => {
       formData.append("image", file);
     });
 
@@ -772,7 +772,60 @@ export const togglePostLike = async (
 };
 
 /**
- * POST /api/reports - 신고하기
+ * POST /api/posts/{postId}/reports - 게시글 신고하기
+ * @param postId 신고할 게시글 ID
+ * @param content 신고 사유
+ */
+export const createPostReport = async (
+  postId: number,
+  content: string
+): Promise<{ message: string }> => {
+  const url = `/api/posts/${postId}/reports`;
+  const fullUrl = buildFullUrl(url);
+
+  // 로컬 스토리지에서 인증 토큰 가져오기
+  const authToken = localStorage.getItem("accessToken");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("게시글 신고 API 요청:", {
+    url: fullUrl,
+    method: "POST",
+    headers,
+    body: JSON.stringify({ content }),
+    postId,
+    content,
+  });
+
+  const response = await fetch(fullUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ content }),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "신고 처리 실패";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  const result = await response.json();
+  console.log("게시글 신고 API 응답:", result);
+  return result;
+};
+
+/**
+ * POST /api/reports - 신고하기 (기존 함수 유지)
  * @param reportData 신고 데이터
  */
 export const createReport = async (
@@ -818,5 +871,53 @@ export const createReport = async (
 
   const result = await response.json();
   console.log("신고 API 응답:", result);
+  return result;
+};
+
+// 댓글 신고 API
+export const createCommentReport = async (
+  commentId: number,
+  content: string
+): Promise<{ message: string }> => {
+  const url = `/api/comment/${commentId}/reports`;
+  const fullUrl = buildFullUrl(url);
+
+  const authToken = localStorage.getItem("accessToken");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("댓글 신고 API 요청:", {
+    url: fullUrl,
+    method: "POST",
+    headers,
+    body: JSON.stringify({ content }),
+    commentId,
+    content,
+  });
+
+  const response = await fetch(fullUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ content }),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "신고 처리 실패";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  const result = await response.json();
+  console.log("댓글 신고 API 응답:", result);
   return result;
 };

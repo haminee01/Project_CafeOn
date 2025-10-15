@@ -119,3 +119,118 @@ export interface MyLikedCommentsParams {
   page?: number;
   size?: number;
 }
+
+// 게시글 타입
+export type PostType = "GENERAL" | "QUESTION" | "INFO";
+
+// 커뮤니티 관련 타입들
+export interface PostListItem {
+  id: number;
+  type: PostType;
+  title: string;
+  author: string;
+  created_at: string;
+  views: number;
+  likes: number;
+  comments: number;
+}
+
+export interface PostListResponse {
+  posts: PostListItem[];
+  pages: number;
+}
+
+export interface PostDetail {
+  id: number;
+  type: PostType;
+  title: string;
+  author: string;
+  created_at: string;
+  views: number;
+  likes: number;
+  comments: number;
+  content: string;
+  Images: string[];
+  likedByMe: boolean;
+}
+
+export interface PostCreateResponse {
+  id: number;
+  message: string;
+}
+
+export interface PostUpdateRequest {
+  title: string;
+  content: string;
+  type: PostType;
+  image?: File[];
+}
+
+export interface PostUpdateResponse {
+  message: string;
+}
+
+export interface PostDeleteResponse {
+  message: string;
+}
+
+export interface PostLikeResponse {
+  message: string;
+  liked: boolean;
+}
+
+export interface Comment {
+  id: number;
+  author: string;
+  content: string;
+  likes: number;
+  created_at: string;
+  replies: Comment[];
+  likedByMe: boolean;
+  parent_id: number | null;
+  children: Comment[];
+}
+
+export interface CommentCreateRequest {
+  content: string;
+  parentId?: number;
+}
+
+export interface CommentCreateResponse {
+  message: string;
+  data: {
+    commentId: number;
+    content: string;
+    authorName: string;
+    createdAt: string;
+    likeCount: number;
+    likedByMe: boolean;
+    parentId: number | null;
+    children: any[];
+  };
+}
+
+export interface CommentUpdateResponse {
+  message: string;
+}
+
+export interface CommentDeleteResponse {
+  message: string;
+}
+
+export interface CommentLikeResponse {
+  message: string;
+  liked: boolean;
+}
+
+export interface ReportRequest {
+  targetType: "POST" | "COMMENT";
+  targetId: number;
+  reason: string;
+  description?: string;
+}
+
+export interface ReportResponse {
+  message: string;
+  reportId: number;
+}
