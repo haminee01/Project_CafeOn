@@ -88,12 +88,12 @@ const QuestionList = ({
 
   // 상태 텍스트 변환
   const getStatusText = (status: string | null) => {
-    return status === "COMPLETED" ? "답변 완료" : "답변 대기";
+    return status === "ANSWERED" ? "답변 완료" : "답변 대기";
   };
 
   // 상태 색상 변환
   const getStatusColor = (status: string | null) => {
-    return status === "COMPLETED"
+    return status === "ANSWERED"
       ? "text-green-600 bg-green-100"
       : "text-orange-600 bg-orange-100";
   };

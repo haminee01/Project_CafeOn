@@ -2,8 +2,9 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import { useQuestionDetail } from "@/hooks/useQnA";
+import { useQuestionDetail, useAnswerList } from "@/hooks/useQnA";
 import { QuestionVisibility } from "@/types/qna";
+import { useAuth } from "@/hooks/useAuth";
 
 interface QuestionDetailPageProps {
   params: Promise<{
@@ -17,17 +18,32 @@ export default function QuestionDetailPage({
   const router = useRouter();
   const resolvedParams = use(params);
   const questionId = parseInt(resolvedParams.id);
+  const { user } = useAuth();
 
   // 문의 상세 조회
   const { question, isLoading, error, refetch } = useQuestionDetail(questionId);
 
+  // 답변 목록 조회 (비공개 문의는 작성자만 조회 가능)
+  const canViewAnswers =
+    question?.visibility === QuestionVisibility.PUBLIC ||
+    (question?.visibility === QuestionVisibility.PRIVATE &&
+      user?.username === question?.authorNickname);
+
+  const {
+    answers,
+    isLoading: answersLoading,
+    error: answersError,
+  } = useAnswerList(
+    canViewAnswers && question?.status === "ANSWERED" ? questionId : 0
+  );
+
   // 상태 표시 함수들
   const getStatusText = (status: string | null) => {
-    return status === "COMPLETED" ? "답변 완료" : "답변 대기";
+    return status === "ANSWERED" ? "답변 완료" : "답변 대기";
   };
 
   const getStatusColor = (status: string | null) => {
-    return status === "COMPLETED"
+    return status === "ANSWERED"
       ? "text-green-600 bg-green-100"
       : "text-orange-600 bg-orange-100";
   };
@@ -163,6 +179,64 @@ export default function QuestionDetailPage({
             </div>
           </div>
         </div>
+
+        {/* 답변 섹션 */}
+        {canViewAnswers && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">답변</h2>
+
+            {answersLoading ? (
+              <div className="text-center py-8 text-gray-500">
+                답변을 불러오는 중...
+              </div>
+            ) : answersError ? (
+              <div className="text-center py-8 text-red-500">
+                답변을 불러오는데 실패했습니다.
+              </div>
+            ) : answers.length > 0 ? (
+              <div className="space-y-4">
+                {answers.map((answer) => (
+                  <div
+                    key={answer.answerId}
+                    className="bg-gray-50 border border-gray-200 rounded-lg p-6"
+                  >
+                    {/* 답변 메타 정보 */}
+                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4 pb-3 border-b border-gray-200">
+                      <div className="flex items-center space-x-4">
+                        <span>관리자: {answer.adminNickname}</span>
+                        <span>
+                          작성일:{" "}
+                          {new Date(answer.createdAt).toLocaleDateString(
+                            "ko-KR"
+                          )}
+                        </span>
+                        {answer.updatedAt !== answer.createdAt && (
+                          <span>
+                            수정일:{" "}
+                            {new Date(answer.updatedAt).toLocaleDateString(
+                              "ko-KR"
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 답변 내용 */}
+                    <div className="prose max-w-none">
+                      <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                        {answer.content}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                아직 답변이 없습니다.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 비공개 문의 안내 */}
         {question.visibility === QuestionVisibility.PRIVATE && (

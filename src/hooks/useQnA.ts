@@ -8,6 +8,7 @@ import {
   QuestionListResponse,
   QuestionVisibility,
   ApiResponse,
+  Answer,
 } from "@/types/qna";
 
 const API_BASE_URL =
@@ -255,5 +256,59 @@ export const useCreateQuestion = () => {
     createQuestion,
     isLoading,
     error,
+  };
+};
+
+// 답변 목록 조회 훅
+export const useAnswerList = (questionId: number) => {
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAnswers = async () => {
+    if (!questionId) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const token = getAuthToken();
+      const response = await fetch(
+        `${API_BASE_URL}/api/admin/inquiries/${questionId}/answers`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const apiResponse: ApiResponse<Answer[]> = await response.json();
+      setAnswers(apiResponse.data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "답변을 불러오는데 실패했습니다."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnswers();
+  }, [questionId]);
+
+  return {
+    answers,
+    isLoading,
+    error,
+    refetch: fetchAnswers,
   };
 };

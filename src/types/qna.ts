@@ -26,6 +26,15 @@ export interface QuestionListItem {
   visibility: QuestionVisibility;
 }
 
+// 답변 정보
+export interface Answer {
+  answerId: number;
+  adminNickname: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // 문의 상세 정보
 export interface QuestionDetail {
   id: number;
