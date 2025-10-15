@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createReport } from "@/api/community";
+import { createPostReport, createCommentReport } from "@/api/community";
 import { useToastContext } from "@/components/common/ToastProvider";
 
 interface ReportModalProps {
@@ -41,12 +41,13 @@ export default function ReportModal({
     try {
       const reason = selectedReason === "기타" ? customReason : selectedReason;
 
-      // 기존 신고 API 사용 (백엔드 권한 설정 완료 후 개별 API로 변경)
-      await createReport({
-        targetType: targetType.toUpperCase() as "POST" | "COMMENT",
-        targetId: targetId,
-        reason: reason,
-      });
+      // 게시글 신고인 경우 새로운 API 사용
+      if (targetType === "post") {
+        await createPostReport(targetId, reason);
+      } else {
+        // 댓글 신고인 경우 새로운 API 사용
+        await createCommentReport(targetId, reason);
+      }
 
       showToast("신고가 접수되었습니다.", "success");
 
