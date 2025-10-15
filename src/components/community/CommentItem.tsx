@@ -67,12 +67,20 @@ export default function CommentItem({
       console.log("댓글 좋아요 응답:", response);
 
       // 응답 구조에 따라 상태 업데이트
-      if (response && typeof response.liked === "boolean") {
-        setIsLiked(response.liked);
-        // 좋아요 수는 현재 상태에서 토글 (API에서 제공하지 않는 경우)
-        setCurrentLikes((prev) =>
-          response.liked ? prev + 1 : Math.max(0, prev - 1)
-        );
+      if (response && response.data) {
+        const { liked, likes } = response.data;
+        if (typeof liked === "boolean") {
+          setIsLiked(liked);
+          // API에서 제공하는 정확한 좋아요 수 사용
+          if (typeof likes === "number") {
+            setCurrentLikes(likes);
+          } else {
+            // API에서 likes를 제공하지 않는 경우에만 토글
+            setCurrentLikes((prev) =>
+              liked ? prev + 1 : Math.max(0, prev - 1)
+            );
+          }
+        }
       }
 
       // 댓글 목록 새로고침

@@ -176,7 +176,10 @@ export interface PostDeleteResponse {
 
 export interface PostLikeResponse {
   message: string;
-  liked: boolean;
+  data: {
+    liked: boolean;
+    likes: number;
+  };
 }
 
 export interface Comment {
@@ -220,7 +223,11 @@ export interface CommentDeleteResponse {
 
 export interface CommentLikeResponse {
   message: string;
-  liked: boolean;
+  data: {
+    commentId: number;
+    liked: boolean;
+    likes: number;
+  };
 }
 
 export interface ReportRequest {
