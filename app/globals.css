@@ -18,3 +18,31 @@ body {
   color: #000;
   background: #fff;
 }
+
+/* Google Maps 인포윈도우 포커스 스타일 제거 */
+.gm-style-iw {
+  outline: none !important;
+  border: none !important;
+}
+
+.gm-style-iw-d {
+  outline: none !important;
+  border: none !important;
+}
+
+.gm-style-iw-c {
+  outline: none !important;
+  border: none !important;
+}
+
+/* 인포윈도우 내부 버튼 포커스 스타일 제거 */
+.gm-style-iw button {
+  outline: none !important;
+  border: none !important;
+}
+
+.gm-style-iw button:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
