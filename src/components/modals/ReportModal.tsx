@@ -37,6 +37,12 @@ export default function ReportModal({
       return;
     }
 
+    // "기타" 선택 시 커스텀 사유가 비어있으면 에러
+    if (selectedReason === "기타" && !customReason.trim()) {
+      showToast("신고 사유를 자세히 입력해주세요.", "error");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const reason = selectedReason === "기타" ? customReason : selectedReason;
@@ -68,6 +74,12 @@ export default function ReportModal({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleClose = () => {
+    onClose();
+    setSelectedReason("");
+    setCustomReason("");
   };
 
   if (!isOpen) return null;
@@ -116,7 +128,7 @@ export default function ReportModal({
 
         <div className="flex justify-end space-x-3">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isSubmitting}
             className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors disabled:opacity-50"
           >
@@ -124,7 +136,11 @@ export default function ReportModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || !selectedReason}
+            disabled={
+              isSubmitting ||
+              !selectedReason ||
+              (selectedReason === "기타" && !customReason.trim())
+            }
             className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors disabled:opacity-50"
           >
             {isSubmitting ? "신고 중..." : "신고하기"}

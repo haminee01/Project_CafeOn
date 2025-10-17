@@ -879,7 +879,7 @@ export const createCommentReport = async (
   commentId: number,
   content: string
 ): Promise<{ message: string }> => {
-  const url = `/api/comment/${commentId}/reports`;
+  const url = `/api/comments/${commentId}/reports`;
   const fullUrl = buildFullUrl(url);
 
   const authToken = localStorage.getItem("accessToken");
