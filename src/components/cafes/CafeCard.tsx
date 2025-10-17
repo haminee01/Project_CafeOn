@@ -16,8 +16,8 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, className = "" }) => {
   };
 
   return (
-    <div className={`cursor-pointer ${className} px-3`} onClick={handleCardClick}>
-      <div className="relative aspect-square bg-gray-200 overflow-hidden">
+    <div className={`cursor-pointer ${className}`} onClick={handleCardClick}>
+      <div className="relative aspect-square bg-gray-200 overflow-hidden rounded-lg">
         <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
           <div className="text-6xl">☕</div>
         </div>
@@ -32,13 +32,13 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, className = "" }) => {
         </div>
       </div>
 
-      <div className="p-4 flex flex-col items-center">
-        <h3 className="text-2xl font-bold text-gray-900 mb-1 line-clamp-1">
+      <div className="p-3 flex flex-col items-center">
+        <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1 w-full text-center">
           {cafe.name}
         </h3>
 
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-lg text-gray-600">description</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-600 line-clamp-1">description</p>
         </div>
       </div>
     </div>

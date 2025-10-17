@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -11,10 +12,14 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
-    alert("로그아웃 되었습니다.");
-    // 실제 로그아웃 로직 구현
+    // 로그아웃 처리
+    logout();
+    // 홈페이지로 리다이렉트
+    router.push("/");
   };
 
   const menuItems = [

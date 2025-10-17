@@ -135,7 +135,13 @@ function Map({ className = "" }: MapProps) {
       try {
         // API 생성자 준비 최종 확인
         if (!(window as any).google?.maps?.Map) {
-          throw new Error("Google Maps API not fully loaded");
+          console.warn("Google Maps API not fully loaded yet, retrying...");
+          // API가 완전히 로드되지 않았으면 재시도
+          setTimeout(() => {
+            setIsApiLoaded(false);
+            setTimeout(() => setIsApiLoaded(true), 10);
+          }, 100);
+          return;
         }
 
         const center = {
@@ -195,15 +201,31 @@ function Map({ className = "" }: MapProps) {
           const infoWindow = new (window as any).google.maps.InfoWindow({
             disableAutoPan: true,
             content: `
-               <div style="
-                 min-width: 180px; 
-                 padding: 8px; 
-                 background: white;
-                 border-radius: 12px;
-                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                 outline: none;
-                 border: none;
-               ">
+               <div 
+                 id="info-window-${cafe.cafe_id}"
+                 style="
+                   min-width: 180px; 
+                   padding: 8px; 
+                   background: white;
+                   border-radius: 12px;
+                   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                   outline: none;
+                   border: none;
+                 "
+                 onmouseenter="
+                   // 인포윈도우에 마우스가 들어오면 닫기 타이머 취소
+                   if (window.infoWindowCloseTimer) {
+                     clearTimeout(window.infoWindowCloseTimer);
+                     window.infoWindowCloseTimer = null;
+                   }
+                   // 마우스가 인포윈도우 위에 있다는 플래그 설정
+                   window.mouseOverInfoWindow = true;
+                 "
+                 onmouseleave="
+                   // 인포윈도우에서 마우스가 나가도 자동으로 닫히지 않도록 설정
+                   // 사용자가 의도적으로 닫을 때만 닫히도록 함
+                 "
+               >
                  <div style="margin-bottom: 12px;">
                    <h3 style="
                      color: #6E4213; 
@@ -277,6 +299,9 @@ function Map({ className = "" }: MapProps) {
             infoWindowsRef.current.forEach((iw) => iw.close());
 
             infoWindow.open(map, marker);
+            
+            // 전역 변수에 현재 인포윈도우 저장
+            (window as any).currentInfoWindow = infoWindow;
 
             // 인포윈도우 내 버튼 클릭 이벤트 등록
             setTimeout(() => {
@@ -291,13 +316,10 @@ function Map({ className = "" }: MapProps) {
             }, 100);
           });
 
-          // 마커에서 마우스 떼면 인포윈도우 닫기
-          marker.addListener("mouseout", () => {
-            // 약간의 지연을 두어 인포윈도우로 마우스가 이동할 시간을 줌
-            setTimeout(() => {
-              infoWindow.close();
-            }, 100);
-          });
+          // 마커에서 마우스 떼면 인포윈도우 닫기 비활성화 (사용자 편의성 향상)
+          // marker.addListener("mouseout", () => {
+          //   // 인포윈도우가 자동으로 닫히지 않도록 주석 처리
+          // });
 
           // 마커 클릭 시에도 인포윈도우 표시 (기존 기능 유지)
           marker.addListener("click", () => {
@@ -305,6 +327,9 @@ function Map({ className = "" }: MapProps) {
             infoWindowsRef.current.forEach((iw) => iw.close());
 
             infoWindow.open(map, marker);
+            
+            // 전역 변수에 현재 인포윈도우 저장
+            (window as any).currentInfoWindow = infoWindow;
 
             // 인포윈도우 내 버튼 클릭 이벤트 등록
             setTimeout(() => {
@@ -323,6 +348,8 @@ function Map({ className = "" }: MapProps) {
           markersRef.current.push(marker);
           infoWindowsRef.current.push(infoWindow);
         });
+
+        // 마우스 위치 추적 제거 - 복잡한 좌표 변환 대신 간단한 플래그 방식 사용
 
         // 지도 클릭 시 모든 인포윈도우 닫기 및 맵 페이지로 이동
         map.addListener("click", () => {

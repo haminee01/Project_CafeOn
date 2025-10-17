@@ -87,7 +87,7 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
 
         <div
           ref={carouselRef}
-          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-3"
+          className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           onMouseDown={handleStart}
           onMouseMove={handleMove}
@@ -100,7 +100,7 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
           {cafes.map((cafe) => (
             <div
               key={cafe.cafe_id}
-              className="flex-shrink-0 w-80"
+              className="flex-shrink-0 w-64"
               style={{ cursor: isDragging ? "grabbing" : "grab" }}
             >
               <CafeCard cafe={cafe} />

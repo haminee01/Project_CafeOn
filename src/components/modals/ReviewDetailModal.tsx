@@ -21,7 +21,6 @@ export default function ReviewDetailModal({ onClose, cafe, review }: ReviewDetai
   const handleReport = () => {
     console.log('리뷰 신고:', reportReason);
     // 실제 구현에서는 리뷰 신고 로직
-    alert('신고가 접수되었습니다.');
     setShowReportForm(false);
     setReportReason("");
   };

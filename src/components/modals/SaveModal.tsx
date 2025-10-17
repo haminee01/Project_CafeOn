@@ -60,7 +60,6 @@ export default function SaveModal({ onClose, cafe }: SaveModalProps) {
     console.log('저장된 카테고리:', selectedCategories);
     console.log('카페:', cafe);
     // 실제 구현에서는 API 호출로 저장
-    alert(`${selectedCategories.length}개 카테고리에 저장되었습니다!`);
     onClose();
   };
 

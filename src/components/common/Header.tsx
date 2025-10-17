@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { useState } from "react";
 import { IoNotificationsOutline } from "react-icons/io5";
 import NotificationDropdown from "./NotificationDropdown";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -13,6 +16,8 @@ const Header = () => {
   const closeNotification = () => {
     setIsNotificationOpen(false);
   };
+
+  const { isAuthenticated, user, logout } = useAuth();
 
   return (
     <header>
@@ -44,7 +49,7 @@ const Header = () => {
           </div>
 
           <div className="flex-shrink-0">
-            <Link href="/">
+            <Link href="/" className="block">
               <h1 className="text-4xl font-bold text-primary cursor-pointer">
                 CafeOn.
               </h1>
@@ -52,12 +57,37 @@ const Header = () => {
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link href="/mypage" className="text-gray-800 font-medium text-lg">
-              마이페이지
-            </Link>
-            <Link href="/login" className="text-gray-800 font-medium text-lg">
-              로그인
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/mypage"
+                  className="text-gray-800 font-normal text-base"
+                >
+                  마이페이지
+                </Link>
+                <button
+                  onClick={logout}
+                  className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/mypage"
+                  className="text-gray-800 font-normal text-base"
+                >
+                  마이페이지
+                </Link>
+                <Link
+                  href="/login"
+                  className="text-gray-800 font-normal text-base"
+                >
+                  로그인
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
