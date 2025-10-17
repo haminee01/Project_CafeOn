@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, use } from "react";
 import ChatModal from "../../../../src/components/chat/CafeChatModal";
 
 interface CafeDetailPageProps {
-  params: {
+  params: Promise<{
     cafeId: string;
-  };
+  }>;
 }
 
 const CafeDetailPage: React.FC<CafeDetailPageProps> = ({ params }) => {
@@ -14,7 +14,8 @@ const CafeDetailPage: React.FC<CafeDetailPageProps> = ({ params }) => {
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
 
   // 2. 현재 카페 정보 (실제로는 API에서 가져옵니다)
-  const cafeId = params.cafeId;
+  const resolvedParams = use(params);
+  const cafeId = resolvedParams.cafeId;
   const cafeName = `문래 마이스페이스 ${cafeId}`;
 
   const handleOpenChat = () => {
@@ -52,7 +53,11 @@ const CafeDetailPage: React.FC<CafeDetailPageProps> = ({ params }) => {
 
       {/* 4. 모달 조건부 렌더링 */}
       {isChatModalOpen && (
-        <ChatModal cafeName={cafeName} onClose={handleCloseChat} />
+        <ChatModal
+          cafeId={cafeId}
+          cafeName={cafeName}
+          onClose={handleCloseChat}
+        />
       )}
     </div>
   );

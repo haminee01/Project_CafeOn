@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { usePrivateChatFlow } from "@/hooks/usePrivateChatFlow";
+import { useCafeChat } from "@/hooks/useCafeChat";
 import ChatMessageList from "./ChatMessageList";
 import ChatMessageInput from "./ChatMessageInput";
 import ChatSidebar from "./ChatSidebar";
@@ -15,66 +16,46 @@ import {
   ProfileClickHandler,
 } from "@/types/chat";
 
-const initialDummyMessages: ChatMessage[] = [
-  {
-    id: "2",
-    senderName: "엘리스",
-    content: "안녕하세요. 채팅에 오신 것을 환영합니다.",
-    isMyMessage: false,
-    senderId: "user-alice",
-  },
-  {
-    id: "3",
-    senderName: "닉네임",
-    content: "네, 안녕하세요.",
-    isMyMessage: true,
-    senderId: "user-me",
-  },
-  {
-    id: "4",
-    senderName: "닉네임",
-    content:
-      "이 카페 정보에 대해 궁금한 게 있어요. 혹시 영업 시간이나 메뉴에 대해 알려주실 수 있나요?",
-    isMyMessage: true,
-    senderId: "user-me",
-  },
-  {
-    id: "5",
-    senderName: "엘리스",
-    content:
-      "궁금한 점을 말씀해주세요! 메뉴는 아메리카노 4,500원부터 시작하고, 영업 시간은 매일 오전 10시부터 오후 9시까지입니다.",
-    isMyMessage: false,
-    senderId: "user-alice",
-  },
-];
-
-const DUMMY_PROFILES: { [key: string]: UserProfile } = {
-  "user-me": { id: "user-me", name: "닉네임" },
-  "user-alice": { id: "user-alice", name: "엘리스" },
-  "user-sunwon": { id: "user-sunwon", name: "Sunwon903" },
-  "user-test1": { id: "user-test1", name: "테스터1" },
-  "user-test2": { id: "user-test2", name: "테스터2" },
-  "user-test3": { id: "user-test3", name: "테스터3" },
-};
-
-const dummyParticipants: Participant[] = Object.values(DUMMY_PROFILES);
-
 interface CafeChatModalProps {
+  cafeId: string;
   cafeName?: string;
   onClose: () => void;
 }
 
 const CafeChatModal: React.FC<CafeChatModalProps> = ({
+  cafeId,
   cafeName = "문래 마이스페이스 6",
   onClose,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialDummyMessages);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  // 1. 알림 상태를 관리하는 State 추가 (기본값: 켜짐)
   const [isNotificationOn, setIsNotificationOn] = useState(true);
 
   // Modal Box DOM을 참조하여 팝업 위치를 상대적으로 계산하기 위해 사용
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // 카페 채팅 API 훅 사용
+  const {
+    roomId,
+    isJoined,
+    isLoading,
+    error,
+    participants,
+    participantCount,
+    messages,
+    joinChat,
+    leaveChat,
+    sendMessage,
+    refreshParticipants,
+  } = useCafeChat({ cafeId, cafeName });
+
+  // 참여자 프로필을 UserProfile 형태로 변환
+  const userProfiles: { [key: string]: UserProfile } = participants.reduce(
+    (acc, participant) => {
+      acc[participant.id] = { id: participant.id, name: participant.name };
+      return acc;
+    },
+    {} as { [key: string]: UserProfile }
+  );
 
   const {
     targetUserForPopup,
@@ -85,9 +66,16 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     closePrivateChatModal,
     closePopup,
   } = usePrivateChatFlow(
-    DUMMY_PROFILES,
+    userProfiles,
     modalRef as React.RefObject<HTMLElement>
   );
+
+  // 컴포넌트 마운트 시 채팅방 참여 (한 번만 실행)
+  useEffect(() => {
+    if (cafeId && !isJoined && !isLoading) {
+      joinChat();
+    }
+  }, [cafeId]); // cafeId가 변경될 때만 실행
 
   // 사이드바 닫기
   const closeSidebar = useCallback(() => {
@@ -107,18 +95,14 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
   };
 
   // 그룹 채팅 메시지 전송 핸들러
-  const handleSendMessage = (message: string) => {
-    console.log("메시지 전송:", message);
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim()) return;
 
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      senderName: "닉네임",
-      content: message,
-      isMyMessage: true,
-      senderId: "user-me",
-    };
-
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
+    try {
+      await sendMessage(message);
+    } catch (err) {
+      console.error("메시지 전송 실패:", err);
+    }
   };
 
   // 2. 알림 상태를 토글하는 Handler 추가
@@ -131,7 +115,10 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     user: Participant,
     event: React.MouseEvent<HTMLDivElement>
   ) => {
-    if (user.id !== "user-me") {
+    // 현재 사용자 ID를 가져와야 함 (실제로는 인증된 사용자 ID 사용)
+    const currentUserId = "user-me"; // TODO: 실제 사용자 ID로 교체
+
+    if (user.id !== currentUserId) {
       handleProfileClick(
         user.id,
         user.name,
@@ -140,6 +127,75 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
       closeSidebar();
     }
   };
+
+  // 채팅방 나가기 핸들러
+  const handleLeaveChat = async () => {
+    try {
+      await leaveChat();
+      onClose(); // 모달도 닫기
+    } catch (err) {
+      console.error("채팅방 나가기 실패:", err);
+    }
+  };
+
+  // 로딩 상태 처리
+  if (isLoading && !isJoined) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans">
+        <div className="bg-white rounded-xl p-8 shadow-2xl">
+          <div className="flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600"></div>
+            <span className="text-gray-700">채팅방 참여 중...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 에러 상태 처리
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans">
+        <div className="bg-white rounded-xl p-8 shadow-2xl max-w-md">
+          <div className="text-center">
+            <div className="text-red-500 mb-4">
+              <svg
+                className="w-12 h-12 mx-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              오류 발생
+            </h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <div className="flex space-x-3">
+              <button
+                onClick={joinChat}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition duration-200"
+              >
+                다시 시도
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // 오버레이 (클릭 시 모든 팝업/사이드바 닫기)
@@ -176,7 +232,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
                   />
                 </svg>
               </span>
-              {dummyParticipants.length}
+              {participantCount}
             </span>
 
             {/* 사이드바 토글 버튼 (햄버거 메뉴) */}
@@ -242,13 +298,13 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
         {/* 사이드바 */}
         {isSidebarOpen && (
           <ChatSidebar
-            participants={dummyParticipants}
-            currentUserId="user-me"
+            participants={participants}
+            currentUserId="user-me" // TODO: 실제 사용자 ID로 교체
             isNotificationOn={isNotificationOn}
             onToggleNotification={handleToggleNotification}
             onClose={closeSidebar}
             onProfileClick={handleSidebarProfileClick}
-            onLeave={() => console.log("나가기")}
+            onLeave={handleLeaveChat}
             title="참여자 목록"
             subtitle="대화 상대"
           />
