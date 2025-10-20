@@ -1,4 +1,4 @@
-import apiClient from './axios';
+import apiClient from "./axios";
 
 // ==================== Auth API ====================
 
@@ -9,7 +9,7 @@ export async function signup(userData: {
   nickname: string;
 }) {
   try {
-    const response = await apiClient.post('/api/auth/signup', userData);
+    const response = await apiClient.post("/api/auth/signup", userData);
     return response.data;
   } catch (error: any) {
     console.error("회원가입 API 호출 실패:", error);
@@ -20,11 +20,11 @@ export async function signup(userData: {
 // 로그인
 export async function login(credentials: { email: string; password: string }) {
   try {
-    const response = await apiClient.post('/api/auth/login', credentials);
+    const response = await apiClient.post("/api/auth/login", credentials);
     return response.data;
   } catch (error: any) {
     console.error("로그인 API 호출 실패:", error);
-    
+
     // 상태 코드별 에러 메시지
     if (error.response?.status === 400) {
       throw new Error("이메일 또는 비밀번호가 일치하지 않습니다.");
@@ -33,19 +33,25 @@ export async function login(credentials: { email: string; password: string }) {
     } else if (error.response?.status === 403) {
       throw new Error("계정이 정지되었거나 접근 권한이 없습니다.");
     }
-    
-    throw new Error(error.message || "로그인에 실패했습니다. 다시 시도해주세요.");
+
+    throw new Error(
+      error.message || "로그인에 실패했습니다. 다시 시도해주세요."
+    );
   }
 }
 
 // 임시 비밀번호 발급
 export async function requestPasswordReset(email: string) {
   try {
-    const response = await apiClient.post('/api/auth/password/reset', { email });
-    return response.data || { message: "임시 비밀번호가 이메일로 발송되었습니다." };
+    const response = await apiClient.post("/api/auth/password/reset", {
+      email,
+    });
+    return (
+      response.data || { message: "임시 비밀번호가 이메일로 발송되었습니다." }
+    );
   } catch (error: any) {
     console.error("비밀번호 재설정 API 호출 실패:", error);
-    
+
     // 에러 메시지 결정
     if (error.response?.status === 403) {
       throw new Error("접근이 거부되었습니다. 백엔드 설정을 확인해주세요.");
@@ -53,8 +59,11 @@ export async function requestPasswordReset(email: string) {
     if (error.response?.status === 500) {
       throw new Error(error.message || "서버 오류가 발생했습니다.");
     }
-    
-    throw new Error(error.message || `비밀번호 재설정 요청 실패 (${error.response?.status || 'unknown'})`);
+
+    throw new Error(
+      error.message ||
+        `비밀번호 재설정 요청 실패 (${error.response?.status || "unknown"})`
+    );
   }
 }
 
@@ -109,16 +118,19 @@ export async function getAdminInquiries(params?: {
   status?: string;
 }) {
   try {
-    const response = await apiClient.get('/api/admin/inquiries', { params });
+    const response = await apiClient.get("/api/admin/inquiries", { params });
     return response.data;
   } catch (error: any) {
     console.error("Admin 문의 목록 API 호출 실패:", error);
-    
+
     if (error.response?.status === 403) {
       throw new Error("관리자 권한이 필요합니다.");
     }
-    
-    throw new Error(error.message || `문의 목록 조회 실패 (${error.response?.status || 'unknown'})`);
+
+    throw new Error(
+      error.message ||
+        `문의 목록 조회 실패 (${error.response?.status || "unknown"})`
+    );
   }
 }
 
@@ -136,7 +148,9 @@ export async function getAdminInquiryDetail(id: number) {
 // 관리자 답변 목록 조회
 export async function getAdminInquiryAnswers(inquiryId: number) {
   try {
-    const response = await apiClient.get(`/api/admin/inquiries/${inquiryId}/answers`);
+    const response = await apiClient.get(
+      `/api/admin/inquiries/${inquiryId}/answers`
+    );
     return response.data;
   } catch (error: any) {
     console.error("Admin 답변 목록 API 호출 실패:", error);
@@ -145,9 +159,15 @@ export async function getAdminInquiryAnswers(inquiryId: number) {
 }
 
 // 관리자 답변 작성
-export async function createAdminInquiryAnswer(inquiryId: number, content: string) {
+export async function createAdminInquiryAnswer(
+  inquiryId: number,
+  content: string
+) {
   try {
-    const response = await apiClient.post(`/api/admin/inquiries/${inquiryId}/answers`, { content });
+    const response = await apiClient.post(
+      `/api/admin/inquiries/${inquiryId}/answers`,
+      { content }
+    );
     return response.data;
   } catch (error: any) {
     console.error("Admin 답변 작성 API 호출 실패:", error);
