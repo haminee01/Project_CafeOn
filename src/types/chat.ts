@@ -4,6 +4,7 @@ export interface ChatMessage {
   content: string;
   isMyMessage: boolean;
   senderId: string;
+  messageType?: string; // 메시지 타입 추가 (TEXT, SYSTEM 등)
 }
 
 export interface UserProfile {

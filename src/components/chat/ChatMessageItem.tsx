@@ -11,6 +11,17 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   message,
   onProfileClick,
 }) => {
+  // 시스템 메시지인 경우 중앙 정렬로 표시
+  if (message.messageType === "SYSTEM") {
+    return (
+      <div className="flex justify-center my-2">
+        <div className="bg-gray-100 text-gray-600 text-sm px-3 py-2 rounded-lg max-w-xs text-center">
+          {message.content}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       key={message.id}

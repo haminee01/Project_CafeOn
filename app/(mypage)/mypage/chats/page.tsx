@@ -1,78 +1,17 @@
 // mypage/chats/page.tsx
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-interface UserProfile {
+import { getUnreadNotifications, NotificationResponse } from "@/api/chat";
+
+interface ChatRoom {
   id: string;
-  name: string;
+  cafeName: string;
+  lastMessage: string;
+  isUnread: boolean;
+  createdAt: string;
 }
-
-interface ChatMessage {
-  id: string;
-  senderName: string;
-  content: string;
-  isMyMessage: boolean;
-  senderId: string;
-}
-
-const DUMMY_PROFILES: { [key: string]: UserProfile } = {
-  // ...
-  "user-me": { id: "user-me", name: "닉네임" },
-  "user-alice": { id: "user-alice", name: "엘리스" },
-  "user-study": { id: "user-study", name: "스터디 리더" },
-  "user-code": { id: "user-code", name: "코드 봇" },
-  "user-test1": { id: "user-test1", name: "테스터1" },
-  "user-test2": { id: "user-test2", name: "테스터2" },
-  "user-test3": { id: "user-test3", name: "테스터3" },
-};
-
-const dummyChatRooms = [
-  {
-    id: "cafe-1",
-    cafeName: "문래 마이스페이스 6",
-    lastMessage: "궁금한 점을 말씀해주세요! 메뉴는...",
-    isUnread: true,
-    messages: [
-      /*...*/
-    ] as ChatMessage[],
-    participants: [
-      /*...*/
-    ],
-  },
-  {
-    id: "cafe-2",
-    cafeName: "강남 스터디룸",
-    lastMessage: "이번 주말 영업시간 알려주세요.",
-    isUnread: false,
-    messages: [
-      /*...*/
-    ] as ChatMessage[],
-    participants: [
-      /*...*/
-    ],
-  },
-  {
-    id: "group-3",
-    cafeName: "코드 리뷰방",
-    lastMessage: "PR 올려두었습니다.",
-    isUnread: false,
-    messages: [
-      /*...*/
-    ] as ChatMessage[],
-    participants: [
-      /*...*/
-    ],
-  },
-  {
-    id: "private-4",
-    cafeName: "닉네임 (1:1)",
-    lastMessage: "개인 메시지 전송...",
-    isUnread: false,
-    messages: [] as ChatMessage[],
-    participants: [DUMMY_PROFILES["user-me"]],
-  },
-];
 
 const ProfileIcon: React.FC<{ size?: string }> = ({ size = "w-8 h-8" }) => (
   <div
@@ -137,25 +76,89 @@ const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
 
 const ChatRoomList: React.FC = () => {
   const router = useRouter();
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 알림 데이터를 채팅방 데이터로 변환하는 함수
+  const convertNotificationsToChatRooms = (
+    notifications: NotificationResponse[]
+  ): ChatRoom[] => {
+    return notifications.map((notification) => ({
+      id: notification.roomId,
+      cafeName: notification.title,
+      lastMessage: notification.preview,
+      isUnread: !notification.read,
+      createdAt: notification.createdAt,
+    }));
+  };
+
+  // 채팅방 목록 로드
+  const loadChatRooms = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log("채팅방 목록 로드 시작");
+      const notifications = await getUnreadNotifications();
+      console.log("알림 목록 응답:", notifications);
+
+      const rooms = convertNotificationsToChatRooms(notifications);
+      setChatRooms(rooms);
+
+      console.log("채팅방 목록 로드 완료:", rooms);
+    } catch (err) {
+      console.error("채팅방 목록 로드 실패:", err);
+      setError("채팅방 목록을 불러올 수 없습니다.");
+      setChatRooms([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleRoomClick = (roomId: string) => {
     router.push(`/mypage/chats/${roomId}`);
   };
+
+  useEffect(() => {
+    loadChatRooms();
+  }, []);
 
   return (
     <div className="w-full bg-white h-full overflow-y-auto">
       <h1 className="p-4 text-2xl font-bold border-b border-[#CDCDCD] text-gray-800">
         채팅방 목록
       </h1>
-      {dummyChatRooms.map((room) => (
-        <ChatRoomItem
-          key={room.id}
-          cafeName={room.cafeName}
-          lastMessage={room.lastMessage}
-          isUnread={room.isUnread}
-          onClick={() => handleRoomClick(room.id)}
-        />
-      ))}
+
+      {isLoading ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="text-gray-500">채팅방 목록을 불러오는 중...</div>
+        </div>
+      ) : error ? (
+        <div className="p-4 text-center">
+          <div className="text-red-500 mb-2">{error}</div>
+          <button
+            onClick={loadChatRooms}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : chatRooms.length === 0 ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="text-gray-500">참여 중인 채팅방이 없습니다.</div>
+        </div>
+      ) : (
+        chatRooms.map((room) => (
+          <ChatRoomItem
+            key={room.id}
+            cafeName={room.cafeName}
+            lastMessage={room.lastMessage}
+            isUnread={room.isUnread}
+            onClick={() => handleRoomClick(room.id)}
+          />
+        ))
+      )}
     </div>
   );
 };

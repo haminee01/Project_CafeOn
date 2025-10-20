@@ -42,11 +42,22 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     participants,
     participantCount,
     messages,
+    chatHistory,
+    hasMoreHistory,
+    isLoadingHistory,
+    isMuted,
     joinChat,
     leaveChat,
     sendMessage,
     refreshParticipants,
+    loadMoreHistory,
+    toggleMute,
   } = useCafeChat({ cafeId, cafeName });
+
+  // roomId 로깅 추가
+  useEffect(() => {
+    console.log("CafeChatModal - roomId 변경됨:", roomId);
+  }, [roomId]);
 
   // 참여자 프로필을 UserProfile 형태로 변환
   const userProfiles: { [key: string]: UserProfile } = participants.reduce(
@@ -77,6 +88,14 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     }
   }, [cafeId]); // cafeId가 변경될 때만 실행
 
+  // 채팅방 참여 성공 시 모달 내에서 채팅 시작
+  useEffect(() => {
+    if (roomId && isJoined) {
+      console.log("채팅방 참여 성공, 모달 내에서 채팅 시작:", roomId);
+      // 딥링크로 이동하지 않고 모달 내에서 채팅 계속
+    }
+  }, [roomId, isJoined]);
+
   // 사이드바 닫기
   const closeSidebar = useCallback(() => {
     setIsSidebarOpen(false);
@@ -106,8 +125,12 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
   };
 
   // 2. 알림 상태를 토글하는 Handler 추가
-  const handleToggleNotification = () => {
-    setIsNotificationOn((prev) => !prev);
+  const handleToggleNotification = async () => {
+    try {
+      await toggleMute();
+    } catch (err) {
+      console.error("알림 토글 실패:", err);
+    }
   };
 
   // 사이드바 내 프로필 클릭 시 동작 (handleProfileClick 재사용)
@@ -152,8 +175,14 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     );
   }
 
-  // 에러 상태 처리
-  if (error) {
+  // 에러 상태 처리 ("이미 참여 중" 또는 중복 키 에러는 제외)
+  const isAlreadyParticipatingError =
+    error?.includes("이미 채팅방에 참여 중입니다.") ||
+    error?.includes("Duplicate entry") ||
+    error?.includes("uk_crm_room_user") ||
+    error?.includes("chat_room_members");
+
+  if (error && !isAlreadyParticipatingError) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans">
         <div className="bg-white rounded-xl p-8 shadow-2xl max-w-md">
@@ -285,11 +314,15 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
           </div>
         </header>
 
-        {/* Chat Messages List (usePrivateChatFlow의 핸들러 전달) */}
+        {/* Chat Messages List (실제 채팅 히스토리 표시) */}
         <ChatMessageList
           messages={messages}
+          chatHistory={chatHistory}
+          hasMoreHistory={hasMoreHistory}
+          isLoadingHistory={isLoadingHistory}
           onProfileClick={handleProfileClick}
           onListClick={handleListClick}
+          onLoadMoreHistory={loadMoreHistory}
         />
 
         {/* Chat Input (분리된 컴포넌트 사용) */}
@@ -300,7 +333,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
           <ChatSidebar
             participants={participants}
             currentUserId="user-me" // TODO: 실제 사용자 ID로 교체
-            isNotificationOn={isNotificationOn}
+            isNotificationOn={!isMuted}
             onToggleNotification={handleToggleNotification}
             onClose={closeSidebar}
             onProfileClick={handleSidebarProfileClick}
