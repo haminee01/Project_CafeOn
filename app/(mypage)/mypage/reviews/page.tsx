@@ -322,7 +322,7 @@ export default function MyReviewsPage() {
 
       {totalReviews > 0 ? (
         <>
-          <div className="space-y-6">
+          <div className="space-y-6 mb-4">
             {currentReviews.map((review) => (
               <ReviewItem
                 key={review.id}

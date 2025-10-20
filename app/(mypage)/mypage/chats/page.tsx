@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getUnreadNotifications, NotificationResponse } from "@/api/chat";
 
 interface ChatRoom {
   id: string;
@@ -74,39 +73,46 @@ const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
   );
 };
 
+// 목데이터: 마이페이지 채팅방 목록
+const mockChatRooms: ChatRoom[] = [
+  {
+    id: "123",
+    cafeName: "카페 온 카페 홍대점",
+    lastMessage: "네, 좌석 여유 있습니다!",
+    isUnread: true,
+    createdAt: "2024-01-20T14:41:00",
+  },
+  {
+    id: "456",
+    cafeName: "빈체로 성수",
+    lastMessage: "이번 주말 예약 가능할까요?",
+    isUnread: false,
+    createdAt: "2024-01-19T10:20:00",
+  },
+  {
+    id: "789",
+    cafeName: "라떼리아 압구정",
+    lastMessage: "감사합니다! 주차는 지하 1층 이용해주세요.",
+    isUnread: true,
+    createdAt: "2024-01-18T18:05:00",
+  },
+];
+
 const ChatRoomList: React.FC = () => {
   const router = useRouter();
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 알림 데이터를 채팅방 데이터로 변환하는 함수
-  const convertNotificationsToChatRooms = (
-    notifications: NotificationResponse[]
-  ): ChatRoom[] => {
-    return notifications.map((notification) => ({
-      id: notification.roomId,
-      cafeName: notification.title,
-      lastMessage: notification.preview,
-      isUnread: !notification.read,
-      createdAt: notification.createdAt,
-    }));
-  };
-
   // 채팅방 목록 로드
   const loadChatRooms = async () => {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log("채팅방 목록 로드 시작");
-      const notifications = await getUnreadNotifications();
-      console.log("알림 목록 응답:", notifications);
-
-      const rooms = convertNotificationsToChatRooms(notifications);
-      setChatRooms(rooms);
-
-      console.log("채팅방 목록 로드 완료:", rooms);
+      // 목데이터 사용
+      console.log("채팅방 목록 로드(목데이터)");
+      setChatRooms(mockChatRooms);
+      console.log("채팅방 목록 로드 완료:", mockChatRooms);
     } catch (err) {
       console.error("채팅방 목록 로드 실패:", err);
       setError("채팅방 목록을 불러올 수 없습니다.");

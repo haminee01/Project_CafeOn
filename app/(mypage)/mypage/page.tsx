@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Button from "@/components/common/Button";
+import { changePassword } from "@/lib/api";
 
 const demoKeywords = [
   "#데이트",
@@ -126,7 +127,8 @@ export default function MypageMainPage() {
     imageUrl: "",
   });
 
-  const [password, setPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [isKeywordModalOpen, setIsKeywordModalOpen] = useState(false);
@@ -177,18 +179,43 @@ export default function MypageMainPage() {
   };
 
   // 비밀번호 변경 핸들러
-  const handleChangePassword = () => {
-    if (password && password === confirmPassword) {
+  const handleChangePassword = async () => {
+    // 입력값 검증
+    if (!oldPassword) {
+      alert("현재 비밀번호를 입력해주세요.");
+      return;
+    }
+    if (!newPassword) {
+      alert("새 비밀번호를 입력해주세요.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert("새 비밀번호가 일치하지 않습니다.");
+      return;
+    }
+    if (oldPassword === newPassword) {
+      alert("현재 비밀번호와 새 비밀번호가 같습니다.");
+      return;
+    }
+
+    try {
+      await changePassword({
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+      });
+
+      // 성공 시 알림 표시
       setShowAlert(true);
       setTimeout(() => {
         setShowAlert(false);
-        setPassword("");
+        setOldPassword("");
+        setNewPassword("");
         setConfirmPassword("");
       }, 3000);
-    } else if (password !== confirmPassword) {
-      alert("비밀번호가 일치하지 않습니다.");
-    } else {
-      alert("비밀번호를 입력해주세요.");
+    } catch (error) {
+      alert(
+        error instanceof Error ? error.message : "비밀번호 변경에 실패했습니다."
+      );
     }
   };
 
@@ -213,7 +240,9 @@ export default function MypageMainPage() {
   );
 
   const isPasswordChangeEnabled =
-    password.length > 0 && password === confirmPassword;
+    oldPassword.length > 0 &&
+    newPassword.length > 0 &&
+    newPassword === confirmPassword;
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -298,14 +327,21 @@ export default function MypageMainPage() {
             <div className="space-y-3">
               <input
                 type="password"
-                placeholder="변경할 비밀번호"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="현재 비밀번호"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
                 className="w-full px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
               />
               <input
                 type="password"
-                placeholder="재입력"
+                placeholder="새 비밀번호"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
+              />
+              <input
+                type="password"
+                placeholder="새 비밀번호 확인"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
