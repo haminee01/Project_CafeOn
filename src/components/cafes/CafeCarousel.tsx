@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Cafe } from "@/types/cafe";
 import CafeCard from "./CafeCard";
 
@@ -19,56 +19,21 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
   description = "추천드리는 카페예요.",
   showAllButton = true,
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const carouselRef = useRef<HTMLDivElement>(null);
-
-  const cardsPerView = 5;
-  const maxIndex = Math.max(0, cafes.length - cardsPerView);
-
-  // 터치/마우스 드래그 이벤트 처리
-  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsDragging(true);
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    setStartX(clientX);
-    if (carouselRef.current) {
-      setScrollLeft(carouselRef.current.scrollLeft);
-    }
-  };
-
-  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDragging || !carouselRef.current) return;
-    e.preventDefault();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const x = clientX - startX;
-    carouselRef.current.scrollLeft = scrollLeft - x;
-  };
-
-  const handleEnd = () => {
-    setIsDragging(false);
-  };
+  const [currentPage, setCurrentPage] = useState(0);
+  const cardsPerPage = 5;
+  const totalPages = Math.ceil(cafes.length / cardsPerPage);
 
   const goToPrevious = () => {
-    setCurrentIndex(Math.max(0, currentIndex - 1));
+    setCurrentPage(Math.max(0, currentPage - 1));
   };
 
   const goToNext = () => {
-    setCurrentIndex(Math.min(maxIndex, currentIndex + 1));
+    setCurrentPage(Math.min(totalPages - 1, currentPage + 1));
   };
 
-  useEffect(() => {
-    if (carouselRef.current) {
-      const cardWidth = carouselRef.current.children[0]?.clientWidth || 0;
-      const gap = 16;
-      const scrollPosition = currentIndex * (cardWidth + gap);
-      carouselRef.current.scrollTo({
-        left: scrollPosition,
-        behavior: "smooth",
-      });
-    }
-  }, [currentIndex]);
+  const startIndex = currentPage * cardsPerPage;
+  const endIndex = startIndex + cardsPerPage;
+  const currentCafes = cafes.slice(startIndex, endIndex);
 
   if (cafes.length === 0) {
     return (
@@ -84,27 +49,53 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
       <p className="text-gray-600 mb-6">{description}</p>
 
       <div className="relative">
+        {/* 좌우 버튼 */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={goToPrevious}
+            disabled={currentPage === 0}
+            className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
+              currentPage === 0
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md border"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
 
-        <div
-          ref={carouselRef}
-          className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          onMouseDown={handleStart}
-          onMouseMove={handleMove}
-          onMouseUp={handleEnd}
-          onMouseLeave={handleEnd}
-          onTouchStart={handleStart}
-          onTouchMove={handleMove}
-          onTouchEnd={handleEnd}
-        >
-          {cafes.map((cafe) => (
-            <div
-              key={cafe.cafe_id}
-              className="flex-shrink-0 w-64"
-              style={{ cursor: isDragging ? "grabbing" : "grab" }}
-            >
-              <CafeCard cafe={cafe} />
-            </div>
+          <div className="flex space-x-1">
+            {Array.from({ length: totalPages }, (_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentPage(index)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentPage ? "bg-gray-600" : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={goToNext}
+            disabled={currentPage === totalPages - 1}
+            className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
+              currentPage === totalPages - 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md border"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* 카페 카드 그리드 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+          {currentCafes.map((cafe) => (
+            <CafeCard key={cafe.cafe_id} cafe={cafe} />
           ))}
         </div>
       </div>
