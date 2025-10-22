@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import ChatMessageItem from "./ChatMessageItem";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
 import { ChatHistoryMessage } from "@/api/chat";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -30,16 +31,39 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // useAuth 훅 사용
+  const { user } = useAuth();
+  const currentUserNickname = user?.username || null;
+
   // 채팅 히스토리를 ChatMessage 형태로 변환
   const historyMessages: ChatMessage[] = chatHistory.map(
-    (historyMsg, index) => ({
-      id: `history-${historyMsg.chatId}`,
-      senderName: historyMsg.senderNickname,
-      content: historyMsg.message,
-      isMyMessage: historyMsg.mine,
-      senderId: historyMsg.senderNickname, // 임시로 nickname을 ID로 사용
-      messageType: historyMsg.messageType, // 메시지 타입 추가
-    })
+    (historyMsg, index) => {
+      // 백엔드에서 mine: true로 보내는 메시지는 확실히 내 메시지
+      const isMyMessage = Boolean(
+        historyMsg.mine === true ||
+          (currentUserNickname &&
+            historyMsg.senderNickname === currentUserNickname)
+      );
+
+      const convertedMessage = {
+        id: `history-${historyMsg.chatId}`,
+        senderName: historyMsg.senderNickname,
+        content: historyMsg.message,
+        isMyMessage: isMyMessage,
+        senderId: historyMsg.senderNickname, // 임시로 nickname을 ID로 사용
+        messageType: historyMsg.messageType, // 메시지 타입 추가
+      };
+
+      console.log("히스토리 메시지 변환:", {
+        originalMine: historyMsg.mine,
+        currentUserNickname,
+        senderNickname: historyMsg.senderNickname,
+        convertedIsMyMessage: isMyMessage,
+        messageId: convertedMessage.id,
+      });
+
+      return convertedMessage;
+    }
   );
 
   // 히스토리와 실시간 메시지를 합치되 중복 제거
@@ -71,8 +95,8 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
     });
   }, [historyMessages, messages]);
 
-  // 모든 메시지가 비어있는지 확인
-  const hasNoMessages = allMessages.length === 0;
+  // 모든 메시지가 비어있는지 확인 (로딩 중이 아닐 때만)
+  const hasNoMessages = allMessages.length === 0 && !isLoadingHistory;
 
   return (
     <div
@@ -102,7 +126,19 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
         </div>
       )}
 
-      {/* 메시지가 없을 때 입장 메시지 표시 */}
+      {/* 로딩 중일 때 로딩 메시지 표시 */}
+      {isLoadingHistory && allMessages.length === 0 && (
+        <div className="flex justify-center items-center h-full">
+          <div className="text-center text-gray-500 text-sm">
+            <div className="mb-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mx-auto"></div>
+            </div>
+            <p>채팅 기록을 불러오는 중...</p>
+          </div>
+        </div>
+      )}
+
+      {/* 메시지가 없을 때 입장 메시지 표시 (로딩 중이 아닐 때만) */}
       {hasNoMessages && (
         <div className="flex justify-center items-center h-full">
           <div className="text-center text-gray-500 text-sm">

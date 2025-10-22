@@ -1,6 +1,7 @@
 import React from "react";
 import ProfileIcon from "./ProfileIcon";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -11,6 +12,33 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   message,
   onProfileClick,
 }) => {
+  // useAuth에서 현재 사용자 정보 가져오기
+  const { user } = useAuth();
+  const currentUserNickname = user?.username || null;
+
+  // 디버깅을 위한 로그 추가
+  console.log("ChatMessageItem 렌더링:", {
+    messageId: message.id,
+    senderName: message.senderName,
+    content: message.content,
+    isMyMessage: message.isMyMessage,
+    messageType: message.messageType,
+    currentUserNickname,
+  });
+
+  // 현재 사용자와 메시지 발신자가 같은지 판단
+  const isMyMessage =
+    message.isMyMessage ||
+    (currentUserNickname && message.senderName === currentUserNickname);
+  const displayName = isMyMessage ? "나" : message.senderName;
+
+  console.log("메시지 소유자 최종 판단:", {
+    senderName: message.senderName,
+    currentUserNickname,
+    isMyMessage,
+    displayName,
+  });
+
   // 시스템 메시지인 경우 중앙 정렬로 표시
   if (message.messageType === "SYSTEM") {
     return (
@@ -25,41 +53,39 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   return (
     <div
       key={message.id}
-      className={`flex ${
-        message.isMyMessage ? "justify-end" : "justify-start"
-      }`}
+      className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}
     >
       <div
         className={`flex items-start max-w-xs md:max-w-md ${
-          message.isMyMessage ? "flex-row-reverse space-x-reverse" : "space-x-3"
+          isMyMessage ? "flex-row-reverse space-x-reverse" : "space-x-3"
         }`}
       >
         {/* 프로필 이미지/아이콘 */}
         <div
           className={`cursor-pointer transition duration-150 ${
-            message.isMyMessage ? "ml-2" : "mr-2"
+            isMyMessage ? "ml-2" : "mr-2"
           }`}
           onClick={(event) =>
             onProfileClick(message.senderId, message.senderName, event)
           }
         >
-          <ProfileIcon variant={message.isMyMessage ? "default" : "amber"} />
+          <ProfileIcon variant={isMyMessage ? "default" : "amber"} />
         </div>
 
         <div className="flex flex-col">
           {/* 이름 */}
           <span
             className={`text-xs text-gray-500 mb-1 ${
-              message.isMyMessage ? "text-right" : "text-left"
+              isMyMessage ? "text-right" : "text-left"
             }`}
           >
-            {message.senderName}
+            {displayName}
           </span>
 
           {/* 메시지 내용 */}
           <div
             className={`p-3 rounded-xl shadow-sm ${
-              message.isMyMessage
+              isMyMessage
                 ? "bg-[#6E4213] text-white rounded-br-none"
                 : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
             }`}

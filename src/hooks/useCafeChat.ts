@@ -22,6 +22,13 @@ import {
   ChatMessage as StompChatMessage,
 } from "@/lib/stompClient";
 import { Client } from "@stomp/stompjs";
+import {
+  setChatMapping,
+  getRoomIdByCafe,
+  getCafeIdByRoom,
+  removeChatMapping,
+  debugMappings,
+} from "@/utils/chatMapping";
 
 interface UseCafeChatProps {
   cafeId: string;
@@ -47,6 +54,9 @@ interface UseCafeChatReturn {
 
   // 알림 상태
   isMuted: boolean;
+
+  // STOMP 연결 상태
+  stompConnected: boolean;
 
   // 액션 함수들
   joinChat: () => Promise<void>;
@@ -76,11 +86,11 @@ export const useCafeChat = ({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isJoining, setIsJoining] = useState(false); // 중복 참여 방지
   const [isMuted, setIsMuted] = useState(false); // 알림 상태
+  const [stompConnected, setStompConnected] = useState(false); // STOMP 연결 상태
 
   // STOMP 관련 상태
   const stompClientRef = useRef<Client | null>(null);
   const subscriptionRef = useRef<StompSubscription | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
 
   // STOMP 클라이언트 연결
   const connectStomp = useCallback(async () => {
@@ -100,32 +110,33 @@ export const useCafeChat = ({
       console.log("STOMP 연결 시도:", serverUrl);
 
       const client = createStompClient(serverUrl, token);
+      stompClientRef.current = client;
 
       client.onConnect = (frame) => {
         console.log("STOMP 연결 성공:", frame);
-        setIsConnected(true);
+        setStompConnected(true);
       };
 
       client.onStompError = (frame) => {
         console.error("STOMP 에러:", frame);
-        setIsConnected(false);
+        setStompConnected(false);
       };
 
       client.onWebSocketError = (error) => {
         console.error("WebSocket 에러:", error);
-        setIsConnected(false);
+        setStompConnected(false);
       };
 
       client.onDisconnect = () => {
         console.log("STOMP 연결 해제");
-        setIsConnected(false);
+        setStompConnected(false);
       };
 
       client.activate();
       stompClientRef.current = client;
     } catch (error) {
       console.error("STOMP 연결 실패:", error);
-      setIsConnected(false);
+      setStompConnected(false);
     }
   }, []);
 
@@ -134,6 +145,12 @@ export const useCafeChat = ({
     if (!stompClientRef.current?.connected || !roomId) return;
 
     try {
+      // 기존 구독 해제
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
+
       const subscription = stompClientRef.current.subscribe(
         `/sub/rooms/${roomId}`,
         (message) => {
@@ -160,7 +177,16 @@ export const useCafeChat = ({
                 console.log("중복 메시지 무시:", newMessage.id);
                 return prev;
               }
-              return [...prev, newMessage];
+
+              const updatedMessages = [...prev, newMessage];
+              console.log("메시지 상태 업데이트:", {
+                이전메시지수: prev.length,
+                새메시지: newMessage,
+                업데이트된메시지수: updatedMessages.length,
+                전체메시지목록: updatedMessages,
+              });
+
+              return updatedMessages;
             });
           } catch (error) {
             console.error("메시지 파싱 오류:", error);
@@ -187,25 +213,157 @@ export const useCafeChat = ({
       stompClientRef.current = null;
     }
 
-    setIsConnected(false);
+    setStompConnected(false);
     console.log("STOMP 연결 해제");
   }, []);
+
+  // 참여자 목록 새로고침
+  const refreshParticipants = useCallback(async () => {
+    if (!roomId) {
+      console.log("roomId가 없어서 참여자 목록 조회 건너뜀");
+      return;
+    }
+
+    try {
+      console.log("참여자 목록 조회 시작, roomId:", roomId);
+      const response: ChatParticipant[] = await getChatParticipants(roomId);
+      console.log("참여자 목록 원본 응답:", response);
+
+      // ChatParticipant를 Participant로 변환
+      const convertedParticipants: Participant[] = response.map(
+        (participant) => ({
+          id: participant.userId,
+          name: participant.nickname,
+        })
+      );
+
+      console.log("변환된 참여자 목록:", convertedParticipants);
+      setParticipants(convertedParticipants);
+    } catch (err) {
+      console.error("참여자 목록 조회 실패:", err);
+      // 에러가 발생했을 때 빈 배열로 설정
+      setParticipants([]);
+    }
+  }, [roomId]);
+
+  // 채팅 히스토리 로드 (커서 페이징)
+  const loadMoreHistory = useCallback(async () => {
+    if (!roomId || isLoadingHistory) return;
+
+    setIsLoadingHistory(true);
+
+    try {
+      // 현재 히스토리의 마지막 메시지 ID를 beforeId로 사용
+      const beforeId =
+        chatHistory.length > 0
+          ? chatHistory[chatHistory.length - 1].chatId.toString()
+          : undefined;
+
+      const response: ChatHistoryResponse = await getChatHistory(
+        roomId,
+        beforeId,
+        50,
+        true
+      );
+
+      // 응답 데이터 안전하게 처리
+      const items = response.data?.content || [];
+      const hasNext = response.data?.hasNext || false;
+
+      // 새로운 히스토리를 기존 히스토리 뒤에 추가
+      setChatHistory((prev) => [...prev, ...items]);
+      setHasMoreHistory(hasNext);
+
+      console.log(
+        `채팅 히스토리 로드 완료: ${items.length}개 메시지, 더 있음: ${hasNext}`
+      );
+    } catch (err) {
+      console.error("채팅 히스토리 조회 실패:", err);
+      // 에러가 발생했을 때 빈 히스토리로 설정
+      setChatHistory([]);
+      setHasMoreHistory(false);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [roomId, chatHistory, isLoadingHistory]);
 
   // 채팅방 참여 (재시도 로직 포함)
   const joinChat = useCallback(
     async (retryCount = 0) => {
-      if (!cafeId || isJoining || isJoined) return;
+      console.log("=== joinChat 함수 호출됨 ===", {
+        cafeId,
+        isJoining,
+        isJoined,
+        retryCount,
+      });
+
+      if (!cafeId || isJoining || isJoined) {
+        console.log("joinChat 조건 불만족:", {
+          cafeId: !!cafeId,
+          isJoining,
+          isJoined,
+        });
+        return;
+      }
 
       setIsJoining(true);
       setIsLoading(true);
       setError(null);
 
       try {
+        // 기존 매핑 확인
+        const existingRoomId = getRoomIdByCafe(parseInt(cafeId));
+        if (existingRoomId) {
+          console.log("=== 이미 참여 중인 채팅방 발견 ===", {
+            cafeId,
+            existingRoomId,
+            currentRoomId: roomId,
+          });
+          console.log("기존 roomId로 상태 업데이트:", existingRoomId);
+          setRoomId(existingRoomId.toString());
+          setIsJoined(true);
+
+          console.log("기존 채팅방 데이터 로드 시작");
+          try {
+            await Promise.all([refreshParticipants(), loadMoreHistory()]);
+            console.log("기존 채팅방 데이터 로드 완료");
+          } catch (dataLoadError) {
+            console.error("기존 채팅방 데이터 로드 실패:", dataLoadError);
+          }
+
+          try {
+            await connectStomp();
+            console.log("기존 채팅방 STOMP 연결 완료");
+          } catch (stompError) {
+            console.warn("기존 채팅방 STOMP 연결 실패:", stompError);
+          }
+          return;
+        }
+
         const response: ChatRoomJoinResponse = await joinCafeGroupChat(cafeId);
         console.log("채팅방 참여 응답:", response);
-        setRoomId(response.roomId);
+
+        const newRoomId = response.data.roomId.toString();
+        console.log("새로운 roomId 설정:", newRoomId);
+
+        setRoomId(newRoomId);
         setIsJoined(true);
-        console.log("roomId 설정됨:", response.roomId);
+
+        // 매핑 저장
+        console.log("=== 매핑 저장 시작 ===", {
+          cafeId: parseInt(cafeId),
+          newRoomId: parseInt(newRoomId),
+        });
+        setChatMapping(parseInt(cafeId), parseInt(newRoomId));
+
+        const savedRoomId = getRoomIdByCafe(parseInt(cafeId));
+        console.log("매핑 저장 후 확인:", {
+          cafeId: parseInt(cafeId),
+          savedRoomId,
+          expectedRoomId: parseInt(newRoomId),
+          매핑성공: savedRoomId === parseInt(newRoomId),
+        });
+        debugMappings();
 
         // 참여자 목록과 채팅 히스토리를 가져옴
         await Promise.all([refreshParticipants(), loadMoreHistory()]);
@@ -214,7 +372,7 @@ export const useCafeChat = ({
         await connectStomp();
         // 연결 완료 후 구독 (약간의 지연)
         setTimeout(() => {
-          subscribeToRoom(response.roomId);
+          subscribeToRoom(newRoomId);
         }, 1000);
       } catch (err) {
         const errorMessage =
@@ -285,7 +443,16 @@ export const useCafeChat = ({
         setIsJoining(false);
       }
     },
-    [cafeId, isJoining, isJoined]
+    [
+      cafeId,
+      isJoining,
+      isJoined,
+      roomId,
+      connectStomp,
+      subscribeToRoom,
+      refreshParticipants,
+      loadMoreHistory,
+    ]
   );
 
   // 채팅방 나가기
@@ -297,6 +464,9 @@ export const useCafeChat = ({
 
     try {
       await leaveChatRoomNew(roomId);
+
+      // 매핑 제거
+      removeChatMapping(parseInt(cafeId));
 
       // STOMP 연결 해제
       disconnectStomp();
@@ -326,7 +496,7 @@ export const useCafeChat = ({
     } finally {
       setIsLoading(false);
     }
-  }, [roomId, disconnectStomp]);
+  }, [roomId, cafeId, disconnectStomp]);
 
   // 메시지 전송 (STOMP 발행)
   const sendMessage = useCallback(
@@ -370,37 +540,8 @@ export const useCafeChat = ({
         console.error("메시지 전송 실패:", err);
       }
     },
-    [roomId, connectStomp]
+    [roomId]
   );
-
-  // 참여자 목록 새로고침
-  const refreshParticipants = useCallback(async () => {
-    if (!roomId) {
-      console.log("roomId가 없어서 참여자 목록 조회 건너뜀");
-      return;
-    }
-
-    try {
-      console.log("참여자 목록 조회 시작, roomId:", roomId);
-      const response: ChatParticipant[] = await getChatParticipants(roomId);
-      console.log("참여자 목록 원본 응답:", response);
-
-      // ChatParticipant를 Participant로 변환
-      const convertedParticipants: Participant[] = response.map(
-        (participant) => ({
-          id: participant.userId,
-          name: participant.nickname,
-        })
-      );
-
-      console.log("변환된 참여자 목록:", convertedParticipants);
-      setParticipants(convertedParticipants);
-    } catch (err) {
-      console.error("참여자 목록 조회 실패:", err);
-      // 에러가 발생했을 때 빈 배열로 설정
-      setParticipants([]);
-    }
-  }, [roomId]);
 
   // 메시지 목록 새로고침
   const refreshMessages = useCallback(async () => {
@@ -424,47 +565,6 @@ export const useCafeChat = ({
     }
   }, [roomId]);
 
-  // 채팅 히스토리 로드 (커서 페이징)
-  const loadMoreHistory = useCallback(async () => {
-    if (!roomId || isLoadingHistory) return;
-
-    setIsLoadingHistory(true);
-
-    try {
-      // 현재 히스토리의 마지막 메시지 ID를 beforeId로 사용
-      const beforeId =
-        chatHistory.length > 0
-          ? chatHistory[chatHistory.length - 1].chatId.toString()
-          : undefined;
-
-      const response: ChatHistoryResponse = await getChatHistory(
-        roomId,
-        beforeId,
-        50,
-        true
-      );
-
-      // 응답 데이터 안전하게 처리
-      const items = response.data?.items || [];
-      const hasNext = response.data?.hasNext || false;
-
-      // 새로운 히스토리를 기존 히스토리 뒤에 추가
-      setChatHistory((prev) => [...prev, ...items]);
-      setHasMoreHistory(hasNext);
-
-      console.log(
-        `채팅 히스토리 로드 완료: ${items.length}개 메시지, 더 있음: ${hasNext}`
-      );
-    } catch (err) {
-      console.error("채팅 히스토리 조회 실패:", err);
-      // 에러가 발생했을 때 빈 히스토리로 설정
-      setChatHistory([]);
-      setHasMoreHistory(false);
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  }, [roomId, chatHistory, isLoadingHistory]);
-
   // 1:1 채팅방 생성
   const createDmChatRoom = useCallback(
     async (counterpartId: string) => {
@@ -476,7 +576,7 @@ export const useCafeChat = ({
         const response = await createDmChat(counterpartId);
         console.log("1:1 채팅방 생성 응답:", response);
 
-        setRoomId(response.roomId);
+        setRoomId(response.data.roomId.toString());
         setIsJoined(true);
 
         // 참여자 목록과 채팅 히스토리를 가져옴
@@ -512,6 +612,64 @@ export const useCafeChat = ({
     }
   }, [roomId, isMuted]);
 
+  // roomId가 설정되면 STOMP 구독
+  useEffect(() => {
+    if (roomId && stompConnected && stompClientRef.current?.connected) {
+      subscribeToRoom(roomId);
+    }
+  }, [roomId, stompConnected, subscribeToRoom]);
+
+  // 초기 채팅방 참여
+  useEffect(() => {
+    console.log("=== 초기 채팅방 참여 useEffect 실행 ===");
+    console.log("초기 참여 조건 확인:", {
+      cafeId,
+      isJoined,
+      isLoading,
+      isJoining,
+    });
+
+    if (cafeId && !isJoined && !isLoading && !isJoining) {
+      console.log("자동 채팅방 참여 시작");
+      joinChat();
+    }
+  }, [cafeId, isJoined, isLoading, isJoining, joinChat]);
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    console.log("=== 초기화 useEffect 실행 ===");
+    console.log("초기화 조건 확인:", {
+      cafeId,
+      roomId,
+      participantsLength: participants.length,
+      chatHistoryLength: chatHistory.length,
+      messagesLength: messages.length,
+    });
+
+    if (cafeId && roomId && isJoined) {
+      console.log("roomId 설정 후 데이터 로드 시작");
+
+      if (participants.length === 0) {
+        console.log("참여자 목록 로드");
+        refreshParticipants();
+      }
+
+      if (chatHistory.length === 0) {
+        console.log("채팅 히스토리 로드");
+        loadMoreHistory();
+      }
+    }
+  }, [
+    cafeId,
+    roomId,
+    isJoined,
+    participants.length,
+    chatHistory.length,
+    messages.length,
+    refreshParticipants,
+    loadMoreHistory,
+  ]);
+
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
@@ -532,6 +690,7 @@ export const useCafeChat = ({
     hasMoreHistory,
     isLoadingHistory,
     isMuted,
+    stompConnected,
     joinChat,
     leaveChat,
     sendMessage,

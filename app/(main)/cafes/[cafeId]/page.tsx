@@ -14,7 +14,7 @@ import ReviewWriteModal from "@/components/modals/ReviewWriteModal";
 import SaveModal from "@/components/modals/SaveModal";
 import Footer from "@/components/common/Footer";
 import { useEscapeKey } from "../../../../src/hooks/useEscapeKey";
-import ChatModal from "../../../../src/components/chat/CafeChatModal";
+import CafeChatModal from "../../../../src/components/chat/CafeChatModal";
 
 interface CafeDetailPageProps {
   params: Promise<{
@@ -62,6 +62,11 @@ const CafeDetailPage: React.FC<CafeDetailPageProps> = ({ params }) => {
 
   // 3. 모달을 띄우는 핸들러 함수들
   const handleOpenChat = () => {
+    console.log("=== 카페 디테일 페이지에서 채팅 모달 열기 ===", {
+      cafeId,
+      cafeName,
+      currentUrl: window.location.href,
+    });
     setIsChatModalOpen(true);
   };
 
@@ -115,7 +120,7 @@ const CafeDetailPage: React.FC<CafeDetailPageProps> = ({ params }) => {
 
       {/* 4. 모달 조건부 렌더링 (원래 로직) */}
       {isChatModalOpen && (
-        <ChatModal
+        <CafeChatModal
           cafeId={cafeId}
           cafeName={cafeName}
           onClose={handleCloseChat}

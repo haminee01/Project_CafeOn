@@ -1,20 +1,12 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { usePrivateChatFlow } from "@/hooks/usePrivateChatFlow";
-import { useCafeChat } from "@/hooks/useCafeChat";
-import ChatMessageList from "./ChatMessageList";
-import ChatMessageInput from "./ChatMessageInput";
-import ChatSidebar from "./ChatSidebar";
+import React, { useState, useEffect } from "react";
+import { useCafeChat } from "../../hooks/useCafeChat";
+import ChatMessageList from "../chat/ChatMessageList";
+import ChatMessageInput from "../chat/ChatMessageInput";
+import ChatSidebar from "../chat/ChatSidebar";
 import PrivateChatModal from "./PrivateChatModal";
-import ProfileMiniPopup from "../common/ProfileMiniPopup";
-import ProfileIcon from "./ProfileIcon";
-import {
-  ChatMessage,
-  UserProfile,
-  Participant,
-  ProfileClickHandler,
-} from "@/types/chat";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface CafeChatModalProps {
   cafeId: string;
@@ -24,16 +16,23 @@ interface CafeChatModalProps {
 
 const CafeChatModal: React.FC<CafeChatModalProps> = ({
   cafeId,
-  cafeName = "문래 마이스페이스 6",
+  cafeName = "문래 마이스페이스",
   onClose,
 }) => {
+  console.log("=== CafeChatModal 렌더링됨 ===", {
+    cafeName,
+    cafeId,
+    componentType: "CafeChatModal",
+  });
+
+  useEscapeKey(onClose);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isNotificationOn, setIsNotificationOn] = useState(true);
+  const [targetUserForPrivateChat, setTargetUserForPrivateChat] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-  // Modal Box DOM을 참조하여 팝업 위치를 상대적으로 계산하기 위해 사용
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // 카페 채팅 API 훅 사용
+  // 카페 채팅 훅 사용
   const {
     roomId,
     isJoined,
@@ -52,170 +51,139 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     refreshParticipants,
     loadMoreHistory,
     toggleMute,
-  } = useCafeChat({ cafeId, cafeName });
+  } = useCafeChat({
+    cafeId,
+    cafeName,
+  });
 
-  // roomId 로깅 추가
-  useEffect(() => {
-    console.log("CafeChatModal - roomId 변경됨:", roomId);
-  }, [roomId]);
-
-  // 참여자 프로필을 UserProfile 형태로 변환
-  const userProfiles: { [key: string]: UserProfile } = participants.reduce(
-    (acc, participant) => {
-      acc[participant.id] = { id: participant.id, name: participant.name };
-      return acc;
-    },
-    {} as { [key: string]: UserProfile }
-  );
-
-  const {
-    targetUserForPopup,
-    popupPosition,
-    targetUserForPrivateChat,
-    handleProfileClick,
-    handleStartPrivateChat,
-    closePrivateChatModal,
-    closePopup,
-  } = usePrivateChatFlow(
-    userProfiles,
-    modalRef as React.RefObject<HTMLElement>
-  );
-
-  // 컴포넌트 마운트 시 채팅방 참여 (한 번만 실행)
-  useEffect(() => {
-    if (cafeId && !isJoined && !isLoading) {
-      joinChat();
-    }
-  }, [cafeId]); // cafeId가 변경될 때만 실행
-
-  // 채팅방 참여 성공 시 모달 내에서 채팅 시작
-  useEffect(() => {
-    if (roomId && isJoined) {
-      console.log("채팅방 참여 성공, 모달 내에서 채팅 시작:", roomId);
-      // 딥링크로 이동하지 않고 모달 내에서 채팅 계속
-    }
-  }, [roomId, isJoined]);
-
-  // 사이드바 닫기
-  const closeSidebar = useCallback(() => {
+  // 사이드바 닫기 핸들러
+  const closeSidebar = () => {
     setIsSidebarOpen(false);
-  }, []);
+  };
 
-  // 미니 팝업 닫기 핸들러 (usePrivateChatFlow의 closePopup 재사용)
-  // 모달 오버레이 클릭 핸들러: 미니 팝업 닫기 + 사이드바 닫기
-  const handleModalOverlayClick = () => {
-    closePopup();
+  // 알림 상태를 토글하는 Handler
+  const handleToggleNotification = () => {
+    toggleMute();
+  };
+
+  // 메시지 전송 핸들러
+  const handleSendMessage = async (message: string) => {
+    await sendMessage(message);
+  };
+
+  // 프로필 클릭 핸들러 (1:1 채팅 모달 열기)
+  const handleProfileClick = (
+    senderId: string,
+    senderName: string,
+    event: React.MouseEvent<any>
+  ) => {
+    event.stopPropagation();
+    console.log("1:1 채팅 시작:", senderId, senderName);
+
+    // 1:1 채팅 모달 열기
+    setTargetUserForPrivateChat({
+      id: senderId,
+      name: senderName,
+    });
+  };
+
+  // 메시지 리스트 영역 클릭 핸들러: 사이드바만 닫기
+  const handleListClick = () => {
     closeSidebar();
   };
 
-  // 메시지 리스트 영역 클릭 핸들러: 미니 팝업만 닫기
-  const handleListClick = () => {
-    closePopup();
+  // 모달 오버레이 클릭 핸들러: 사이드바 닫기 + 모달 닫기
+  const handleModalOverlayClick = () => {
+    closeSidebar();
+    onClose();
   };
 
-  // 그룹 채팅 메시지 전송 핸들러
-  const handleSendMessage = async (message: string) => {
-    if (!message.trim()) return;
-
-    try {
-      await sendMessage(message);
-    } catch (err) {
-      console.error("메시지 전송 실패:", err);
-    }
+  // 1:1 채팅 모달 닫기 핸들러
+  const closePrivateChatModal = () => {
+    setTargetUserForPrivateChat(null);
   };
 
-  // 2. 알림 상태를 토글하는 Handler 추가
-  const handleToggleNotification = async () => {
-    try {
-      await toggleMute();
-    } catch (err) {
-      console.error("알림 토글 실패:", err);
-    }
-  };
-
-  // 사이드바 내 프로필 클릭 시 동작 (handleProfileClick 재사용)
+  // 사이드바 내 프로필 클릭 핸들러
   const handleSidebarProfileClick = (
-    user: Participant,
+    user: { id: string; name: string },
     event: React.MouseEvent<HTMLDivElement>
   ) => {
-    // 현재 사용자 ID를 가져와야 함 (실제로는 인증된 사용자 ID 사용)
-    const currentUserId = "user-me"; // TODO: 실제 사용자 ID로 교체
+    event.stopPropagation();
+    console.log("사이드바에서 1:1 채팅 시작:", user.id, user.name);
 
-    if (user.id !== currentUserId) {
-      handleProfileClick(
-        user.id,
-        user.name,
-        event as unknown as React.MouseEvent<HTMLElement>
-      );
-      closeSidebar();
-    }
+    // 1:1 채팅 모달 열기
+    setTargetUserForPrivateChat({
+      id: user.id,
+      name: user.name,
+    });
+
+    closeSidebar();
   };
 
-  // 채팅방 나가기 핸들러
-  const handleLeaveChat = async () => {
-    try {
-      await leaveChat();
-      onClose(); // 모달도 닫기
-    } catch (err) {
-      console.error("채팅방 나가기 실패:", err);
+  // 모달이 열릴 때 채팅방 참여
+  useEffect(() => {
+    console.log("CafeChatModal useEffect 실행:", {
+      cafeId,
+      isJoined,
+      isLoading,
+      roomId,
+    });
+
+    if (cafeId && !isLoading) {
+      if (!isJoined) {
+        console.log("새로운 채팅방 참여 시도");
+        joinChat();
+      } else if (isJoined && roomId) {
+        console.log("이미 참여 중인 채팅방, 데이터 새로고침");
+        refreshParticipants();
+        loadMoreHistory();
+      }
+    } else {
+      console.log("joinChat 호출 조건 불만족:", {
+        cafeId,
+        isJoined,
+        isLoading,
+      });
     }
-  };
+  }, [
+    cafeId,
+    isJoined,
+    isLoading,
+    roomId,
+    joinChat,
+    refreshParticipants,
+    loadMoreHistory,
+  ]);
 
-  // 로딩 상태 처리
-  if (isLoading && !isJoined) {
+  // roomId가 null인 경우 에러 처리
+  if (!roomId && !isLoading && isJoined) {
+    console.error("CafeChatModal - roomId가 null입니다:", {
+      roomId,
+      cafeId: parseInt(cafeId),
+      isJoined,
+      isLoading,
+      error,
+    });
+
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans">
-        <div className="bg-white rounded-xl p-8 shadow-2xl">
-          <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600"></div>
-            <span className="text-gray-700">채팅방 참여 중...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 에러 상태 처리 ("이미 참여 중" 또는 중복 키 에러는 제외)
-  const isAlreadyParticipatingError =
-    error?.includes("이미 채팅방에 참여 중입니다.") ||
-    error?.includes("Duplicate entry") ||
-    error?.includes("uk_crm_room_user") ||
-    error?.includes("chat_room_members");
-
-  if (error && !isAlreadyParticipatingError) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans">
-        <div className="bg-white rounded-xl p-8 shadow-2xl max-w-md">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
           <div className="text-center">
-            <div className="text-red-500 mb-4">
-              <svg
-                className="w-12 h-12 mx-auto"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              오류 발생
-            </h3>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <div className="flex space-x-3">
+            <div className="text-red-500 text-6xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold mb-2">채팅방 정보 오류</h2>
+            <p className="text-gray-600 mb-4">
+              채팅방 정보를 불러올 수 없습니다. 다시 시도해주세요.
+            </p>
+            <div className="flex gap-2 justify-center">
               <button
-                onClick={joinChat}
-                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition duration-200"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
               >
                 다시 시도
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200"
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
               >
                 닫기
               </button>
@@ -227,131 +195,136 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
   }
 
   return (
-    // 오버레이 (클릭 시 모든 팝업/사이드바 닫기)
+    // 오버레이
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans"
-      onClick={handleModalOverlayClick}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-70 font-sans transition-opacity duration-300"
+      onClick={handleModalOverlayClick} // 오버레이 클릭 시 모든 팝업/사이드바/모달 닫기
     >
-      {/* Modal Box (단체 채팅방) */}
       <div
-        ref={modalRef}
-        className="modal-box relative flex h-[70vh] w-[90%] flex-col rounded-xl bg-white shadow-2xl md:h-[80vh] md:w-[60%] lg:h-[75vh] lg:w-1/2 xl:w-1/3 max-w-lg overflow-hidden transition-all duration-300"
+        className="relative flex h-[70vh] w-[90%] flex-col rounded-xl bg-white shadow-2xl md:h-[80vh] md:w-[70%] lg:h-[75vh] lg:w-[60%] xl:w-[50%] max-w-4xl overflow-hidden transition-all duration-300 transform scale-100"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-20 shadow-sm bg-white sticky top-0">
-          <h2 className="text-xl font-bold text-gray-800">{cafeName}</h2>
-          <div className="flex items-center space-x-2">
-            {/* 참여자 수 표시 */}
-            <span className="text-sm font-medium text-gray-600 px-3 py-1 rounded-full bg-amber-50">
-              <span className="inline-block mr-1">
-                <svg
-                  aria-hidden="true"
-                  focusable="false"
-                  data-prefix="fas"
-                  data-icon="user"
-                  className="w-4 h-4 inline-block align-text-top"
-                  role="img"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 448 512"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"
-                  />
-                </svg>
-              </span>
-              {participantCount}
-            </span>
-
-            {/* 사이드바 토글 버튼 (햄버거 메뉴) */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                closePopup();
-                setIsSidebarOpen((prev) => !prev);
-              }}
-              className="text-gray-600 p-2 rounded-full transition duration-150"
-            >
-              <svg
-                aria-hidden="true"
-                focusable="false"
-                data-prefix="fas"
-                data-icon="bars"
-                className="h-6 w-6"
-                role="img"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 448 512"
-              >
-                <path
-                  fill="currentColor"
-                  d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"
-                />
-              </svg>
-            </button>
-
-            {/* 모달 닫기 버튼 */}
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition duration-150"
-            >
-              {/* 3. 모달 닫기 아이콘 */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+        {/* 로딩 상태 */}
+        {isLoading && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">채팅방에 참여하는 중...</p>
+            </div>
           </div>
-        </header>
-
-        {/* Chat Messages List (실제 채팅 히스토리 표시) */}
-        <ChatMessageList
-          messages={messages}
-          chatHistory={chatHistory}
-          hasMoreHistory={hasMoreHistory}
-          isLoadingHistory={isLoadingHistory}
-          onProfileClick={handleProfileClick}
-          onListClick={handleListClick}
-          onLoadMoreHistory={loadMoreHistory}
-        />
-
-        {/* Chat Input (분리된 컴포넌트 사용) */}
-        <ChatMessageInput onSendMessage={handleSendMessage} />
-
-        {/* 사이드바 */}
-        {isSidebarOpen && (
-          <ChatSidebar
-            participants={participants}
-            currentUserId="user-me" // TODO: 실제 사용자 ID로 교체
-            isNotificationOn={!isMuted}
-            onToggleNotification={handleToggleNotification}
-            onClose={closeSidebar}
-            onProfileClick={handleSidebarProfileClick}
-            onLeave={handleLeaveChat}
-            title="참여자 목록"
-            subtitle="대화 상대"
-          />
         )}
 
-        <ProfileMiniPopup
-          targetUserForPopup={targetUserForPopup}
-          popupPosition={popupPosition}
-          handleStartPrivateChat={handleStartPrivateChat}
-          closePopup={closePopup}
-        />
+        {/* 에러 상태 */}
+        {error && !isLoading && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="text-red-500 text-6xl mb-4">⚠️</div>
+              <h2 className="text-xl font-bold mb-2">오류 발생</h2>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+              >
+                다시 시도
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 정상 채팅 화면 */}
+        {!isLoading && !error && (
+          <>
+            {/* Header */}
+            <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-10 shadow-sm bg-[#6E4213] sticky top-0">
+              <h2 className="text-xl font-bold text-white">
+                {cafeName} 채팅방
+              </h2>
+              <div className="flex items-center space-x-2">
+                {/* 사이드바 토글 버튼 (햄버거 메뉴) */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSidebarOpen((prev) => !prev);
+                  }}
+                  className="text-white p-2 rounded-full transition duration-150"
+                >
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    data-prefix="fas"
+                    data-icon="bars"
+                    className="w-5 h-5"
+                    role="img"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 448 512"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M16 132h416c8.837 0 16-7.163 16-16V76c0-8.837-7.163-16-16-16H16C7.163 60 0 67.163 0 76v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16z"
+                    ></path>
+                  </svg>
+                </button>
+
+                {/* 닫기 버튼 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}
+                  className="text-white p-2 rounded-full transition duration-150"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            {/* ChatMessageList: onListClick prop 추가 및 onProfileClick 전달 */}
+            <ChatMessageList
+              messages={messages}
+              chatHistory={chatHistory}
+              hasMoreHistory={hasMoreHistory}
+              isLoadingHistory={isLoadingHistory}
+              onLoadMoreHistory={loadMoreHistory}
+              onProfileClick={handleProfileClick}
+              onListClick={handleListClick}
+            />
+
+            <ChatMessageInput onSendMessage={handleSendMessage} />
+
+            {/* 사이드바 */}
+            {isSidebarOpen && (
+              <ChatSidebar
+                participants={participants}
+                currentUserId="user-me" // 실제 사용자 ID로 교체 필요
+                isNotificationOn={!isMuted}
+                onToggleNotification={handleToggleNotification}
+                onClose={closeSidebar}
+                onProfileClick={handleSidebarProfileClick}
+                onLeave={() => {
+                  leaveChat();
+                  onClose();
+                }}
+                title="참여자 목록"
+                subtitle="참여자"
+              />
+            )}
+          </>
+        )}
       </div>
 
-      {/* 1:1 채팅 모달 (PrivateChatModal) - usePrivateChatFlow의 상태 사용 */}
+      {/* 1:1 채팅 모달 */}
       {targetUserForPrivateChat && (
         <PrivateChatModal
           targetUser={targetUserForPrivateChat}

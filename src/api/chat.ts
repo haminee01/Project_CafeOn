@@ -15,16 +15,42 @@ export interface NotificationResponse {
 }
 
 export interface ChatRoomJoinResponse {
-  roomId: string;
-  cafeId: string;
   message: string;
+  data: {
+    userId: string;
+    memberId: number;
+    cafeId: number;
+    roomId: number;
+    roomName: string;
+    type: string;
+    muted: boolean;
+    maxCapacity: number;
+    currentMembers: number;
+    joinedAt: string;
+    alreadyJoined: boolean;
+  };
+}
+
+// 1:1 채팅방 생성 응답 타입
+export interface DmChatJoinResponse {
+  message: string;
+  data: {
+    userId: string;
+    memberId: number;
+    roomId: number;
+    type: string;
+    muted: boolean;
+    joinedAt: string;
+    alreadyJoined: boolean;
+  };
 }
 
 // 채팅방 참여자 타입
 export interface ChatParticipant {
   userId: string;
   nickname: string;
-  profileImage?: string;
+  profileImage?: string | null;
+  me: boolean; // 채팅목록에서 나 표시
 }
 
 // 채팅 메시지 타입
@@ -51,8 +77,9 @@ export interface ChatHistoryMessage {
 
 // 채팅 히스토리 응답 타입 (커서 페이징)
 export interface ChatHistoryResponse {
+  message: string;
   data: {
-    items: ChatHistoryMessage[];
+    content: ChatHistoryMessage[];
     hasNext: boolean;
     nextCursor?: string;
   };
@@ -171,94 +198,12 @@ export const joinCafeGroupChat = async (
       }
     );
 
-    // 응답 데이터 파싱 (빈 응답 처리)
-    let responseData: any = {};
-    const responseText = await response.text();
+    // 백엔드에서 정상 응답을 주고 있으므로 에러 처리 로직 제거
+    // if (!response.ok) { ... } 블록 제거
 
-    if (responseText.trim()) {
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error(
-          "JSON 파싱 실패:",
-          parseError,
-          "응답 텍스트:",
-          responseText
-        );
-        responseData = { message: "서버 응답을 처리할 수 없습니다." };
-      }
-    }
-
-    if (!response.ok) {
-      console.error("API 에러 응답:", {
-        status: response.status,
-        statusText: response.statusText,
-        responseData,
-        responseText,
-      });
-
-      // 403 Forbidden 에러인 경우 특별 처리
-      if (response.status === 403) {
-        console.log("403 Forbidden - 권한 없음, 이미 참여 중인지 확인");
-
-        // 실제 chatroom_id를 가져와서 이미 참여 중인 것으로 처리
-        try {
-          const roomInfo = await getChatRoomIdByCafeId(cafeId);
-          console.log("카페 ID로 조회한 실제 채팅방 ID:", roomInfo);
-
-          const defaultRoomInfo: ChatRoomJoinResponse = {
-            roomId: roomInfo.roomId,
-            cafeId: cafeId,
-            message: "이미 참여 중인 채팅방입니다.",
-          };
-          console.log("403 에러를 이미 참여 중으로 처리:", defaultRoomInfo);
-          return defaultRoomInfo;
-        } catch (roomIdErr) {
-          console.error("채팅방 ID 조회 실패:", roomIdErr);
-          throw new Error(
-            "채팅방에 접근할 권한이 없습니다. 로그인 상태를 확인해주세요."
-          );
-        }
-      }
-
-      // "이미 참여 중" 또는 중복 키 에러인 경우 정상 응답으로 처리
-      const isAlreadyParticipating =
-        responseData.message === "이미 채팅방에 참여 중입니다." ||
-        responseData.message?.includes("Duplicate entry") ||
-        responseData.message?.includes("uk_crm_room_user") ||
-        responseData.message?.includes("chat_room_members");
-
-      if (isAlreadyParticipating) {
-        console.log("이미 참여 중인 채팅방 - 정상 처리");
-
-        // 실제 chatroom_id를 가져오기
-        const roomInfo = await getChatRoomIdByCafeId(cafeId);
-        console.log("카페 ID로 조회한 실제 채팅방 ID:", roomInfo);
-
-        // data가 있으면 반환, 없으면 실제 chatroom_id로 채팅방 정보 생성
-        if (responseData.data) {
-          return responseData.data;
-        } else {
-          // 실제 chatroom_id를 사용한 채팅방 정보 생성
-          const defaultRoomInfo: ChatRoomJoinResponse = {
-            roomId: roomInfo.roomId, // 실제 chatroom_id 사용
-            cafeId: cafeId,
-            message: "이미 참여 중인 채팅방입니다.",
-          };
-          console.log("실제 채팅방 정보 반환:", defaultRoomInfo);
-          return defaultRoomInfo;
-        }
-      }
-
-      // 실제 에러인 경우만 에러로 처리
-      throw new Error(
-        responseData.message ||
-          responseData.error ||
-          `HTTP error! status: ${response.status}`
-      );
-    }
-
+    const responseData: ChatRoomJoinResponse = await response.json();
     console.log("채팅방 참여 성공:", responseData);
+
     return responseData;
   } catch (error) {
     console.error("카페 단체 채팅방 가입 실패:", error);
@@ -288,16 +233,22 @@ export const getChatParticipants = async (
   roomId: string
 ): Promise<ChatParticipant[]> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("accessToken")
+        : null;
+    if (!token) {
+      throw new Error("인증 토큰이 없습니다.");
+    }
 
     console.log("참여자 목록 요청:", {
-      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/participants`,
+      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members`,
       token: token ? "토큰 존재" : "토큰 없음",
       roomId,
     });
 
     const response = await fetch(
-      `${API_BASE_URL}/api/chat/rooms/${roomId}/participants`,
+      `${API_BASE_URL}/api/chat/rooms/${roomId}/members`,
       {
         method: "GET",
         headers: {
@@ -328,7 +279,8 @@ export const getChatParticipants = async (
 
     const data = await response.json();
     console.log("참여자 목록 응답:", data);
-    return data;
+    console.log("참여자 목록 data.data:", data.data);
+    return data.data || [];
   } catch (error) {
     console.error("채팅방 참여자 목록 조회 실패:", error);
     throw error;
@@ -669,8 +621,9 @@ export const getChatHistory = async (
           response.status
         );
         const emptyHistory: ChatHistoryResponse = {
+          message: "채팅 히스토리가 없습니다",
           data: {
-            items: [],
+            content: [],
             hasNext: false,
             nextCursor: undefined,
           },
@@ -738,7 +691,7 @@ export const patchRead = async (
  */
 export const createDmChat = async (
   counterpartId: string
-): Promise<ChatRoomJoinResponse> => {
+): Promise<DmChatJoinResponse> => {
   try {
     const token = localStorage.getItem("accessToken");
 
@@ -772,9 +725,16 @@ export const createDmChat = async (
       ) {
         console.log("1:1 채팅방 생성 API 에러, 기본값 반환:", response.status);
         return {
-          roomId: "1",
-          cafeId: "",
           message: "1:1 채팅방 생성에 실패했습니다.",
+          data: {
+            userId: "",
+            memberId: 0,
+            roomId: 1,
+            type: "PRIVATE",
+            muted: false,
+            joinedAt: new Date().toISOString(),
+            alreadyJoined: false,
+          },
         };
       }
 

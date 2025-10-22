@@ -52,10 +52,12 @@ export default function ChatPage() {
       console.log("딥링크 채팅 페이지 - 히스토리 로드 시작:", { roomId, jump });
 
       const response = await getChatHistory(roomId, undefined, 50, true);
-      const messages = response.data.items || [];
+      const messages = response.data.content || [];
 
       // chatId 순으로 정렬 (오래된 → 최신)
-      messages.sort((a, b) => a.chatId - b.chatId);
+      messages.sort(
+        (a: ChatHistoryMessage, b: ChatHistoryMessage) => a.chatId - b.chatId
+      );
 
       setChatHistory(messages);
 
