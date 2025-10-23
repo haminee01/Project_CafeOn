@@ -19,6 +19,15 @@ export function setDmChatMapping(counterpartId: string, roomId: number): void {
     저장전매핑내용: Object.fromEntries(counterpartToRoom),
   });
 
+  // roomId가 1인 경우 저장하지 않음 (잘못된 매핑 방지)
+  if (roomId === 1) {
+    console.error("❌ 잘못된 roomId(1) 저장 시도 차단!", {
+      counterpartId,
+      roomId,
+    });
+    return;
+  }
+
   counterpartToRoom.set(counterpartId, roomId);
   roomToCounterpart.set(roomId, counterpartId);
 
@@ -80,4 +89,36 @@ export function debugDmMappings(): void {
   console.log("상대방 -> 채팅방:", Object.fromEntries(counterpartToRoom));
   console.log("채팅방 -> 상대방:", Object.fromEntries(roomToCounterpart));
   console.log("총 매핑 수:", counterpartToRoom.size);
+}
+
+/**
+ * 모든 1:1 채팅 매핑을 초기화합니다.
+ */
+export function clearAllDmMappings(): void {
+  console.log("=== 모든 1:1 채팅 매핑 초기화 ===");
+  counterpartToRoom.clear();
+  roomToCounterpart.clear();
+  console.log("초기화 완료, 총 매핑 수:", counterpartToRoom.size);
+}
+
+/**
+ * 잘못된 매핑(roomId가 1인 경우)을 모두 제거합니다.
+ */
+export function removeInvalidMappings(): void {
+  console.log("=== 잘못된 매핑 제거 시작 ===");
+  const invalidCounterparts: string[] = [];
+
+  // roomId가 1인 매핑 찾기
+  counterpartToRoom.forEach((roomId, counterpartId) => {
+    if (roomId === 1) {
+      invalidCounterparts.push(counterpartId);
+    }
+  });
+
+  // 잘못된 매핑 제거
+  invalidCounterparts.forEach((counterpartId) => {
+    removeDmChatMapping(counterpartId);
+  });
+
+  console.log(`잘못된 매핑 ${invalidCounterparts.length}개 제거 완료`);
 }

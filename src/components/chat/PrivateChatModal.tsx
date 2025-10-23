@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ChatMessageList from "./ChatMessageList";
 import ChatMessageInput from "./ChatMessageInput";
 import ChatSidebar from "./ChatSidebar";
 import { useDmChat } from "../../hooks/useDmChat";
+import { useAuth } from "../../hooks/useAuth";
 
 interface PrivateChatModalProps {
   targetUser: {
@@ -19,6 +20,10 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
   onClose,
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // 현재 사용자 정보 가져오기
+  const { user } = useAuth();
+  const currentUserId = user?.id || "user-me";
 
   // 1:1 채팅 훅 사용
   const {
@@ -44,6 +49,23 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
     counterpartId: targetUser.id,
     counterpartName: targetUser.name,
   });
+
+  // 컴포넌트 마운트 시 자동으로 채팅방 참여
+  useEffect(() => {
+    console.log("=== PrivateChatModal 마운트, joinChat 호출 ===", {
+      targetUserId: targetUser.id,
+      targetUserName: targetUser.name,
+      isJoined,
+      isLoading,
+      error,
+    });
+
+    // 이미 참여 중이거나, 로딩 중이거나, 에러가 있으면 재시도하지 않음
+    if (!isJoined && !isLoading && !error) {
+      joinChat();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 한 번만 실행
 
   // 사이드바 닫기 핸들러
   const closeSidebar = () => {
@@ -108,15 +130,18 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
         {/* 에러 상태 */}
         {error && !isLoading && (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center">
+            <div className="text-center p-6">
               <div className="text-red-500 text-6xl mb-4">⚠️</div>
-              <h2 className="text-xl font-bold mb-2">오류 발생</h2>
-              <p className="text-gray-600 mb-4">{error}</p>
+              <h2 className="text-xl font-bold mb-2">1:1 채팅 시작 실패</h2>
+              <p className="text-gray-600 mb-2">{error}</p>
+              <p className="text-sm text-gray-500 mb-4">
+                올바른 사용자 ID가 필요합니다.
+              </p>
               <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
               >
-                다시 시도
+                닫기
               </button>
             </div>
           </div>
@@ -194,15 +219,15 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
             {isSidebarOpen && (
               <ChatSidebar
                 participants={participants}
-                currentUserId={
-                  participants.find((u) => u.name.startsWith("나"))?.id ||
-                  "user-me"
-                }
+                currentUserId={currentUserId}
                 isNotificationOn={!isMuted}
                 onToggleNotification={handleToggleNotification}
                 onClose={closeSidebar}
                 onProfileClick={() => {}} // 1:1 채팅에서는 별도 동작 없음
-                onLeave={() => console.log("나가기")}
+                onLeave={() => {
+                  leaveChat();
+                  onClose();
+                }}
                 title="참여자 목록"
                 subtitle="참여자"
               />

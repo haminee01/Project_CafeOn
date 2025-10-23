@@ -59,26 +59,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               </p>
             )}
             <div className="space-y-3">
-              {participants.map((user) => (
-                <div
-                  key={user.id}
-                  className={`flex items-center space-x-3 p-2 rounded-md transition duration-150 ${
-                    user.id !== currentUserId && onProfileClick
-                      ? "cursor-pointer hover:bg-gray-100"
-                      : ""
-                  }`}
-                  onClick={(e) => {
-                    if (user.id !== currentUserId && onProfileClick) {
-                      onProfileClick(user, e);
-                    }
-                  }}
-                >
-                  <ProfileIcon variant="default" />
-                  <span className="font-medium text-gray-800">
-                    {user.name} {user.id === currentUserId ? "(나)" : ""}
-                  </span>
-                </div>
-              ))}
+              {participants
+                .sort((a, b) => {
+                  // 현재 사용자를 맨 위로 정렬
+                  if (a.id === currentUserId) return -1;
+                  if (b.id === currentUserId) return 1;
+                  return 0;
+                })
+                .map((user) => (
+                  <div
+                    key={user.id}
+                    className={`flex items-center space-x-3 p-2 rounded-md transition duration-150 ${
+                      user.id !== currentUserId && onProfileClick
+                        ? "cursor-pointer hover:bg-gray-100"
+                        : ""
+                    }`}
+                    onClick={(e) => {
+                      if (user.id !== currentUserId && onProfileClick) {
+                        onProfileClick(user, e);
+                      }
+                    }}
+                  >
+                    <ProfileIcon variant="default" />
+                    <span className="font-medium text-gray-800">
+                      {user.name} {user.id === currentUserId ? "(나)" : ""}
+                    </span>
+                  </div>
+                ))}
             </div>
           </div>
 

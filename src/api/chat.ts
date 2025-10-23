@@ -481,12 +481,12 @@ export const getChatParticipants = async (
         ? localStorage.getItem("accessToken")
         : null;
     if (!token) {
-      throw new Error("인증 토큰이 없습니다.");
+      console.warn("참여자 목록 조회: 인증 토큰이 없습니다.");
+      return [];
     }
 
     console.log("참여자 목록 요청:", {
       url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members`,
-      token: token ? "토큰 존재" : "토큰 없음",
       roomId,
     });
 
@@ -507,8 +507,9 @@ export const getChatParticipants = async (
         response.statusText
       );
 
-      // 403, 404, 500 에러인 경우 빈 배열 반환
+      // 400, 403, 404, 500 에러인 경우 빈 배열 반환 (무한 재시도 방지)
       if (
+        response.status === 400 ||
         response.status === 403 ||
         response.status === 404 ||
         response.status === 500
@@ -522,11 +523,11 @@ export const getChatParticipants = async (
 
     const data = await response.json();
     console.log("참여자 목록 응답:", data);
-    console.log("참여자 목록 data.data:", data.data);
     return data.data || [];
   } catch (error) {
     console.error("채팅방 참여자 목록 조회 실패:", error);
-    throw error;
+    // 에러 발생 시 빈 배열 반환하여 무한 재시도 방지
+    return [];
   }
 };
 
@@ -814,10 +815,17 @@ export const getChatHistory = async (
   try {
     const token = localStorage.getItem("accessToken");
 
-    // 토큰이 없으면 에러
+    // 토큰이 없으면 빈 히스토리 반환 (무한 재시도 방지)
     if (!token) {
-      console.error("인증 토큰이 없습니다.");
-      throw new Error("인증이 필요합니다. 로그인해주세요.");
+      console.warn("채팅 히스토리 조회: 인증 토큰이 없습니다.");
+      return {
+        message: "인증이 필요합니다",
+        data: {
+          content: [],
+          hasNext: false,
+          nextCursor: undefined,
+        },
+      };
     }
 
     // 쿼리 파라미터 구성
@@ -832,7 +840,6 @@ export const getChatHistory = async (
 
     console.log("채팅 히스토리 요청:", {
       url,
-      token: token ? "토큰 존재" : "토큰 없음",
       roomId,
       beforeId,
       size,
@@ -853,8 +860,9 @@ export const getChatHistory = async (
         response.statusText
       );
 
-      // 403, 404, 500 에러인 경우 빈 히스토리 반환
+      // 400, 403, 404, 500 에러인 경우 빈 히스토리 반환 (무한 재시도 방지)
       if (
+        response.status === 400 ||
         response.status === 403 ||
         response.status === 404 ||
         response.status === 500
@@ -863,15 +871,14 @@ export const getChatHistory = async (
           "채팅 히스토리 API 에러, 빈 히스토리 반환:",
           response.status
         );
-        const emptyHistory: ChatHistoryResponse = {
-          message: "채팅 히스토리가 없습니다",
+        return {
+          message: "채팅 히스토리를 불러올 수 없습니다",
           data: {
             content: [],
             hasNext: false,
             nextCursor: undefined,
           },
         };
-        return emptyHistory;
       }
 
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -892,7 +899,15 @@ export const getChatHistory = async (
     return data;
   } catch (error) {
     console.error("채팅 히스토리 조회 실패:", error);
-    throw error;
+    // 에러 발생 시 빈 히스토리 반환하여 무한 재시도 방지
+    return {
+      message: "채팅 히스토리 조회에 실패했습니다",
+      data: {
+        content: [],
+        hasNext: false,
+        nextCursor: undefined,
+      },
+    };
   }
 };
 
@@ -938,19 +953,22 @@ export const createDmChat = async (
   try {
     const token = localStorage.getItem("accessToken");
 
+    const url = `${API_BASE_URL}/api/chat/rooms/dm/join?counterpartId=${encodeURIComponent(
+      counterpartId
+    )}`;
+
     console.log("1:1 채팅방 생성 요청:", {
-      url: `${API_BASE_URL}/api/chat/rooms/dm/join`,
+      url,
       counterpartId,
       token: token ? "토큰 존재" : "토큰 없음",
     });
 
-    const response = await fetch(`${API_BASE_URL}/api/chat/rooms/dm/join`, {
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ counterpartId }),
     });
 
     if (!response.ok) {
@@ -960,27 +978,7 @@ export const createDmChat = async (
         response.statusText
       );
 
-      // 403, 404, 500 에러인 경우 기본값 반환
-      if (
-        response.status === 403 ||
-        response.status === 404 ||
-        response.status === 500
-      ) {
-        console.log("1:1 채팅방 생성 API 에러, 기본값 반환:", response.status);
-        return {
-          message: "1:1 채팅방 생성에 실패했습니다.",
-          data: {
-            userId: "",
-            memberId: 0,
-            roomId: 1,
-            type: "PRIVATE",
-            muted: false,
-            joinedAt: new Date().toISOString(),
-            alreadyJoined: false,
-          },
-        };
-      }
-
+      // 403, 404, 500 에러인 경우 에러 throw (기본값 반환하지 않음)
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 

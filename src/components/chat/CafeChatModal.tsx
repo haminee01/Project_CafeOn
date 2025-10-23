@@ -9,6 +9,7 @@ import PrivateChatModal from "./PrivateChatModal";
 import ProfileMiniPopup from "../common/ProfileMiniPopup";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { usePrivateChatFlow } from "../../hooks/usePrivateChatFlow";
+import { useAuth } from "../../hooks/useAuth";
 
 interface CafeChatModalProps {
   cafeId: string;
@@ -25,16 +26,9 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // usePrivateChatFlow 훅 사용 (빈 더미 프로필 객체 전달)
-  const {
-    targetUserForPopup,
-    popupPosition,
-    targetUserForPrivateChat,
-    handleProfileClick,
-    handleStartPrivateChat,
-    closePrivateChatModal,
-    closePopup,
-  } = usePrivateChatFlow({}, modalRef);
+  // 현재 사용자 정보 가져오기
+  const { user } = useAuth();
+  const currentUserId = user?.id || "user-me";
 
   // 카페 채팅 훅 사용
   const {
@@ -59,6 +53,17 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     cafeId,
     cafeName,
   });
+
+  // usePrivateChatFlow 훅 사용 (참여자 목록 전달)
+  const {
+    targetUserForPopup,
+    popupPosition,
+    targetUserForPrivateChat,
+    handleProfileClick,
+    handleStartPrivateChat,
+    closePrivateChatModal,
+    closePopup,
+  } = usePrivateChatFlow({}, modalRef, participants);
 
   // 사이드바 닫기 핸들러
   const closeSidebar = () => {
@@ -254,7 +259,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
             {isSidebarOpen && (
               <ChatSidebar
                 participants={participants}
-                currentUserId="user-me" // 실제 사용자 ID로 교체 필요
+                currentUserId={currentUserId}
                 isNotificationOn={!isMuted}
                 onToggleNotification={handleToggleNotification}
                 onClose={closeSidebar}

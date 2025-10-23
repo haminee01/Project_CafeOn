@@ -234,13 +234,28 @@ export const useCafeChat = ({
           useRoomId
         );
         console.log("참여자 목록 조회 성공:", response);
+        console.log("첫 번째 참여자 nickname:", response[0]?.nickname);
 
         // ChatParticipant를 Participant로 변환
         const convertedParticipants: Participant[] = response.map(
-          (participant) => ({
-            id: participant.userId,
-            name: participant.nickname,
-          })
+          (participant) => {
+            // "나 (nickname)" 형태에서 순수한 닉네임만 추출
+            let cleanNickname = participant.nickname;
+            console.log("원본 nickname:", participant.nickname);
+
+            if (cleanNickname.startsWith("나 (")) {
+              cleanNickname = cleanNickname
+                .replace("나 (", "")
+                .replace(")", "");
+            }
+
+            console.log("정리된 nickname:", cleanNickname);
+
+            return {
+              id: participant.userId,
+              name: cleanNickname, // 순수한 닉네임만 저장
+            };
+          }
         );
 
         console.log("변환된 참여자 목록:", convertedParticipants);
