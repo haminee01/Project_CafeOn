@@ -30,7 +30,7 @@ interface ChatFlowActions extends ChatFlowState {
 
 export const usePrivateChatFlow = (
   DUMMY_PROFILES: { [key: string]: UserProfile },
-  relativeRef?: React.RefObject<HTMLElement>
+  relativeRef?: React.RefObject<HTMLElement | null>
 ): ChatFlowActions => {
   // 1. 프로필 팝업 관련 상태
   const [targetUserForPopup, setTargetUserForPopup] =

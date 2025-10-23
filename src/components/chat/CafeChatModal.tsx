@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useCafeChat } from "../../hooks/useCafeChat";
 import ChatMessageList from "../chat/ChatMessageList";
 import ChatMessageInput from "../chat/ChatMessageInput";
 import ChatSidebar from "../chat/ChatSidebar";
 import PrivateChatModal from "./PrivateChatModal";
+import ProfileMiniPopup from "../common/ProfileMiniPopup";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
+import { usePrivateChatFlow } from "../../hooks/usePrivateChatFlow";
 
 interface CafeChatModalProps {
   cafeId: string;
@@ -19,18 +21,20 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
   cafeName = "문래 마이스페이스",
   onClose,
 }) => {
-  console.log("=== CafeChatModal 렌더링됨 ===", {
-    cafeName,
-    cafeId,
-    componentType: "CafeChatModal",
-  });
-
   useEscapeKey(onClose);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [targetUserForPrivateChat, setTargetUserForPrivateChat] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // usePrivateChatFlow 훅 사용 (빈 더미 프로필 객체 전달)
+  const {
+    targetUserForPopup,
+    popupPosition,
+    targetUserForPrivateChat,
+    handleProfileClick,
+    handleStartPrivateChat,
+    closePrivateChatModal,
+    closePopup,
+  } = usePrivateChatFlow({}, modalRef);
 
   // 카페 채팅 훅 사용
   const {
@@ -71,36 +75,17 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     await sendMessage(message);
   };
 
-  // 프로필 클릭 핸들러 (1:1 채팅 모달 열기)
-  const handleProfileClick = (
-    senderId: string,
-    senderName: string,
-    event: React.MouseEvent<any>
-  ) => {
-    event.stopPropagation();
-    console.log("1:1 채팅 시작:", senderId, senderName);
-
-    // 1:1 채팅 모달 열기
-    setTargetUserForPrivateChat({
-      id: senderId,
-      name: senderName,
-    });
-  };
-
-  // 메시지 리스트 영역 클릭 핸들러: 사이드바만 닫기
+  // 메시지 리스트 영역 클릭 핸들러: 사이드바와 팝업 닫기
   const handleListClick = () => {
     closeSidebar();
+    closePopup();
   };
 
-  // 모달 오버레이 클릭 핸들러: 사이드바 닫기 + 모달 닫기
+  // 모달 오버레이 클릭 핸들러: 사이드바 닫기 + 팝업 닫기 + 모달 닫기
   const handleModalOverlayClick = () => {
     closeSidebar();
+    closePopup();
     onClose();
-  };
-
-  // 1:1 채팅 모달 닫기 핸들러
-  const closePrivateChatModal = () => {
-    setTargetUserForPrivateChat(null);
   };
 
   // 사이드바 내 프로필 클릭 핸들러
@@ -109,57 +94,15 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     event: React.MouseEvent<HTMLDivElement>
   ) => {
     event.stopPropagation();
-    console.log("사이드바에서 1:1 채팅 시작:", user.id, user.name);
-
-    // 1:1 채팅 모달 열기
-    setTargetUserForPrivateChat({
-      id: user.id,
-      name: user.name,
-    });
-
+    handleProfileClick(user.id, user.name, event);
     closeSidebar();
   };
-
-  // 모달이 열릴 때 채팅방 참여
-  useEffect(() => {
-    console.log("CafeChatModal useEffect 실행:", {
-      cafeId,
-      isJoined,
-      isLoading,
-      roomId,
-    });
-
-    if (cafeId && !isLoading) {
-      if (!isJoined) {
-        console.log("새로운 채팅방 참여 시도");
-        joinChat();
-      } else if (isJoined && roomId) {
-        console.log("이미 참여 중인 채팅방, 데이터 새로고침");
-        refreshParticipants();
-        loadMoreHistory();
-      }
-    } else {
-      console.log("joinChat 호출 조건 불만족:", {
-        cafeId,
-        isJoined,
-        isLoading,
-      });
-    }
-  }, [
-    cafeId,
-    isJoined,
-    isLoading,
-    roomId,
-    joinChat,
-    refreshParticipants,
-    loadMoreHistory,
-  ]);
 
   // roomId가 null인 경우 에러 처리
   if (!roomId && !isLoading && isJoined) {
     console.error("CafeChatModal - roomId가 null입니다:", {
       roomId,
-      cafeId: parseInt(cafeId),
+      cafeId,
       isJoined,
       isLoading,
       error,
@@ -173,6 +116,9 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
             <h2 className="text-xl font-bold mb-2">채팅방 정보 오류</h2>
             <p className="text-gray-600 mb-4">
               채팅방 정보를 불러올 수 없습니다. 다시 시도해주세요.
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              카페 ID: {cafeId}, 상태: {isJoined ? "참여됨" : "미참여"}
             </p>
             <div className="flex gap-2 justify-center">
               <button
@@ -201,6 +147,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
       onClick={handleModalOverlayClick} // 오버레이 클릭 시 모든 팝업/사이드바/모달 닫기
     >
       <div
+        ref={modalRef}
         className="relative flex h-[70vh] w-[90%] flex-col rounded-xl bg-white shadow-2xl md:h-[80vh] md:w-[70%] lg:h-[75vh] lg:w-[60%] xl:w-[50%] max-w-4xl overflow-hidden transition-all duration-300 transform scale-100"
         onClick={(e) => e.stopPropagation()}
       >
@@ -235,8 +182,8 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
         {!isLoading && !error && (
           <>
             {/* Header */}
-            <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-10 shadow-sm bg-[#6E4213] sticky top-0">
-              <h2 className="text-xl font-bold text-white">
+            <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-10 shadow-sm bg-white sticky top-0">
+              <h2 className="text-xl font-bold text-gray-900">
                 {cafeName} 채팅방
               </h2>
               <div className="flex items-center space-x-2">
@@ -246,7 +193,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
                     e.stopPropagation();
                     setIsSidebarOpen((prev) => !prev);
                   }}
-                  className="text-white p-2 rounded-full transition duration-150"
+                  className="text-gray-900 p-2 rounded-full transition duration-150"
                 >
                   <svg
                     aria-hidden="true"
@@ -271,7 +218,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
                     e.stopPropagation();
                     onClose();
                   }}
-                  className="text-white p-2 rounded-full transition duration-150"
+                  className="text-gray-900 p-2 rounded-full transition duration-150"
                 >
                   <svg
                     className="w-5 h-5"
@@ -318,6 +265,16 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
                 }}
                 title="참여자 목록"
                 subtitle="참여자"
+              />
+            )}
+
+            {/* 프로필 미니 팝업 */}
+            {targetUserForPopup && popupPosition && (
+              <ProfileMiniPopup
+                targetUserForPopup={targetUserForPopup}
+                popupPosition={popupPosition}
+                handleStartPrivateChat={handleStartPrivateChat}
+                closePopup={closePopup}
               />
             )}
           </>

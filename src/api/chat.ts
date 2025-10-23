@@ -169,6 +169,34 @@ export const getChatRoomIdByCafeId = async (
   }
 };
 
+// 요청 중복 방지를 위한 Map
+const pendingRequests = new Map<string, Promise<ChatRoomJoinResponse>>();
+
+// 사용자 인증 상태 확인
+async function checkAuthStatus(): Promise<boolean> {
+  try {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      console.error("토큰이 없습니다");
+      return false;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    console.log("인증 상태 확인:", response.status);
+    return response.ok;
+  } catch (error) {
+    console.error("인증 상태 확인 실패:", error);
+    return false;
+  }
+}
+
 /**
  * 카페 단체 채팅방 생성 + 가입
  * POST /api/chat/rooms/group/:cafeId/join
@@ -177,52 +205,267 @@ export const joinCafeGroupChat = async (
   cafeId: string,
   retryCount = 0
 ): Promise<ChatRoomJoinResponse> => {
-  try {
-    const token = localStorage.getItem("accessToken");
-
-    console.log("채팅방 참여 요청:", {
-      url: `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
-      token: token ? "토큰 존재" : "토큰 없음",
-      cafeId,
-      retryCount,
-    });
-
-    const response = await fetch(
-      `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    // 백엔드에서 정상 응답을 주고 있으므로 에러 처리 로직 제거
-    // if (!response.ok) { ... } 블록 제거
-
-    const responseData: ChatRoomJoinResponse = await response.json();
-    console.log("채팅방 참여 성공:", responseData);
-
-    return responseData;
-  } catch (error) {
-    console.error("카페 단체 채팅방 가입 실패:", error);
-
-    // 데드락 에러인 경우 재시도 (최대 2번)
-    if (
-      error instanceof Error &&
-      error.message.includes("Deadlock") &&
-      retryCount < 2
-    ) {
-      console.log(`데드락 발생, ${retryCount + 1}번째 재시도 중...`);
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1000 * (retryCount + 1))
-      );
-      return joinCafeGroupChat(cafeId, retryCount + 1);
-    }
-
-    throw error;
+  // 중복 요청 방지
+  const requestKey = `${cafeId}-${retryCount}`;
+  if (pendingRequests.has(requestKey)) {
+    console.log("중복 요청 감지, 기존 요청 반환:", requestKey);
+    return pendingRequests.get(requestKey)!;
   }
+
+  // Promise 생성 및 Map에 저장
+  const requestPromise = (async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      // 카페 ID 유효성 검사
+      const parsedCafeId = parseInt(cafeId);
+      if (isNaN(parsedCafeId) || parsedCafeId <= 0) {
+        throw new Error(`유효하지 않은 카페 ID: ${cafeId}`);
+      }
+
+      console.log("채팅방 참여 요청:", {
+        url: `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
+        token: token ? "토큰 존재" : "토큰 없음",
+        cafeId,
+        parsedCafeId,
+        retryCount,
+      });
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          // body는 포함하지 않음 - cafeId는 URL path에 이미 포함됨
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("채팅방 참여 API 에러:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorText,
+          cafeId,
+          url: `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
+        });
+
+        // 400 에러인 경우 더 자세한 정보 제공
+        if (response.status === 400) {
+          console.error("400 Bad Request - 요청 데이터 확인 필요:", {
+            cafeId,
+            cafeIdType: typeof cafeId,
+            cafeIdParsed: parseInt(cafeId),
+            isNaN: isNaN(parseInt(cafeId)),
+          });
+
+          // 에러 응답을 JSON으로 파싱 시도
+          try {
+            const errorJson = JSON.parse(errorText);
+            console.error("에러 응답 상세:", errorJson);
+
+            // "가입 상태 조회 실패" 에러인 경우 특별 처리
+            if (
+              errorJson.message &&
+              errorJson.message.includes("가입 상태 조회 실패")
+            ) {
+              console.error(
+                "가입 상태 조회 실패 - 사용자 인증 또는 권한 문제일 수 있음"
+              );
+              console.error("토큰 상태:", {
+                hasToken: !!token,
+                tokenLength: token ? token.length : 0,
+                tokenPreview: token ? token.substring(0, 50) + "..." : "없음",
+              });
+
+              // 토큰이 있는데도 가입 상태 조회가 실패하면 토큰 갱신 시도
+              if (token && retryCount === 0) {
+                console.log("토큰 갱신 시도...");
+                try {
+                  const refreshToken = localStorage.getItem("refreshToken");
+                  console.log("refreshToken 존재:", !!refreshToken);
+
+                  if (refreshToken) {
+                    console.log("토큰 갱신 요청:", {
+                      url: `${API_BASE_URL}/api/auth/refresh`,
+                      refreshTokenLength: refreshToken.length,
+                    });
+
+                    const refreshResponse = await fetch(
+                      `${API_BASE_URL}/api/auth/refresh`,
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ refreshToken }),
+                      }
+                    );
+
+                    console.log(
+                      "토큰 갱신 응답 상태:",
+                      refreshResponse.status,
+                      refreshResponse.statusText
+                    );
+
+                    if (refreshResponse.ok) {
+                      const refreshData = await refreshResponse.json();
+                      console.log("토큰 갱신 응답:", refreshData);
+
+                      // 응답 구조 확인 및 토큰 저장
+                      const newAccessToken =
+                        refreshData.accessToken ||
+                        refreshData.data?.accessToken;
+                      if (newAccessToken) {
+                        localStorage.setItem("accessToken", newAccessToken);
+                        console.log("토큰 갱신 성공, 재시도...");
+                        return joinCafeGroupChat(cafeId, retryCount + 1);
+                      } else {
+                        console.error(
+                          "토큰 갱신 응답에 accessToken이 없음:",
+                          refreshData
+                        );
+                      }
+                    } else {
+                      const errorText = await refreshResponse.text();
+                      console.error("토큰 갱신 실패:", {
+                        status: refreshResponse.status,
+                        statusText: refreshResponse.statusText,
+                        errorText,
+                      });
+                    }
+                  } else {
+                    console.error("refreshToken이 없음");
+                  }
+                } catch (refreshError) {
+                  console.error("토큰 갱신 실패:", refreshError);
+                }
+              }
+
+              // 토큰 갱신이 실패하거나 효과가 없을 때, 사용자 인증 상태 재확인
+              if (retryCount === 0) {
+                console.log("사용자 인증 상태 재확인 시도...");
+                try {
+                  // 간단한 인증 확인 API 호출 (예: 사용자 정보 조회)
+                  const authCheckResponse = await fetch(
+                    `${API_BASE_URL}/api/auth/me`,
+                    {
+                      method: "GET",
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                      },
+                    }
+                  );
+
+                  console.log("인증 상태 확인 응답:", authCheckResponse.status);
+
+                  if (authCheckResponse.ok) {
+                    console.log("인증 상태 정상, 잠시 후 재시도...");
+                    // 인증이 정상이면 잠시 후 재시도
+                    setTimeout(async () => {
+                      console.log("인증 확인 후 재시도");
+                      await joinCafeGroupChat(cafeId, retryCount + 1);
+                    }, 2000);
+                  } else {
+                    console.error(
+                      "인증 상태 확인 실패:",
+                      authCheckResponse.status
+                    );
+                  }
+                } catch (authCheckError) {
+                  console.error("인증 상태 확인 중 에러:", authCheckError);
+                }
+              }
+            }
+
+            // Hibernate 엔티티 ID null 에러 처리
+            if (
+              errorJson.message &&
+              (errorJson.message.includes("has a null identifier") ||
+                errorJson.message.includes("ChatRoomEntity"))
+            ) {
+              console.error(
+                "Hibernate 엔티티 ID null 에러 - 백엔드 데이터베이스 문제"
+              );
+              console.error(
+                "채팅방 생성 시 데이터베이스 제약 조건 위반 또는 트랜잭션 문제"
+              );
+              console.error("에러 상세:", errorJson.message);
+
+              // 처음 시도인 경우 인증 상태 확인 후 자동 재시도
+              if (retryCount === 0) {
+                console.log("Hibernate 에러 - 인증 상태 확인 후 재시도...");
+
+                const isAuthValid = await checkAuthStatus();
+                if (isAuthValid) {
+                  console.log("인증 상태 정상, 3초 후 자동 재시도...");
+                  setTimeout(async () => {
+                    console.log("Hibernate 에러 후 자동 재시도");
+                    await joinCafeGroupChat(cafeId, retryCount + 1);
+                  }, 3000);
+                } else {
+                  console.error("인증 상태 이상, 재시도하지 않음");
+                }
+              }
+            }
+          } catch (parseError) {
+            console.error("에러 응답 파싱 실패:", parseError);
+            console.error("원본 에러 텍스트:", errorText);
+          }
+        }
+
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
+      }
+
+      const responseData: ChatRoomJoinResponse = await response.json();
+      console.log("채팅방 참여 성공:", responseData);
+
+      // 응답 데이터 검증
+      if (!responseData || !responseData.data || !responseData.data.roomId) {
+        console.error(
+          "채팅방 참여 응답 데이터가 올바르지 않습니다:",
+          responseData
+        );
+        throw new Error("채팅방 참여 응답 데이터가 올바르지 않습니다.");
+      }
+
+      // 요청 완료 후 Map에서 제거
+      pendingRequests.delete(requestKey);
+
+      return responseData;
+    } catch (error) {
+      console.error("카페 단체 채팅방 가입 실패:", error);
+
+      // 에러 발생 시에도 Map에서 제거
+      pendingRequests.delete(requestKey);
+
+      // 데드락 에러인 경우 재시도 (최대 2번)
+      if (
+        error instanceof Error &&
+        error.message.includes("Deadlock") &&
+        retryCount < 2
+      ) {
+        console.log(`데드락 발생, ${retryCount + 1}번째 재시도 중...`);
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * (retryCount + 1))
+        );
+        return joinCafeGroupChat(cafeId, retryCount + 1);
+      }
+
+      throw error;
+    }
+  })();
+
+  // Promise를 Map에 저장
+  pendingRequests.set(requestKey, requestPromise);
+
+  return requestPromise;
 };
 
 /**
