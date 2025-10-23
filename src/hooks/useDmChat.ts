@@ -563,6 +563,19 @@ export const useDmChat = ({
       console.log("1:1 채팅방 나가기 완료");
     } catch (err) {
       console.error("1:1 채팅방 나가기 실패:", err);
+
+      // API 에러가 발생해도 로컬 상태는 초기화 (사용자 경험 개선)
+      removeDmChatMapping(counterpartId);
+      disconnectStomp();
+
+      setRoomId(null);
+      setIsJoined(false);
+      setParticipants([]);
+      setMessages([]);
+      setChatHistory([]);
+      setError(null);
+
+      console.log("1:1 채팅방 나가기 완료 (에러 발생했지만 상태 초기화)");
     }
   }, [roomId, counterpartId, disconnectStomp]);
 

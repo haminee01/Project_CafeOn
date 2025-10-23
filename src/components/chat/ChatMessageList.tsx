@@ -82,16 +82,17 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
       }
     });
 
-    // 시간순으로 정렬 (히스토리가 먼저, 그 다음 실시간 메시지)
+    // 시간순으로 정렬 (오래된 메시지부터 최신 메시지 순)
     return Array.from(messageMap.values()).sort((a, b) => {
-      // 히스토리 메시지는 앞에, 실시간 메시지는 뒤에
-      const aIsHistory = a.id.startsWith("history-");
-      const bIsHistory = b.id.startsWith("history-");
+      // 메시지 ID에서 시간 정보 추출 (chatId는 시간순으로 증가)
+      const aId = a.id.replace("history-", "");
+      const bId = b.id.replace("history-", "");
 
-      if (aIsHistory && !bIsHistory) return -1;
-      if (!aIsHistory && bIsHistory) return 1;
+      // 숫자로 변환하여 비교 (오래된 메시지가 먼저)
+      const aNum = parseInt(aId) || 0;
+      const bNum = parseInt(bId) || 0;
 
-      return 0;
+      return aNum - bNum;
     });
   }, [historyMessages, messages]);
 
