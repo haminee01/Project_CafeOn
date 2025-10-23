@@ -364,3 +364,112 @@ export async function createAdminInquiryAnswer(
     throw error;
   }
 }
+
+// ==================== Wishlist API ====================
+
+// 위시리스트 목록 조회 (카테고리별)
+export async function getWishlist(params: {
+  category: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+}) {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append("category", params.category);
+    if (params.page !== undefined)
+      queryParams.append("page", params.page.toString());
+    if (params.size !== undefined)
+      queryParams.append("size", params.size.toString());
+    if (params.sort) queryParams.append("sort", params.sort);
+
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(
+      `${API_BASE_URL}/api/my/wishlist?${queryParams.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `위시리스트 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("위시리스트 조회 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 위시리스트 추가/제거
+export async function toggleWishlist(cafeId: number, category: string) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/my/wishlist/${cafeId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify({ category }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `위시리스트 처리 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("위시리스트 처리 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 특정 카페의 위시리스트 카테고리 조회
+export async function getWishlistCategories(cafeId: number) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/my/wishlist/${cafeId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `카테고리 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("위시리스트 카테고리 조회 API 호출 실패:", error);
+    throw error;
+  }
+}
