@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import ProfileIcon from "./ProfileIcon";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,6 +40,17 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     isMyMessage,
     displayName,
   });
+
+  // 디버깅용 로그
+  useEffect(() => {
+    console.log("ChatMessageItem 렌더링:", {
+      messageId: message.id,
+      content: message.content,
+      unreadCount,
+      isMyMessage,
+      shouldShow: unreadCount > 0,
+    });
+  }, [message.id, message.content, unreadCount, isMyMessage]);
 
   // 시스템 메시지인 경우 중앙 정렬로 표시
   if (message.messageType === "SYSTEM") {
@@ -95,10 +106,14 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             {message.content}
           </div>
 
-          {/* 읽지 않은 사람 수 표시 (내가 보낸 메시지이고 읽지 않은 사람이 있을 때만) */}
-          {isMyMessage && unreadCount > 0 && (
-            <div className="flex justify-end mt-1">
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
+          {/* 읽지 않은 사람 수 표시 (읽지 않은 사람이 있을 때만) */}
+          {unreadCount > 0 && (
+            <div
+              className={`flex mt-1 ${
+                isMyMessage ? "justify-start" : "justify-end"
+              }`}
+            >
+              <span className="text-[#8B4513] text-xs font-medium">
                 {unreadCount}
               </span>
             </div>

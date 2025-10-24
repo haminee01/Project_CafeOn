@@ -571,3 +571,40 @@ export async function getNotificationsUnread() {
     throw error;
   }
 }
+
+// 채팅방 메시지 목록 조회 (othersUnreadUsers 포함)
+export async function getChatMessagesWithUnreadCount(roomId: string) {
+  try {
+    if (!roomId || roomId === "undefined" || roomId === "null") {
+      throw new Error("유효하지 않은 roomId입니다.");
+    }
+
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(
+      `${API_BASE_URL}/api/chat/rooms/${roomId}/messages`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `채팅 메시지 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("채팅 메시지 조회 API 호출 실패:", error);
+    throw error;
+  }
+}

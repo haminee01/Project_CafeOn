@@ -5,7 +5,7 @@ import ChatMessageItem from "./ChatMessageItem";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
 import { ChatHistoryMessage } from "@/api/chat";
 import { useAuth } from "@/hooks/useAuth";
-import { getNotificationsUnread } from "@/lib/api";
+import { getChatMessagesWithUnreadCount } from "@/lib/api";
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -73,33 +73,48 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
     hasMarkedAsRead.current = false;
   }, [messages]);
 
-  // 읽음 상태 조회 (notifications/unread API 사용)
+  // 읽음 상태 조회 (othersUnreadUsers 포함된 메시지 API 사용)
   useEffect(() => {
+    if (!roomId) {
+      console.log("roomId가 없어서 읽음 상태 조회를 건너뜁니다.");
+      return;
+    }
+
     const fetchReadStatus = async () => {
       try {
-        const response = await getNotificationsUnread();
-        console.log("읽지 않은 알림 조회 결과:", response);
+        const response = await getChatMessagesWithUnreadCount(roomId);
+        console.log("메시지 목록 조회 결과:", response);
 
         // 응답 데이터 구조에 따라 읽음 상태 설정
-        if (response.data) {
+        if (response.data && response.data.content) {
           const statusMap: { [messageId: string]: number } = {};
 
-          // chatId별로 읽지 않은 알림 수 계산
-          response.data.forEach((notification: any) => {
-            if (notification.chatId && notification.roomId === roomId) {
-              if (!statusMap[notification.chatId]) {
-                statusMap[notification.chatId] = 0;
-              }
-              if (!notification.read) {
-                statusMap[notification.chatId]++;
-              }
-            }
+          // 각 메시지의 othersUnreadUsers 값을 사용
+          response.data.content.forEach((message: any) => {
+            const chatId = message.chatId.toString();
+            // chatHistory 메시지의 경우 "history-" 접두사가 붙은 ID로 매핑
+            const historyMessageId = `history-${chatId}`;
+
+            // 두 가지 ID 형태 모두 매핑
+            statusMap[chatId] = message.othersUnreadUsers || 0;
+            statusMap[historyMessageId] = message.othersUnreadUsers || 0;
+
+            console.log("API 메시지 처리:", {
+              chatId: message.chatId,
+              messageId: chatId,
+              historyMessageId,
+              content: message.message,
+              othersUnreadUsers: message.othersUnreadUsers,
+            });
           });
 
+          console.log("읽음 상태 맵 (정확한 값):", statusMap);
           setReadStatus(statusMap);
+        } else {
+          console.log("API 응답 데이터가 없습니다:", response);
         }
       } catch (error) {
-        console.error("읽지 않은 알림 조회 실패:", error);
+        console.error("메시지 목록 조회 실패:", error);
       }
     };
 
@@ -242,14 +257,27 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
       )}
 
       {/* 통합된 메시지 리스트 */}
-      {allMessages.map((message) => (
-        <ChatMessageItem
-          key={message.id}
-          message={message}
-          onProfileClick={onProfileClick}
-          unreadCount={readStatus[message.id] || 0}
-        />
-      ))}
+      {allMessages.map((message) => {
+        const messageId = message.id;
+        const unreadCount = readStatus[messageId] || 0;
+
+        console.log("메시지 렌더링:", {
+          messageId,
+          content: message.content,
+          unreadCount,
+          readStatusMap: readStatus,
+          messageExistsInStatusMap: messageId in readStatus,
+        });
+
+        return (
+          <ChatMessageItem
+            key={messageId}
+            message={message}
+            onProfileClick={onProfileClick}
+            unreadCount={unreadCount}
+          />
+        );
+      })}
       <div ref={messagesEndRef} />
     </div>
   );
