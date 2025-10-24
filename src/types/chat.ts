@@ -40,3 +40,47 @@ export interface ChatSidebarProps {
   title?: string;
   subtitle?: string;
 }
+
+// 내 채팅방 목록 API 타입 정의
+export interface MyChatRoom {
+  roomId: number;
+  displayName: string;
+  type: "PRIVATE" | "GROUP";
+  cafeId: number | null;
+  unreadCount: number;
+  lastMessage: string;
+  lastMessageAt: string;
+  memberCount: number;
+}
+
+export interface MyChatRoomsResponse {
+  message: string;
+  data: {
+    content: MyChatRoom[];
+    pageable: {
+      pageNumber: number;
+      pageSize: number;
+      sort: {
+        empty: boolean;
+        sorted: boolean;
+        unsorted: boolean;
+      };
+      offset: number;
+      paged: boolean;
+      unpaged: boolean;
+    };
+    last: boolean;
+    totalElements: number;
+    totalPages: number;
+    first: boolean;
+    size: number;
+    number: number;
+    sort: {
+      empty: boolean;
+      sorted: boolean;
+      unsorted: boolean;
+    };
+    numberOfElements: number;
+    empty: boolean;
+  };
+}

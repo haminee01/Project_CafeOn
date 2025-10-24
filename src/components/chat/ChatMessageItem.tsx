@@ -6,11 +6,13 @@ import { useAuth } from "@/hooks/useAuth";
 interface ChatMessageItemProps {
   message: ChatMessage;
   onProfileClick: ProfileClickHandler;
+  unreadCount?: number;
 }
 
 const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   message,
   onProfileClick,
+  unreadCount = 0,
 }) => {
   // useAuth에서 현재 사용자 정보 가져오기
   const { user } = useAuth();
@@ -92,6 +94,15 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           >
             {message.content}
           </div>
+
+          {/* 읽지 않은 사람 수 표시 (내가 보낸 메시지이고 읽지 않은 사람이 있을 때만) */}
+          {isMyMessage && unreadCount > 0 && (
+            <div className="flex justify-end mt-1">
+              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
+                {unreadCount}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

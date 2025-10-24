@@ -15,6 +15,7 @@ import {
   ChatHistoryMessage,
   ChatHistoryResponse,
 } from "@/api/chat";
+import { markChatAsRead } from "@/lib/api";
 import { ChatMessage, Participant } from "@/types/chat";
 import {
   createStompClient,
@@ -69,6 +70,7 @@ interface UseCafeChatReturn {
   // 새로운 기능들
   createDmChat: (counterpartId: string) => Promise<void>;
   toggleMute: () => Promise<void>;
+  markAsRead: () => Promise<void>;
 }
 
 export const useCafeChat = ({
@@ -703,6 +705,77 @@ export const useCafeChat = ({
     }
   }, [roomId, isMuted]);
 
+  // 채팅 읽음 처리
+  const markAsRead = useCallback(async () => {
+    if (!roomId) return;
+
+    try {
+      console.log("markAsRead 호출됨 - roomId:", roomId);
+
+      // 현재 메시지 목록에서 가장 최근 메시지의 ID를 찾음
+      const allMessages = [...messages, ...chatHistory];
+      console.log("전체 메시지 수:", allMessages.length);
+
+      if (allMessages.length === 0) {
+        console.log("읽을 메시지가 없습니다.");
+        return;
+      }
+
+      // 메시지를 시간순으로 정렬하여 가장 최근 메시지 찾기
+      const sortedMessages = allMessages.sort((a, b) => {
+        const aId = "id" in a ? parseInt(a.id) : a.chatId;
+        const bId = "id" in b ? parseInt(b.id) : b.chatId;
+        return aId - bId;
+      });
+
+      console.log(
+        "정렬된 메시지들:",
+        sortedMessages.map((msg) => ({
+          id: "id" in msg ? msg.id : msg.chatId,
+          senderId: "senderId" in msg ? msg.senderId : msg.senderNickname,
+          isMyMessage: "isMyMessage" in msg ? msg.isMyMessage : msg.mine,
+          content: "content" in msg ? msg.content : msg.message,
+        }))
+      );
+
+      // 내가 보낸 메시지가 아닌 가장 최근 메시지를 찾기
+      const lastUnreadMessage = [...sortedMessages]
+        .reverse()
+        .find((message) => {
+          const isMyMessage =
+            "isMyMessage" in message ? message.isMyMessage : message.mine;
+          console.log("메시지 체크:", {
+            id: "id" in message ? message.id : message.chatId,
+            senderId:
+              "senderId" in message ? message.senderId : message.senderNickname,
+            isMyMessage,
+            content: "content" in message ? message.content : message.message,
+          });
+          return !isMyMessage;
+        });
+
+      if (lastUnreadMessage) {
+        const messageId =
+          "id" in lastUnreadMessage
+            ? lastUnreadMessage.id
+            : lastUnreadMessage.chatId.toString();
+        await markChatAsRead(roomId, messageId);
+        console.log("채팅 읽음 처리 완료:", {
+          roomId,
+          lastReadChatId: messageId,
+          messageContent:
+            "content" in lastUnreadMessage
+              ? lastUnreadMessage.content
+              : lastUnreadMessage.message,
+        });
+      } else {
+        console.log("읽을 메시지가 없습니다 (모든 메시지가 내가 보낸 메시지)");
+      }
+    } catch (err) {
+      console.error("채팅 읽음 처리 실패:", err);
+    }
+  }, [roomId, messages, chatHistory]);
+
   // roomId가 설정되면 STOMP 구독
   useEffect(() => {
     if (roomId && stompConnected && stompClientRef.current?.connected) {
@@ -748,5 +821,6 @@ export const useCafeChat = ({
     loadMoreHistory,
     createDmChat: createDmChatRoom,
     toggleMute,
+    markAsRead,
   };
 };

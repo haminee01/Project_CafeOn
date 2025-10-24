@@ -45,6 +45,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
     refreshParticipants,
     loadMoreHistory,
     toggleMute,
+    markAsRead,
   } = useDmChat({
     counterpartId: targetUser.id,
     counterpartName: targetUser.name,
@@ -106,6 +107,10 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
   const handleSidebarProfileClick = () => {
     closeSidebar();
   };
+
+  // 채팅방이 열릴 때는 읽음 처리하지 않음 (사용자가 실제로 메시지를 볼 때만 처리)
+
+  // 새 메시지가 도착할 때 자동 읽음 처리는 제거 (사용자가 스크롤할 때만 처리)
 
   return (
     // 오버레이
@@ -211,6 +216,8 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
               messages={messages}
               onProfileClick={handleProfileClick}
               onListClick={handleListClick}
+              onMarkAsRead={markAsRead}
+              roomId={roomId || undefined}
             />
 
             <ChatMessageInput onSendMessage={handleSendMessage} />

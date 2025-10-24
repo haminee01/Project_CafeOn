@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ChatMessageItem from "./ChatMessageItem";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
 import { ChatHistoryMessage } from "@/api/chat";
 import { useAuth } from "@/hooks/useAuth";
+import { getNotificationsUnread } from "@/lib/api";
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -14,6 +15,8 @@ interface ChatMessageListProps {
   onProfileClick: ProfileClickHandler;
   onListClick: () => void;
   onLoadMoreHistory?: () => void;
+  onMarkAsRead?: () => void;
+  roomId?: string;
 }
 
 const ChatMessageList: React.FC<ChatMessageListProps> = ({
@@ -24,12 +27,85 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   onProfileClick,
   onListClick,
   onLoadMoreHistory,
+  onMarkAsRead,
+  roomId,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasMarkedAsRead = useRef(false);
+  const [readStatus, setReadStatus] = useState<{ [messageId: string]: number }>(
+    {}
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // 스크롤 이벤트 핸들러 - 사용자가 메시지를 실제로 볼 때 읽음 처리
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !onMarkAsRead) return;
+
+    const handleScroll = () => {
+      // 스크롤이 맨 아래에 가까우면 읽음 처리
+      const isNearBottom =
+        container.scrollTop + container.clientHeight >=
+        container.scrollHeight - 100;
+
+      if (isNearBottom && !hasMarkedAsRead.current) {
+        hasMarkedAsRead.current = true;
+        onMarkAsRead();
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+
+    // 초기 로드 시에도 체크
+    handleScroll();
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [onMarkAsRead]);
+
+  // 메시지가 변경될 때 읽음 처리 상태 리셋
+  useEffect(() => {
+    hasMarkedAsRead.current = false;
+  }, [messages]);
+
+  // 읽음 상태 조회 (notifications/unread API 사용)
+  useEffect(() => {
+    const fetchReadStatus = async () => {
+      try {
+        const response = await getNotificationsUnread();
+        console.log("읽지 않은 알림 조회 결과:", response);
+
+        // 응답 데이터 구조에 따라 읽음 상태 설정
+        if (response.data) {
+          const statusMap: { [messageId: string]: number } = {};
+
+          // chatId별로 읽지 않은 알림 수 계산
+          response.data.forEach((notification: any) => {
+            if (notification.chatId && notification.roomId === roomId) {
+              if (!statusMap[notification.chatId]) {
+                statusMap[notification.chatId] = 0;
+              }
+              if (!notification.read) {
+                statusMap[notification.chatId]++;
+              }
+            }
+          });
+
+          setReadStatus(statusMap);
+        }
+      } catch (error) {
+        console.error("읽지 않은 알림 조회 실패:", error);
+      }
+    };
+
+    // 초기 로드 시에만 호출
+    fetchReadStatus();
+  }, [roomId]);
 
   // useAuth 훅 사용
   const { user } = useAuth();
@@ -101,6 +177,7 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
 
   return (
     <div
+      ref={containerRef}
       className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 border-y"
       onClick={onListClick}
     >
@@ -170,6 +247,7 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
           key={message.id}
           message={message}
           onProfileClick={onProfileClick}
+          unreadCount={readStatus[message.id] || 0}
         />
       ))}
       <div ref={messagesEndRef} />

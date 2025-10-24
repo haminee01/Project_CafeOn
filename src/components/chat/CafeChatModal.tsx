@@ -49,6 +49,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     refreshParticipants,
     loadMoreHistory,
     toggleMute,
+    markAsRead,
   } = useCafeChat({
     cafeId,
     cafeName,
@@ -102,6 +103,10 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     handleProfileClick(user.id, user.name, event);
     closeSidebar();
   };
+
+  // 채팅방이 열릴 때는 읽음 처리하지 않음 (사용자가 실제로 메시지를 볼 때만 처리)
+
+  // 새 메시지가 도착할 때 자동 읽음 처리는 제거 (사용자가 스크롤할 때만 처리)
 
   // roomId가 null인 경우 에러 처리
   if (!roomId && !isLoading && isJoined) {
@@ -251,6 +256,8 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
               onLoadMoreHistory={loadMoreHistory}
               onProfileClick={handleProfileClick}
               onListClick={handleListClick}
+              onMarkAsRead={markAsRead}
+              roomId={roomId || undefined}
             />
 
             <ChatMessageInput onSendMessage={handleSendMessage} />

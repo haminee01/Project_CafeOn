@@ -473,3 +473,101 @@ export async function getWishlistCategories(cafeId: number) {
     throw error;
   }
 }
+
+// ==================== Chat API ====================
+
+// 내 채팅방 목록 조회
+export async function getMyChatRooms() {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/my/chat/rooms`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `채팅방 목록 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("내 채팅방 목록 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 채팅 읽음 처리
+export async function markChatAsRead(roomId: string, lastReadChatId: string) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(
+      `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          lastReadChatId: lastReadChatId,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `채팅 읽음 처리 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("채팅 읽음 처리 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 사용자의 읽지 않은 채팅 목록 조회
+export async function getNotificationsUnread() {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/notifications/unread`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `읽지 않은 알림 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("읽지 않은 알림 조회 API 호출 실패:", error);
+    throw error;
+  }
+}

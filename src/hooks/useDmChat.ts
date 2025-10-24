@@ -10,6 +10,7 @@ import {
   ChatHistoryMessage,
   ChatHistoryResponse,
 } from "@/api/chat";
+import { markChatAsRead } from "@/lib/api";
 import { ChatMessage, Participant } from "@/types/chat";
 import {
   setDmChatMapping,
@@ -62,6 +63,7 @@ interface UseDmChatReturn {
   refreshParticipants: () => Promise<void>;
   loadMoreHistory: () => Promise<void>;
   toggleMute: () => Promise<void>;
+  markAsRead: () => Promise<void>;
 }
 
 export const useDmChat = ({
@@ -746,6 +748,51 @@ export const useDmChat = ({
     }
   }, [counterpartId, roomId, isJoined]); // 의존성 배열에서 함수들과 상태값들 제거
 
+  // 채팅 읽음 처리
+  const markAsRead = useCallback(async () => {
+    if (!roomId) return;
+
+    try {
+      // 현재 메시지 목록에서 가장 최근 메시지의 ID를 찾음
+      const allMessages = [...messages, ...chatHistory];
+      if (allMessages.length === 0) return;
+
+      // 메시지를 시간순으로 정렬하여 가장 최근 메시지 찾기
+      const sortedMessages = allMessages.sort((a, b) => {
+        const aId = "id" in a ? parseInt(a.id) : a.chatId;
+        const bId = "id" in b ? parseInt(b.id) : b.chatId;
+        return aId - bId;
+      });
+
+      // 내가 보낸 메시지가 아닌 가장 최근 메시지를 찾기
+      const lastUnreadMessage = [...sortedMessages]
+        .reverse()
+        .find((message) => {
+          const isMyMessage =
+            "isMyMessage" in message ? message.isMyMessage : message.mine;
+          return !isMyMessage;
+        });
+
+      if (lastUnreadMessage) {
+        const messageId =
+          "id" in lastUnreadMessage
+            ? lastUnreadMessage.id
+            : lastUnreadMessage.chatId.toString();
+        await markChatAsRead(roomId, messageId);
+        console.log("DM 채팅 읽음 처리 완료:", {
+          roomId,
+          lastReadChatId: messageId,
+          messageContent:
+            "content" in lastUnreadMessage
+              ? lastUnreadMessage.content
+              : lastUnreadMessage.message,
+        });
+      }
+    } catch (err) {
+      console.error("DM 채팅 읽음 처리 실패:", err);
+    }
+  }, [roomId, messages, chatHistory]);
+
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
@@ -783,5 +830,6 @@ export const useDmChat = ({
     refreshParticipants,
     loadMoreHistory,
     toggleMute,
+    markAsRead,
   };
 };

@@ -34,11 +34,13 @@ const formatTime = (createdAt: string): string => {
 interface NotificationDropdownProps {
   isOpen: boolean;
   onClose: () => void;
+  onNotificationCountChange?: (count: number) => void;
 }
 
 const NotificationDropdown = ({
   isOpen,
   onClose,
+  onNotificationCountChange,
 }: NotificationDropdownProps) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -55,6 +57,10 @@ const NotificationDropdown = ({
         try {
           const data = await getUnreadNotifications();
           setNotifications(data);
+          // 알림 개수 변경 콜백 호출
+          if (onNotificationCountChange) {
+            onNotificationCountChange(data.length);
+          }
         } catch (error) {
           console.error("알림 로드 실패:", error);
         } finally {
@@ -64,7 +70,7 @@ const NotificationDropdown = ({
     };
 
     loadNotifications();
-  }, [isOpen]);
+  }, [isOpen, onNotificationCountChange]);
 
   // 알림 클릭 핸들러
   const handleNotificationClick = (deeplink: string) => {

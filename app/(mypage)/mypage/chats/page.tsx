@@ -3,14 +3,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-interface ChatRoom {
-  id: string;
-  cafeName: string;
-  lastMessage: string;
-  isUnread: boolean;
-  createdAt: string;
-}
+import { getMyChatRooms } from "../../../../src/lib/api";
+import { MyChatRoom, MyChatRoomsResponse } from "../../../../src/types/chat";
 
 const ProfileIcon: React.FC<{ size?: string }> = ({ size = "w-8 h-8" }) => (
   <div
@@ -35,16 +29,18 @@ const ProfileIcon: React.FC<{ size?: string }> = ({ size = "w-8 h-8" }) => (
 );
 
 interface ChatRoomItemProps {
-  cafeName: string;
+  displayName: string;
   lastMessage: string;
-  isUnread: boolean;
+  unreadCount: number;
+  memberCount: number;
   onClick: () => void;
 }
 
 const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
-  cafeName,
+  displayName,
   lastMessage,
-  isUnread,
+  unreadCount,
+  memberCount,
   onClick,
 }) => {
   return (
@@ -58,13 +54,17 @@ const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
         <ProfileIcon size="w-12 h-12" />
         <div className="ml-3 flex-1 min-w-0">
           <div className="flex justify-between items-center">
-            {/* isSelected에 따른 텍스트 색상 변경 로직도 제거했습니다. */}
             <h3 className={`text-base font-semibold truncate text-gray-800`}>
-              {cafeName}
+              {displayName}
             </h3>
-            {isUnread && (
-              <span className="w-2 h-2 ml-2 bg-red-500 rounded-full flex-shrink-0" />
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">{memberCount}명</span>
+              {unreadCount > 0 && (
+                <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </div>
+              )}
+            </div>
           </div>
           <p className="text-sm text-gray-500 truncate mt-1">{lastMessage}</p>
         </div>
@@ -73,34 +73,9 @@ const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
   );
 };
 
-// 목데이터: 마이페이지 채팅방 목록
-const mockChatRooms: ChatRoom[] = [
-  {
-    id: "123",
-    cafeName: "카페 온 카페 홍대점",
-    lastMessage: "네, 좌석 여유 있습니다!",
-    isUnread: true,
-    createdAt: "2024-01-20T14:41:00",
-  },
-  {
-    id: "456",
-    cafeName: "빈체로 성수",
-    lastMessage: "이번 주말 예약 가능할까요?",
-    isUnread: false,
-    createdAt: "2024-01-19T10:20:00",
-  },
-  {
-    id: "789",
-    cafeName: "라떼리아 압구정",
-    lastMessage: "감사합니다! 주차는 지하 1층 이용해주세요.",
-    isUnread: true,
-    createdAt: "2024-01-18T18:05:00",
-  },
-];
-
 const ChatRoomList: React.FC = () => {
   const router = useRouter();
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [chatRooms, setChatRooms] = useState<MyChatRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,25 +84,35 @@ const ChatRoomList: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      // 목데이터 사용
-      console.log("채팅방 목록 로드(목데이터)");
-      setChatRooms(mockChatRooms);
-      console.log("채팅방 목록 로드 완료:", mockChatRooms);
+
+      console.log("채팅방 목록 로드 시작");
+      const response: MyChatRoomsResponse = await getMyChatRooms();
+      setChatRooms(response.data.content);
+      console.log("채팅방 목록 로드 완료:", response.data.content);
     } catch (err) {
       console.error("채팅방 목록 로드 실패:", err);
-      setError("채팅방 목록을 불러올 수 없습니다.");
+      setError(
+        err instanceof Error ? err.message : "채팅방 목록을 불러올 수 없습니다."
+      );
       setChatRooms([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRoomClick = (roomId: string) => {
+  const handleRoomClick = (roomId: number) => {
     router.push(`/mypage/chats/${roomId}`);
   };
 
   useEffect(() => {
     loadChatRooms();
+
+    // 주기적으로 채팅방 목록 새로고침 (5초마다)
+    const interval = setInterval(() => {
+      loadChatRooms();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -157,11 +142,12 @@ const ChatRoomList: React.FC = () => {
       ) : (
         chatRooms.map((room) => (
           <ChatRoomItem
-            key={room.id}
-            cafeName={room.cafeName}
+            key={room.roomId}
+            displayName={room.displayName}
             lastMessage={room.lastMessage}
-            isUnread={room.isUnread}
-            onClick={() => handleRoomClick(room.id)}
+            unreadCount={room.unreadCount}
+            memberCount={room.memberCount}
+            onClick={() => handleRoomClick(room.roomId)}
           />
         ))
       )}
