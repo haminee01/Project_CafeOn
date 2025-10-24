@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import ChatMessageItem from "./ChatMessageItem";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
 import { ChatHistoryMessage } from "@/api/chat";
@@ -73,54 +73,107 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
     hasMarkedAsRead.current = false;
   }, [messages]);
 
-  // 읽음 상태 조회 (othersUnreadUsers 포함된 메시지 API 사용)
-  useEffect(() => {
+  // 읽음 상태 조회 함수
+  const fetchReadStatus = useCallback(async () => {
     if (!roomId) {
       console.log("roomId가 없어서 읽음 상태 조회를 건너뜁니다.");
       return;
     }
 
-    const fetchReadStatus = async () => {
-      try {
-        const response = await getChatMessagesWithUnreadCount(roomId);
-        console.log("메시지 목록 조회 결과:", response);
+    try {
+      const response = await getChatMessagesWithUnreadCount(roomId);
+      console.log("메시지 목록 조회 결과:", response);
 
-        // 응답 데이터 구조에 따라 읽음 상태 설정
-        if (response.data && response.data.content) {
-          const statusMap: { [messageId: string]: number } = {};
+      // 응답 데이터 구조에 따라 읽음 상태 설정
+      if (response.data && response.data.content) {
+        const statusMap: { [messageId: string]: number } = {};
 
-          // 각 메시지의 othersUnreadUsers 값을 사용
-          response.data.content.forEach((message: any) => {
-            const chatId = message.chatId.toString();
-            // chatHistory 메시지의 경우 "history-" 접두사가 붙은 ID로 매핑
-            const historyMessageId = `history-${chatId}`;
+        // 각 메시지의 othersUnreadUsers 값을 사용
+        response.data.content.forEach((message: any) => {
+          const chatId = message.chatId.toString();
+          // chatHistory 메시지의 경우 "history-" 접두사가 붙은 ID로 매핑
+          const historyMessageId = `history-${chatId}`;
 
-            // 두 가지 ID 형태 모두 매핑
-            statusMap[chatId] = message.othersUnreadUsers || 0;
-            statusMap[historyMessageId] = message.othersUnreadUsers || 0;
+          // 두 가지 ID 형태 모두 매핑
+          statusMap[chatId] = message.othersUnreadUsers || 0;
+          statusMap[historyMessageId] = message.othersUnreadUsers || 0;
 
-            console.log("API 메시지 처리:", {
-              chatId: message.chatId,
-              messageId: chatId,
-              historyMessageId,
-              content: message.message,
-              othersUnreadUsers: message.othersUnreadUsers,
-            });
+          console.log("API 메시지 처리:", {
+            chatId: message.chatId,
+            messageId: chatId,
+            historyMessageId,
+            content: message.message,
+            othersUnreadUsers: message.othersUnreadUsers,
           });
+        });
 
-          console.log("읽음 상태 맵 (정확한 값):", statusMap);
-          setReadStatus(statusMap);
-        } else {
-          console.log("API 응답 데이터가 없습니다:", response);
-        }
-      } catch (error) {
-        console.error("메시지 목록 조회 실패:", error);
+        console.log("읽음 상태 맵 (정확한 값):", statusMap);
+        setReadStatus(statusMap);
+      } else {
+        console.log("API 응답 데이터가 없습니다:", response);
+      }
+    } catch (error) {
+      console.error("메시지 목록 조회 실패:", error);
+    }
+  }, [roomId]);
+
+  // 초기 로드 시 읽음 상태 조회
+  useEffect(() => {
+    fetchReadStatus();
+  }, [fetchReadStatus]);
+
+  // 메시지가 변경될 때마다 읽음 상태 업데이트 (실시간 반영)
+  useEffect(() => {
+    if (messages.length > 0 || chatHistory.length > 0) {
+      // 메시지가 있을 때만 읽음 상태 조회
+      fetchReadStatus();
+    }
+  }, [messages, chatHistory, fetchReadStatus]);
+
+  // 새 메시지 추가 및 읽음 처리 이벤트 감지하여 읽음 상태 업데이트
+  useEffect(() => {
+    const handleChatMessageAdded = (event: CustomEvent) => {
+      const { roomId: eventRoomId } = event.detail;
+      if (eventRoomId === roomId) {
+        console.log("새 메시지 추가 이벤트 감지, 읽음 상태 업데이트");
+        // 약간의 지연을 두고 읽음 상태 조회 (서버에서 처리 시간 고려)
+        setTimeout(() => {
+          fetchReadStatus();
+        }, 500);
       }
     };
 
-    // 초기 로드 시에만 호출
-    fetchReadStatus();
-  }, [roomId]);
+    const handleChatMarkedAsRead = (event: CustomEvent) => {
+      const { roomId: eventRoomId } = event.detail;
+      if (eventRoomId === roomId) {
+        console.log("읽음 처리 이벤트 감지, 읽음 상태 업데이트");
+        // 약간의 지연을 두고 읽음 상태 조회 (서버에서 처리 시간 고려)
+        setTimeout(() => {
+          fetchReadStatus();
+        }, 500);
+      }
+    };
+
+    window.addEventListener(
+      "chatMessageAdded",
+      handleChatMessageAdded as EventListener
+    );
+    window.addEventListener(
+      "chatMarkedAsRead",
+      handleChatMarkedAsRead as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "chatMessageAdded",
+        handleChatMessageAdded as EventListener
+      );
+      window.removeEventListener(
+        "chatMarkedAsRead",
+        handleChatMarkedAsRead as EventListener
+      );
+    };
+  }, [roomId, fetchReadStatus]);
 
   // useAuth 훅 사용
   const { user } = useAuth();

@@ -4,17 +4,19 @@ import React, { useState } from "react";
 
 interface ChatMessageInputProps extends React.HTMLAttributes<HTMLFormElement> {
   onSendMessage: (message: string) => void;
+  disabled?: boolean;
 }
 
 const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
   onSendMessage,
   className,
+  disabled = false,
 }) => {
   const [input, setInput] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) {
+    if (input.trim() && !disabled) {
       onSendMessage(input.trim());
       setInput("");
     }
@@ -30,15 +32,16 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="메시지를 입력하세요..."
-        className="flex-1 p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6E4213] transition duration-150 mr-2"
+        disabled={disabled}
+        className="flex-1 p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6E4213] transition duration-150 mr-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
         autoFocus
       />
       <button
         type="submit"
-        disabled={!input.trim()}
+        disabled={!input.trim() || disabled}
         className={`p-3 rounded-xl transition duration-150 shadow-sm
           ${
-            input.trim()
+            input.trim() && !disabled
               ? "bg-[#6E4213] text-white hover:bg-[#8d5e33]"
               : "bg-gray-200 text-gray-500 cursor-not-allowed"
           }`}

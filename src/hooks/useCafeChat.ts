@@ -191,6 +191,14 @@ export const useCafeChat = ({
 
               return updatedMessages;
             });
+
+            // 새 메시지가 추가되면 읽지 않은 사람 수 업데이트를 위한 이벤트 발생
+            // ChatMessageList에서 이 이벤트를 감지하여 읽음 상태를 다시 조회하도록 함
+            window.dispatchEvent(
+              new CustomEvent("chatMessageAdded", {
+                detail: { roomId, messageId: newMessage.id },
+              })
+            );
           } catch (error) {
             console.error("메시지 파싱 오류:", error);
           }
@@ -822,6 +830,13 @@ export const useCafeChat = ({
         //       ? lastUnreadMessage.content
         //       : lastUnreadMessage.message,
         // });
+
+        // 읽음 처리 후 읽지 않은 사람 수 업데이트를 위한 이벤트 발생
+        window.dispatchEvent(
+          new CustomEvent("chatMarkedAsRead", {
+            detail: { roomId, messageId },
+          })
+        );
       } else {
         console.log("읽을 메시지가 없습니다 (모든 메시지가 내가 보낸 메시지)");
       }
