@@ -51,6 +51,7 @@ export interface ChatParticipant {
   nickname: string;
   profileImage?: string | null;
   me: boolean; // 채팅목록에서 나 표시
+  muted?: boolean; // 알림 상태
 }
 
 // 채팅 메시지 타입
@@ -993,7 +994,7 @@ export const createDmChat = async (
 
 /**
  * 채팅방 나가기
- * POST /api/chat/rooms/{roomId}/members/me/leave
+ * DELETE /api/chat/rooms/{roomId}/members/me/leave
  */
 export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
   try {
@@ -1008,7 +1009,7 @@ export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/leave`,
       {
-        method: "POST",
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -1049,15 +1050,20 @@ export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
  */
 export const toggleChatMute = async (
   roomId: string,
-  muted: boolean
+  muted: boolean | number
 ): Promise<void> => {
   try {
     const token = localStorage.getItem("accessToken");
 
+    const requestBody = { muted };
     console.log("채팅방 알림 설정 요청:", {
       url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/mute`,
       roomId,
+      roomIdType: typeof roomId,
       muted,
+      mutedType: typeof muted,
+      requestBody,
+      requestBodyString: JSON.stringify(requestBody),
       token: token ? "토큰 존재" : "토큰 없음",
     });
 

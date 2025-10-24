@@ -229,29 +229,35 @@ export const useCafeChat = ({
         return;
       }
 
+      console.log("refreshParticipants 호출됨:", useRoomId);
+
       console.log("참여자 목록 새로고침 시작:", useRoomId);
 
       try {
         const response: ChatParticipant[] = await getChatParticipants(
           useRoomId
         );
-        console.log("참여자 목록 조회 성공:", response);
-        console.log("첫 번째 참여자 nickname:", response[0]?.nickname);
+        console.log("참여자 목록 조회 성공:", response.length, "명");
+        // console.log("참여자 목록 상세:", response);
+        // response.forEach((p, index) => {
+        //   console.log(`참여자 ${index + 1}:`, {
+        //     nickname: p.nickname,
+        //     muted: p.muted,
+        //     me: p.me,
+        //     userId: p.userId,
+        //   });
+        // });
 
         // ChatParticipant를 Participant로 변환
         const convertedParticipants: Participant[] = response.map(
           (participant) => {
             // "나 (nickname)" 형태에서 순수한 닉네임만 추출
             let cleanNickname = participant.nickname;
-            console.log("원본 nickname:", participant.nickname);
-
             if (cleanNickname.startsWith("나 (")) {
               cleanNickname = cleanNickname
                 .replace("나 (", "")
                 .replace(")", "");
             }
-
-            console.log("정리된 nickname:", cleanNickname);
 
             return {
               id: participant.userId,
@@ -260,8 +266,36 @@ export const useCafeChat = ({
           }
         );
 
-        console.log("변환된 참여자 목록:", convertedParticipants);
         setParticipants(convertedParticipants);
+
+        // 현재 사용자의 알림 상태 확인
+        const currentUser = response.find((p) => p.me === true);
+        console.log("현재 사용자 찾기 결과:", currentUser);
+
+        if (currentUser) {
+          // muted 값이 undefined인 경우 서버에서 알림 상태를 가져오지 못한 것으로 간주
+          if (currentUser.muted === undefined) {
+            console.log(
+              "🔔 서버에서 muted 값이 undefined로 반환됨 - 기본값 false 사용"
+            );
+            setIsMuted(false);
+          } else {
+            console.log(
+              "🔔 알림 상태 로드:",
+              currentUser.muted ? "끄기" : "켜기",
+              "(muted 값:",
+              currentUser.muted,
+              ")"
+            );
+            setIsMuted(currentUser.muted || false);
+          }
+        } else {
+          console.log("현재 사용자를 찾을 수 없음 - me 필드 확인 필요");
+          console.log(
+            "참여자 목록에서 me=true인 사용자:",
+            response.filter((p) => p.me === true)
+          );
+        }
       } catch (err) {
         console.error("참여자 목록 조회 실패:", err);
         setParticipants([]);
@@ -694,9 +728,29 @@ export const useCafeChat = ({
 
     try {
       const newMutedState = !isMuted;
-      await toggleChatMute(roomId, newMutedState);
+      console.log("🔔 알림 토글 시작:", newMutedState ? "끄기" : "켜기");
+
+      // roomId와 muted 값 검증
+      console.log("🔔 요청 값 검증:", {
+        roomId,
+        roomIdType: typeof roomId,
+        newMutedState,
+        newMutedStateType: typeof newMutedState,
+      });
+
+      // 서버에서 muted 값을 number로 처리하므로 boolean을 number로 변환
+      const mutedAsNumber = newMutedState ? 1 : 0;
+      console.log("🔔 muted 값 변환:", {
+        boolean: newMutedState,
+        number: mutedAsNumber,
+      });
+      await toggleChatMute(roomId, mutedAsNumber);
       setIsMuted(newMutedState);
-      console.log("채팅방 알림 설정 변경:", newMutedState ? "끄기" : "켜기");
+      console.log("🔔 알림 토글 완료:", newMutedState ? "끄기" : "켜기");
+
+      // 서버에서 muted 값을 제대로 저장하지 않으므로 참여자 목록 재로드를 하지 않음
+      // 로컬 상태만 사용하여 UI를 업데이트
+      console.log("🔔 서버 muted 값 저장 문제로 인해 로컬 상태만 사용");
     } catch (err) {
       console.error("채팅방 알림 설정 실패:", err);
       // 에러가 발생해도 UI 상태는 변경 (사용자 경험 개선)
@@ -710,14 +764,14 @@ export const useCafeChat = ({
     if (!roomId) return;
 
     try {
-      console.log("markAsRead 호출됨 - roomId:", roomId);
+      // console.log("markAsRead 호출됨 - roomId:", roomId);
 
       // 현재 메시지 목록에서 가장 최근 메시지의 ID를 찾음
       const allMessages = [...messages, ...chatHistory];
-      console.log("전체 메시지 수:", allMessages.length);
+      // console.log("전체 메시지 수:", allMessages.length);
 
       if (allMessages.length === 0) {
-        console.log("읽을 메시지가 없습니다.");
+        // console.log("읽을 메시지가 없습니다.");
         return;
       }
 
@@ -728,15 +782,15 @@ export const useCafeChat = ({
         return aId - bId;
       });
 
-      console.log(
-        "정렬된 메시지들:",
-        sortedMessages.map((msg) => ({
-          id: "id" in msg ? msg.id : msg.chatId,
-          senderId: "senderId" in msg ? msg.senderId : msg.senderNickname,
-          isMyMessage: "isMyMessage" in msg ? msg.isMyMessage : msg.mine,
-          content: "content" in msg ? msg.content : msg.message,
-        }))
-      );
+      // console.log(
+      //   "정렬된 메시지들:",
+      //   sortedMessages.map((msg) => ({
+      //     id: "id" in msg ? msg.id : msg.chatId,
+      //     senderId: "senderId" in msg ? msg.senderId : msg.senderNickname,
+      //     isMyMessage: "isMyMessage" in msg ? msg.isMyMessage : msg.mine,
+      //     content: "content" in msg ? msg.content : msg.message,
+      //   }))
+      // );
 
       // 내가 보낸 메시지가 아닌 가장 최근 메시지를 찾기
       const lastUnreadMessage = [...sortedMessages]
@@ -744,13 +798,13 @@ export const useCafeChat = ({
         .find((message) => {
           const isMyMessage =
             "isMyMessage" in message ? message.isMyMessage : message.mine;
-          console.log("메시지 체크:", {
-            id: "id" in message ? message.id : message.chatId,
-            senderId:
-              "senderId" in message ? message.senderId : message.senderNickname,
-            isMyMessage,
-            content: "content" in message ? message.content : message.message,
-          });
+          // console.log("메시지 체크:", {
+          //   id: "id" in message ? message.id : message.chatId,
+          //   senderId:
+          //     "senderId" in message ? message.senderId : message.senderNickname,
+          //   isMyMessage,
+          //   content: "content" in message ? message.content : message.message,
+          // });
           return !isMyMessage;
         });
 
@@ -760,14 +814,14 @@ export const useCafeChat = ({
             ? lastUnreadMessage.id
             : lastUnreadMessage.chatId.toString();
         await markChatAsRead(roomId, messageId);
-        console.log("채팅 읽음 처리 완료:", {
-          roomId,
-          lastReadChatId: messageId,
-          messageContent:
-            "content" in lastUnreadMessage
-              ? lastUnreadMessage.content
-              : lastUnreadMessage.message,
-        });
+        // console.log("채팅 읽음 처리 완료:", {
+        //   roomId,
+        //   lastReadChatId: messageId,
+        //   messageContent:
+        //     "content" in lastUnreadMessage
+        //       ? lastUnreadMessage.content
+        //       : lastUnreadMessage.message,
+        // });
       } else {
         console.log("읽을 메시지가 없습니다 (모든 메시지가 내가 보낸 메시지)");
       }

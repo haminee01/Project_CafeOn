@@ -73,6 +73,10 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
 
   // 알림 상태를 토글하는 Handler
   const handleToggleNotification = () => {
+    console.log(
+      "🔔 알림 토글 버튼 클릭됨 - 현재 상태:",
+      isMuted ? "끄기" : "켜기"
+    );
     toggleMute();
   };
 
@@ -103,6 +107,34 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     handleProfileClick(user.id, user.name, event);
     closeSidebar();
   };
+
+  // 채팅방이 열릴 때 자동으로 참여
+  useEffect(() => {
+    if (roomId && !isJoined && !isLoading) {
+      console.log("채팅방 자동 참여 시작:", roomId);
+      joinChat();
+    }
+  }, [roomId, isJoined, isLoading, joinChat]);
+
+  // 채팅방이 열릴 때 참여자 목록 강제 로드 (알림 상태 확인용)
+  useEffect(() => {
+    if (roomId && isJoined) {
+      console.log("채팅방 진입 후 참여자 목록 강제 로드:", roomId);
+      // 약간의 지연을 두고 참여자 목록을 로드하여 상태가 안정화되도록 함
+      const timer = setTimeout(() => {
+        refreshParticipants();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [roomId, isJoined, refreshParticipants]);
+
+  // 채팅방이 닫힐 때 상태 초기화
+  useEffect(() => {
+    return () => {
+      // 컴포넌트가 언마운트될 때 상태 초기화
+      console.log("채팅방 모달 언마운트 - 상태 초기화");
+    };
+  }, []);
 
   // 채팅방이 열릴 때는 읽음 처리하지 않음 (사용자가 실제로 메시지를 볼 때만 처리)
 

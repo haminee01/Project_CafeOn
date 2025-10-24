@@ -145,13 +145,13 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
         messageType: historyMsg.messageType, // 메시지 타입 추가
       };
 
-      console.log("히스토리 메시지 변환:", {
-        originalMine: historyMsg.mine,
-        currentUserNickname,
-        senderNickname: historyMsg.senderNickname,
-        convertedIsMyMessage: isMyMessage,
-        messageId: convertedMessage.id,
-      });
+      // console.log("히스토리 메시지 변환:", {
+      //   originalMine: historyMsg.mine,
+      //   currentUserNickname,
+      //   senderNickname: historyMsg.senderNickname,
+      //   convertedIsMyMessage: isMyMessage,
+      //   messageId: convertedMessage.id,
+      // });
 
       return convertedMessage;
     }
@@ -261,13 +261,14 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
         const messageId = message.id;
         const unreadCount = readStatus[messageId] || 0;
 
-        console.log("메시지 렌더링:", {
-          messageId,
-          content: message.content,
-          unreadCount,
-          readStatusMap: readStatus,
-          messageExistsInStatusMap: messageId in readStatus,
-        });
+        // 읽지 않은 사람 수가 있을 때만 로그 출력 (디버깅용)
+        if (unreadCount > 0) {
+          // console.log("메시지 읽지 않은 사람 수:", {
+          //   messageId,
+          //   content: message.content,
+          //   unreadCount,
+          // });
+        }
 
         return (
           <ChatMessageItem

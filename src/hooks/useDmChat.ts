@@ -262,6 +262,8 @@ export const useDmChat = ({
       return;
     }
 
+    console.log("refreshParticipants 호출됨 (DM):", roomId);
+
     try {
       console.log("참여자 목록 조회 시작:", roomId);
       const response = await getChatParticipants(roomId);
@@ -276,6 +278,34 @@ export const useDmChat = ({
       setParticipants(participantList);
       setParticipantCount(participantList.length);
       console.log("참여자 목록 조회 완료:", participantList.length, "명");
+      console.log(
+        "참여자 목록 상세 (DM):",
+        response.map((p) => ({
+          nickname: p.nickname,
+          muted: p.muted,
+          me: p.me,
+        }))
+      );
+
+      // 현재 사용자의 알림 상태 확인 (1:1 채팅에서는 첫 번째 참여자가 현재 사용자)
+      const currentUser = response.find((p) => p.me === true);
+      if (currentUser) {
+        // muted 값이 undefined인 경우 서버에서 알림 상태를 가져오지 못한 것으로 간주
+        if (currentUser.muted === undefined) {
+          console.log(
+            "🔔 DM 서버에서 muted 값이 undefined로 반환됨 - 기본값 false 사용"
+          );
+          setIsMuted(false);
+        } else {
+          console.log(
+            "🔔 DM 알림 상태 로드:",
+            currentUser.muted ? "끄기" : "켜기"
+          );
+          setIsMuted(currentUser.muted || false);
+        }
+      } else {
+        console.log("현재 사용자를 찾을 수 없음 (DM) - me 필드 확인 필요");
+      }
     } catch (err) {
       console.error("1:1 채팅 참여자 목록 새로고침 실패:", err);
     }
@@ -560,6 +590,7 @@ export const useDmChat = ({
       setParticipants([]);
       setMessages([]);
       setChatHistory([]);
+      setIsMuted(false); // 알림 상태 초기화
       setError(null);
 
       console.log("1:1 채팅방 나가기 완료");
@@ -631,14 +662,26 @@ export const useDmChat = ({
     if (!roomId) return;
 
     try {
-      console.log("1:1 채팅 알림 토글:", roomId);
-      await toggleChatMute(roomId, !isMuted);
-      setIsMuted((prev) => !prev);
-      console.log("1:1 채팅 알림 토글 완료");
+      const newMutedState = !isMuted;
+      console.log("🔔 DM 알림 토글 시작:", newMutedState ? "끄기" : "켜기");
+
+      // 서버에서 muted 값을 number로 처리하므로 boolean을 number로 변환
+      const mutedAsNumber = newMutedState ? 1 : 0;
+      console.log("🔔 DM muted 값 변환:", {
+        boolean: newMutedState,
+        number: mutedAsNumber,
+      });
+      await toggleChatMute(roomId, mutedAsNumber);
+      setIsMuted(newMutedState);
+      console.log("🔔 DM 알림 토글 완료:", newMutedState ? "끄기" : "켜기");
+
+      // 서버에서 muted 값을 제대로 저장하지 않으므로 참여자 목록 재로드를 하지 않음
+      // 로컬 상태만 사용하여 UI를 업데이트
+      console.log("🔔 DM 서버 muted 값 저장 문제로 인해 로컬 상태만 사용");
     } catch (err) {
       console.error("1:1 채팅 알림 토글 실패:", err);
     }
-  }, [roomId]);
+  }, [roomId, isMuted]);
 
   // 컴포넌트 마운트 시 1:1 채팅방 참여
   useEffect(() => {

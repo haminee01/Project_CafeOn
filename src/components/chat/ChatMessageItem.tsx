@@ -18,15 +18,15 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   const { user } = useAuth();
   const currentUserNickname = user?.username || null;
 
-  // 디버깅을 위한 로그 추가
-  console.log("ChatMessageItem 렌더링:", {
-    messageId: message.id,
-    senderName: message.senderName,
-    content: message.content,
-    isMyMessage: message.isMyMessage,
-    messageType: message.messageType,
-    currentUserNickname,
-  });
+  // 디버깅을 위한 로그 추가 (주석 처리)
+  // console.log("ChatMessageItem 렌더링:", {
+  //   messageId: message.id,
+  //   senderName: message.senderName,
+  //   content: message.content,
+  //   isMyMessage: message.isMyMessage,
+  //   messageType: message.messageType,
+  //   currentUserNickname,
+  // });
 
   // 현재 사용자와 메시지 발신자가 같은지 판단
   const isMyMessage =
@@ -34,22 +34,23 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     (currentUserNickname && message.senderName === currentUserNickname);
   const displayName = isMyMessage ? "나" : message.senderName;
 
-  console.log("메시지 소유자 최종 판단:", {
-    senderName: message.senderName,
-    currentUserNickname,
-    isMyMessage,
-    displayName,
-  });
+  // console.log("메시지 소유자 최종 판단:", {
+  //   senderName: message.senderName,
+  //   currentUserNickname,
+  //   isMyMessage,
+  //   displayName,
+  // });
 
-  // 디버깅용 로그
+  // 읽지 않은 사람 수가 있을 때만 로그 출력 (디버깅용)
   useEffect(() => {
-    console.log("ChatMessageItem 렌더링:", {
-      messageId: message.id,
-      content: message.content,
-      unreadCount,
-      isMyMessage,
-      shouldShow: unreadCount > 0,
-    });
+    if (unreadCount > 0) {
+      // console.log("읽지 않은 메시지:", {
+      //   messageId: message.id,
+      //   content: message.content,
+      //   unreadCount,
+      //   isMyMessage,
+      // });
+    }
   }, [message.id, message.content, unreadCount, isMyMessage]);
 
   // 시스템 메시지인 경우 중앙 정렬로 표시
