@@ -15,7 +15,7 @@ const bookmarkCategories = [
   "방문 예정/찜",
 ];
 
-// 카테고리 한글 -> 영문 매핑
+// 카테고리 한글 -> 영문 매핑 (대문자 사용)
 const categoryMapping: { [key: string]: string } = {
   "나만의 아지트": "HIDEOUT",
   "작업하기 좋은": "WORK",
@@ -162,7 +162,11 @@ export default function MyBookmarksPage() {
   // 북마크 해제 핸들러
   const handleRemoveBookmark = async (cafeId: number, name: string) => {
     try {
+      // 북마크 해제 시 현재 보고 있는 카테고리를 사용
       const categoryEn = categoryMapping[activeCategory];
+
+      console.log("북마크 해제 시도:", { cafeId, category: categoryEn });
+
       await toggleWishlist(cafeId, categoryEn);
 
       // 1. 토스트 메시지 설정
@@ -176,9 +180,19 @@ export default function MyBookmarksPage() {
       if (bookmarks.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("북마크 해제 실패:", error);
-      setToastMessage("북마크 해제에 실패했습니다.");
+
+      // 에러 메시지 추출 및 표시
+      const errorMessage = error.message || "북마크 해제에 실패했습니다.";
+      setToastMessage(errorMessage);
+
+      // 에러 발생 시에도 목록 새로고침 시도
+      try {
+        await loadWishlist();
+      } catch (reloadError) {
+        console.error("목록 새로고침 실패:", reloadError);
+      }
     }
   };
 

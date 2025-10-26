@@ -417,23 +417,44 @@ export async function getWishlist(params: {
 export async function toggleWishlist(cafeId: number, category: string) {
   try {
     const token = localStorage.getItem("accessToken");
+    const requestBody = { category };
+
+    console.log("위시리스트 API 호출:", {
+      url: `${API_BASE_URL}/api/my/wishlist/${cafeId}`,
+      method: "POST",
+      body: requestBody,
+      category,
+    });
+
     const response = await fetch(`${API_BASE_URL}/api/my/wishlist/${cafeId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token && { Authorization: `Bearer ${token}` }),
       },
-      body: JSON.stringify({ category }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error("로그인이 필요합니다.");
       }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || `위시리스트 처리 실패 (${response.status})`
-      );
+
+      let errorData: any = {};
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        // JSON 파싱 실패 시 빈 객체 유지
+      }
+
+      // 500 에러 또는 서버 에러에 대한 메시지 처리
+      const errorMessage =
+        errorData.message ||
+        (response.status === 500
+          ? "서버 내부 오류가 발생했습니다."
+          : `위시리스트 처리 실패 (${response.status})`);
+
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
