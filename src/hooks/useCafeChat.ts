@@ -228,6 +228,38 @@ export const useCafeChat = ({
     console.log("STOMP 연결 해제");
   }, []);
 
+  // 채팅방별 muted 상태를 로컬 스토리지에서 가져오기
+  const getMutedStateFromStorage = useCallback(
+    (targetRoomId: string): boolean => {
+      const key = `chat_muted_${targetRoomId}`;
+      const stored = localStorage.getItem(key);
+      if (stored !== null) {
+        const muted = stored === "true";
+        console.log(
+          `🔔 로컬 스토리지에서 muted 상태 로드: ${muted} (${targetRoomId})`
+        );
+        return muted;
+      }
+      console.log(
+        `🔔 로컬 스토리지에 muted 상태 없음 - 기본값 false (${targetRoomId})`
+      );
+      return false;
+    },
+    []
+  );
+
+  // 채팅방별 muted 상태를 로컬 스토리지에 저장
+  const saveMutedStateToStorage = useCallback(
+    (targetRoomId: string, muted: boolean): void => {
+      const key = `chat_muted_${targetRoomId}`;
+      localStorage.setItem(key, String(muted));
+      console.log(
+        `🔔 로컬 스토리지에 muted 상태 저장: ${muted} (${targetRoomId})`
+      );
+    },
+    []
+  );
+
   // 참여자 목록 새로고침
   const refreshParticipants = useCallback(
     async (targetRoomId?: string) => {
@@ -276,40 +308,25 @@ export const useCafeChat = ({
 
         setParticipants(convertedParticipants);
 
-        // 현재 사용자의 알림 상태 확인
+        // 현재 사용자 찾기
         const currentUser = response.find((p) => p.me === true);
-        console.log("현재 사용자 찾기 결과:", currentUser);
 
         if (currentUser) {
-          // muted 값이 undefined인 경우 서버에서 알림 상태를 가져오지 못한 것으로 간주
-          if (currentUser.muted === undefined) {
-            console.log(
-              "🔔 서버에서 muted 값이 undefined로 반환됨 - 기본값 false 사용"
-            );
-            setIsMuted(false);
-          } else {
-            console.log(
-              "🔔 알림 상태 로드:",
-              currentUser.muted ? "끄기" : "켜기",
-              "(muted 값:",
-              currentUser.muted,
-              ")"
-            );
-            setIsMuted(currentUser.muted || false);
-          }
-        } else {
-          console.log("현재 사용자를 찾을 수 없음 - me 필드 확인 필요");
+          // 로컬 스토리지에서 muted 상태 가져오기 (서버가 반환하지 않으므로)
+          const mutedState = getMutedStateFromStorage(useRoomId);
+          setIsMuted(mutedState);
           console.log(
-            "참여자 목록에서 me=true인 사용자:",
-            response.filter((p) => p.me === true)
+            `🔔 알림 상태 설정 완료: ${mutedState ? "끄기" : "켜기"}`
           );
+        } else {
+          console.log("현재 사용자를 찾을 수 없음");
         }
       } catch (err) {
         console.error("참여자 목록 조회 실패:", err);
         setParticipants([]);
       }
     },
-    [roomId]
+    [roomId, getMutedStateFromStorage]
   );
 
   // 채팅 히스토리 로드 (커서 페이징)
@@ -365,15 +382,23 @@ export const useCafeChat = ({
   // 채팅방 참여 (재시도 로직 포함)
   const joinChat = useCallback(
     async (retryCount = 0) => {
-      console.log("=== joinChat 함수 호출됨 ===", {
+      console.log("=== joinChat 함수 호출됨 (useCafeChat) ===", {
         cafeId,
+        cafeName,
         isJoining,
         isJoined,
         retryCount,
         currentRoomId: roomId,
       });
 
-      if (!cafeId || isJoining || isJoined || isRetrying) {
+      // cafeId가 비어있거나 0이면 에러
+      if (!cafeId || cafeId === "" || cafeId === "0") {
+        console.error("joinChat: cafeId가 유효하지 않습니다:", cafeId);
+        setError("카페 정보가 없습니다. 페이지를 새로고침해주세요.");
+        return;
+      }
+
+      if (isJoining || isJoined || isRetrying) {
         console.log("joinChat 조건 불만족:", {
           cafeId: !!cafeId,
           isJoining,
@@ -462,10 +487,20 @@ export const useCafeChat = ({
         console.log("참여자 목록 및 채팅 히스토리 로드 완료");
 
         // STOMP 연결 및 구독
+        console.log("STOMP 연결 시작 (useCafeChat)");
         await connectStomp();
+
         // 연결 완료 후 구독 (약간의 지연)
+        console.log("STOMP 연결 완료, 구독 시작:", newRoomId);
         setTimeout(() => {
-          subscribeToRoom(newRoomId);
+          if (stompClientRef.current?.connected) {
+            subscribeToRoom(newRoomId);
+          } else {
+            console.error("STOMP 연결이 완료되지 않음, 재시도...");
+            setTimeout(() => {
+              subscribeToRoom(newRoomId);
+            }, 1000);
+          }
         }, 1000);
       } catch (err) {
         const errorMessage =
@@ -606,6 +641,8 @@ export const useCafeChat = ({
       // STOMP 연결 해제
       disconnectStomp();
 
+      // 채팅방을 나가도 muted 상태는 유지 (다시 들어오면 같은 상태로)
+
       setRoomId(null);
       setIsJoined(false);
       setParticipants([]);
@@ -738,34 +775,25 @@ export const useCafeChat = ({
       const newMutedState = !isMuted;
       console.log("🔔 알림 토글 시작:", newMutedState ? "끄기" : "켜기");
 
-      // roomId와 muted 값 검증
-      console.log("🔔 요청 값 검증:", {
-        roomId,
-        roomIdType: typeof roomId,
-        newMutedState,
-        newMutedStateType: typeof newMutedState,
-      });
+      // 서버에 muted 값 업데이트
+      await toggleChatMute(roomId, newMutedState);
 
-      // 서버에서 muted 값을 number로 처리하므로 boolean을 number로 변환
-      const mutedAsNumber = newMutedState ? 1 : 0;
-      console.log("🔔 muted 값 변환:", {
-        boolean: newMutedState,
-        number: mutedAsNumber,
-      });
-      await toggleChatMute(roomId, mutedAsNumber);
+      // 로컬 상태 업데이트
       setIsMuted(newMutedState);
-      console.log("🔔 알림 토글 완료:", newMutedState ? "끄기" : "켜기");
 
-      // 서버에서 muted 값을 제대로 저장하지 않으므로 참여자 목록 재로드를 하지 않음
-      // 로컬 상태만 사용하여 UI를 업데이트
-      console.log("🔔 서버 muted 값 저장 문제로 인해 로컬 상태만 사용");
+      // 로컬 스토리지에 저장 (새로고침 시 유지)
+      saveMutedStateToStorage(roomId, newMutedState);
+
+      console.log("🔔 알림 토글 완료:", newMutedState ? "끄기" : "켜기");
     } catch (err) {
       console.error("채팅방 알림 설정 실패:", err);
       // 에러가 발생해도 UI 상태는 변경 (사용자 경험 개선)
-      setIsMuted(!isMuted);
+      const newMutedState = !isMuted;
+      setIsMuted(newMutedState);
+      saveMutedStateToStorage(roomId, newMutedState);
       console.log("API 에러로 인한 로컬 상태 변경");
     }
-  }, [roomId, isMuted]);
+  }, [roomId, isMuted, saveMutedStateToStorage]);
 
   // 채팅 읽음 처리
   const markAsRead = useCallback(async () => {
@@ -855,6 +883,7 @@ export const useCafeChat = ({
   // 초기 채팅방 참여 - cafeId가 변경될 때만 실행
   useEffect(() => {
     if (cafeId && !isJoined && !isLoading && !isJoining) {
+      console.log("초기 채팅방 참여 시도 (useCafeChat):", cafeId);
       joinChat();
     }
     // joinChat을 의존성에서 제거하여 무한 루프 방지

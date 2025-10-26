@@ -48,6 +48,7 @@ export interface MyChatRoom {
   type: "PRIVATE" | "GROUP";
   cafeId: number | null;
   counterpartId?: number; // 1:1 채팅의 경우 상대방 ID
+  counterpartUserId?: string; // 1:1 채팅의 경우 상대방 유저 ID (UUID)
   unreadCount: number;
   lastMessage: string;
   lastMessageAt: string;

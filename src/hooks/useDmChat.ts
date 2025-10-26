@@ -31,6 +31,7 @@ import { useAuth } from "./useAuth";
 interface UseDmChatProps {
   counterpartId: string;
   counterpartName: string;
+  existingRoomId?: string; // 마이페이지에서 이미 존재하는 채팅방의 roomId
 }
 
 interface UseDmChatReturn {
@@ -69,6 +70,7 @@ interface UseDmChatReturn {
 export const useDmChat = ({
   counterpartId,
   counterpartName,
+  existingRoomId,
 }: UseDmChatProps): UseDmChatReturn => {
   // 기본 상태
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -255,6 +257,38 @@ export const useDmChat = ({
     console.log("1:1 채팅 STOMP 연결 해제");
   }, []);
 
+  // 채팅방별 muted 상태를 로컬 스토리지에서 가져오기
+  const getMutedStateFromStorage = useCallback(
+    (targetRoomId: string): boolean => {
+      const key = `chat_muted_${targetRoomId}`;
+      const stored = localStorage.getItem(key);
+      if (stored !== null) {
+        const muted = stored === "true";
+        console.log(
+          `🔔 DM 로컬 스토리지에서 muted 상태 로드: ${muted} (${targetRoomId})`
+        );
+        return muted;
+      }
+      console.log(
+        `🔔 DM 로컬 스토리지에 muted 상태 없음 - 기본값 false (${targetRoomId})`
+      );
+      return false;
+    },
+    []
+  );
+
+  // 채팅방별 muted 상태를 로컬 스토리지에 저장
+  const saveMutedStateToStorage = useCallback(
+    (targetRoomId: string, muted: boolean): void => {
+      const key = `chat_muted_${targetRoomId}`;
+      localStorage.setItem(key, String(muted));
+      console.log(
+        `🔔 DM 로컬 스토리지에 muted 상태 저장: ${muted} (${targetRoomId})`
+      );
+    },
+    []
+  );
+
   // 참여자 목록 새로고침
   const refreshParticipants = useCallback(async () => {
     if (!roomId) {
@@ -278,38 +312,24 @@ export const useDmChat = ({
       setParticipants(participantList);
       setParticipantCount(participantList.length);
       console.log("참여자 목록 조회 완료:", participantList.length, "명");
-      console.log(
-        "참여자 목록 상세 (DM):",
-        response.map((p) => ({
-          nickname: p.nickname,
-          muted: p.muted,
-          me: p.me,
-        }))
-      );
 
-      // 현재 사용자의 알림 상태 확인 (1:1 채팅에서는 첫 번째 참여자가 현재 사용자)
+      // 현재 사용자 찾기
       const currentUser = response.find((p) => p.me === true);
+
       if (currentUser) {
-        // muted 값이 undefined인 경우 서버에서 알림 상태를 가져오지 못한 것으로 간주
-        if (currentUser.muted === undefined) {
-          console.log(
-            "🔔 DM 서버에서 muted 값이 undefined로 반환됨 - 기본값 false 사용"
-          );
-          setIsMuted(false);
-        } else {
-          console.log(
-            "🔔 DM 알림 상태 로드:",
-            currentUser.muted ? "끄기" : "켜기"
-          );
-          setIsMuted(currentUser.muted || false);
-        }
+        // 로컬 스토리지에서 muted 상태 가져오기 (서버가 반환하지 않으므로)
+        const mutedState = getMutedStateFromStorage(roomId);
+        setIsMuted(mutedState);
+        console.log(
+          `🔔 DM 알림 상태 설정 완료: ${mutedState ? "끄기" : "켜기"}`
+        );
       } else {
-        console.log("현재 사용자를 찾을 수 없음 (DM) - me 필드 확인 필요");
+        console.log("현재 사용자를 찾을 수 없음 (DM)");
       }
     } catch (err) {
       console.error("1:1 채팅 참여자 목록 새로고침 실패:", err);
     }
-  }, [roomId]);
+  }, [roomId, getMutedStateFromStorage]);
 
   // 채팅 히스토리 로딩
   const loadMoreHistory = useCallback(async () => {
@@ -382,7 +402,64 @@ export const useDmChat = ({
       counterpartName,
       currentUserId,
       currentUserNickname,
+      existingRoomId,
     });
+
+    // 마이페이지에서 이미 존재하는 채팅방인 경우
+    if (existingRoomId) {
+      console.log("=== 기존 채팅방 직접 로드 ===", {
+        existingRoomId,
+        counterpartName,
+      });
+      setIsLoading(true);
+      setError(null);
+      setRoomId(existingRoomId);
+      setIsJoined(true);
+      
+      try {
+        // 참여자 목록 로드
+        const participantsResponse = await getChatParticipants(existingRoomId);
+        const participantList: Participant[] = participantsResponse.map(
+          (p: ChatParticipant) => ({
+            id: p.userId,
+            name: p.nickname,
+          })
+        );
+        setParticipants(participantList);
+        setParticipantCount(participantList.length);
+
+        // 채팅 히스토리 로드
+        const historyResponse = await getChatHistory(existingRoomId);
+        if (historyResponse.data.content.length > 0) {
+          setChatHistory(historyResponse.data.content);
+          setHasMoreHistory(historyResponse.data.hasNext);
+
+          const historyMessages: ChatMessage[] =
+            historyResponse.data.content.map((msg: ChatHistoryMessage) => ({
+              id: msg.chatId.toString(),
+              senderName: msg.senderNickname,
+              content: msg.message,
+              isMyMessage: msg.mine,
+              senderId: msg.senderNickname,
+              messageType: msg.messageType,
+            }));
+          setMessages(historyMessages);
+        }
+
+        // STOMP 연결
+        console.log("STOMP 연결 시작 (기존 채팅방)");
+        await connectStomp();
+
+        console.log("=== 기존 채팅방 로드 완료 ===");
+        setIsLoading(false);
+        return;
+      } catch (err) {
+        console.error("기존 채팅방 로드 실패:", err);
+        setError("채팅방 로드에 실패했습니다.");
+        setIsLoading(false);
+        return;
+      }
+    }
 
     // counterpartId 유효성 검사
     if (
@@ -418,28 +495,28 @@ export const useDmChat = ({
       console.log("=== 현재 매핑 상태 디버그 ===");
       debugDmMappings();
 
-      let existingRoomId = getRoomIdByCounterpart(counterpartId);
+      let existingRoomIdFromMapping = getRoomIdByCounterpart(counterpartId);
       console.log("=== 기존 매핑 조회 결과 ===", {
         counterpartId,
-        existingRoomId,
-        existingRoomIdType: typeof existingRoomId,
+        existingRoomIdFromMapping,
+        existingRoomIdFromMappingType: typeof existingRoomIdFromMapping,
       });
 
-      if (existingRoomId) {
+      if (existingRoomIdFromMapping) {
         console.log("=== 이미 참여 중인 1:1 채팅방 발견 ===", {
           counterpartId,
-          existingRoomId,
+          existingRoomIdFromMapping,
           currentRoomId: roomId,
         });
-        console.log("기존 roomId로 상태 업데이트:", existingRoomId);
-        setRoomId(existingRoomId.toString());
+        console.log("기존 roomId로 상태 업데이트:", existingRoomIdFromMapping);
+        setRoomId(existingRoomIdFromMapping.toString());
         setIsJoined(true);
 
         console.log("기존 1:1 채팅방 데이터 로드 시작");
         try {
           // 참여자 목록 로드
           const participantsResponse = await getChatParticipants(
-            existingRoomId.toString()
+            existingRoomIdFromMapping.toString()
           );
           const participantList: Participant[] = participantsResponse.map(
             (p: ChatParticipant) => ({
@@ -452,7 +529,7 @@ export const useDmChat = ({
 
           // 채팅 히스토리 로드
           const historyResponse = await getChatHistory(
-            existingRoomId.toString()
+            existingRoomIdFromMapping.toString()
           );
           if (historyResponse.data.content.length > 0) {
             setChatHistory(historyResponse.data.content);
@@ -665,31 +742,34 @@ export const useDmChat = ({
       const newMutedState = !isMuted;
       console.log("🔔 DM 알림 토글 시작:", newMutedState ? "끄기" : "켜기");
 
-      // 서버에서 muted 값을 number로 처리하므로 boolean을 number로 변환
-      const mutedAsNumber = newMutedState ? 1 : 0;
-      console.log("🔔 DM muted 값 변환:", {
-        boolean: newMutedState,
-        number: mutedAsNumber,
-      });
-      await toggleChatMute(roomId, mutedAsNumber);
-      setIsMuted(newMutedState);
-      console.log("🔔 DM 알림 토글 완료:", newMutedState ? "끄기" : "켜기");
+      // 서버에 muted 값 업데이트
+      await toggleChatMute(roomId, newMutedState);
 
-      // 서버에서 muted 값을 제대로 저장하지 않으므로 참여자 목록 재로드를 하지 않음
-      // 로컬 상태만 사용하여 UI를 업데이트
-      console.log("🔔 DM 서버 muted 값 저장 문제로 인해 로컬 상태만 사용");
+      // 로컬 상태 업데이트
+      setIsMuted(newMutedState);
+
+      // 로컬 스토리지에 저장 (새로고침 시 유지)
+      saveMutedStateToStorage(roomId, newMutedState);
+
+      console.log("🔔 DM 알림 토글 완료:", newMutedState ? "끄기" : "켜기");
     } catch (err) {
       console.error("1:1 채팅 알림 토글 실패:", err);
+      // 에러가 발생해도 UI 상태는 변경 (사용자 경험 개선)
+      const newMutedState = !isMuted;
+      setIsMuted(newMutedState);
+      saveMutedStateToStorage(roomId, newMutedState);
+      console.log("API 에러로 인한 로컬 상태 변경");
     }
-  }, [roomId, isMuted]);
+  }, [roomId, isMuted, saveMutedStateToStorage]);
 
   // 컴포넌트 마운트 시 1:1 채팅방 참여
   useEffect(() => {
+    // existingRoomId 또는 counterpartId가 있으면 참여
     // 에러가 있으면 재시도하지 않음 (무한 루프 방지)
-    if (counterpartId && !isJoined && !isLoading && !error) {
+    if ((existingRoomId || counterpartId) && !isJoined && !isLoading && !error) {
       joinChat();
     }
-  }, [counterpartId, isJoined, isLoading, error, joinChat]);
+  }, [existingRoomId, counterpartId, isJoined, isLoading, error, joinChat]);
 
   // roomId가 설정되면 STOMP 구독
   useEffect(() => {

@@ -1050,7 +1050,7 @@ export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
  */
 export const toggleChatMute = async (
   roomId: string,
-  muted: boolean | number
+  muted: boolean
 ): Promise<void> => {
   try {
     const token = localStorage.getItem("accessToken");
@@ -1080,10 +1080,12 @@ export const toggleChatMute = async (
     );
 
     if (!response.ok) {
+      const errorText = await response.text();
       console.error(
         "채팅방 알림 설정 API 에러:",
         response.status,
-        response.statusText
+        response.statusText,
+        errorText
       );
 
       // 403, 404, 500 에러인 경우 무시

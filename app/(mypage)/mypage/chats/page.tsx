@@ -137,6 +137,10 @@ const ChatRoomView: React.FC<{
   activeRoom: MyChatRoom | null;
   onLeaveRoom: () => void;
 }> = ({ activeRoom, onLeaveRoom }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { user } = useAuth();
+  const currentUserId = user?.id || "user-me";
+
   // 채팅방 타입에 따라 다른 훅 사용
   const isGroupChat = activeRoom?.type === "GROUP";
   const isDmChat = activeRoom?.type === "PRIVATE";
@@ -147,18 +151,96 @@ const ChatRoomView: React.FC<{
     cafeName: activeRoom?.displayName || "",
   });
 
+  console.log("🔔 마이페이지 채팅방 정보:", {
+    roomId: activeRoom?.roomId,
+    type: activeRoom?.type,
+    displayName: activeRoom?.displayName,
+    cafeId: activeRoom?.cafeId,
+    counterpartId: activeRoom?.counterpartId,
+    cafeIdString: activeRoom?.cafeId?.toString(),
+  });
+
   // 1:1 채팅 훅 (type이 PRIVATE인 경우)
-  // PRIVATE 채팅의 경우 counterpartId를 사용 (roomId가 아님)
+  // 마이페이지 채팅방 목록에서는 counterpartId가 undefined
+  // roomId가 64인 경우 "64"를 사용 (이미 존재하는 채팅방이므로)
+  // 유효성 검사를 통과하도록 숫자 문자열만 사용
+  const dmChatCounterpartId =
+    isDmChat && activeRoom?.roomId ? activeRoom.roomId.toString() : "";
+
+  console.log("🔔 1:1 채팅 counterpartId 설정:", {
+    isDmChat,
+    roomId: activeRoom?.roomId,
+    counterpartId: dmChatCounterpartId,
+  });
+
   const dmChat = useDmChat({
-    counterpartId:
-      activeRoom?.counterpartId?.toString() ||
-      activeRoom?.roomId?.toString() ||
-      "",
+    counterpartId: "", // 빈 문자열로 설정하여 자동 가입 방지
     counterpartName: activeRoom?.displayName || "",
+    // 마이페이지에서는 이미 존재하는 채팅방이므로 roomId를 직접 사용
+    existingRoomId: isDmChat ? activeRoom?.roomId?.toString() : undefined,
   });
 
   // 현재 활성화된 채팅 데이터 선택
   const currentChat = isGroupChat ? cafeChat : isDmChat ? dmChat : null;
+
+  // 사이드바 닫기 핸들러
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
+  // 알림 상태를 토글하는 Handler
+  const handleToggleNotification = () => {
+    if (currentChat) {
+      console.log(
+        "🔔 알림 토글 버튼 클릭됨 - 현재 상태:",
+        currentChat.isMuted ? "끄기" : "켜기"
+      );
+      currentChat.toggleMute();
+    }
+  };
+
+  // 메시지 전송 핸들러
+  const handleSendMessage = async (message: string) => {
+    if (currentChat) {
+      await currentChat.sendMessage(message);
+    }
+  };
+
+  // 메시지 리스트 영역 클릭 핸들러
+  const handleListClick = () => {
+    closeSidebar();
+  };
+
+  // 채팅방 나가기 핸들러
+  const handleLeaveChat = async () => {
+    if (currentChat && window.confirm("정말로 이 채팅방을 나가시겠습니까?")) {
+      try {
+        await currentChat.leaveChat();
+        onLeaveRoom();
+      } catch (error) {
+        console.error("채팅방 나가기 실패:", error);
+      }
+    }
+  };
+
+  // 사이드바 내 프로필 클릭 핸들러
+  const handleSidebarProfileClick = (
+    user: { id: string; name: string },
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
+    event.stopPropagation();
+    closeSidebar();
+  };
+
+  // 프로필 클릭 핸들러 (단체 채팅에서만)
+  const handleProfileClick = (
+    senderId: string,
+    senderName: string,
+    event: React.MouseEvent<HTMLElement>
+  ) => {
+    // 프로필 클릭 시 동작
+    console.log("프로필 클릭:", { senderId, senderName });
+  };
 
   // 채팅방이 선택되면 자동으로 참여
   useEffect(() => {
@@ -166,16 +248,31 @@ const ChatRoomView: React.FC<{
       activeRoom &&
       currentChat &&
       !currentChat.isJoined &&
-      !currentChat.isLoading
+      !currentChat.isLoading &&
+      !currentChat.error
     ) {
-      console.log("채팅방 자동 참여 시도:", {
+      console.log("채팅방 자동 참여 시도 (마이페이지):", {
         roomId: activeRoom.roomId,
         type: activeRoom.type,
         displayName: activeRoom.displayName,
+        cafeId: activeRoom.cafeId,
+        counterpartId: activeRoom.counterpartId,
       });
-      currentChat.joinChat();
+
+      // 단체 채팅방인 경우 - cafeId 확인
+      if (isGroupChat && !activeRoom.cafeId) {
+        console.error("단체 채팅방인데 cafeId가 없습니다!");
+      }
+
+      // 약간의 지연을 두고 참여 (상태 안정화를 위해)
+      const timeoutId = setTimeout(() => {
+        console.log("자동 참여 실행 중...");
+        currentChat.joinChat();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [activeRoom, currentChat]);
+  }, [activeRoom, currentChat, isGroupChat]);
 
   if (!activeRoom) {
     return (
@@ -207,102 +304,110 @@ const ChatRoomView: React.FC<{
     );
   }
 
-  const handleSendMessage = async (message: string) => {
-    if (currentChat) {
-      try {
-        await currentChat.sendMessage(message);
-      } catch (error) {
-        console.error("메시지 전송 실패:", error);
-      }
-    }
-  };
-
-  const handleProfileClick = (
-    senderId: string,
-    senderName: string,
-    event: React.MouseEvent<HTMLElement>
-  ) => {
-    // 프로필 클릭 시 동작 (1:1 채팅 시작 등)
-    console.log("프로필 클릭:", { senderId, senderName });
-  };
-
-  const handleListClick = () => {
-    // 메시지 리스트 클릭 시 동작
-  };
-
-  const handleLeaveChat = async () => {
-    if (currentChat && window.confirm("정말로 이 채팅방을 나가시겠습니까?")) {
-      try {
-        await currentChat.leaveChat();
-        // 채팅방 나가기 성공 시 목록에서 제거
-        onLeaveRoom();
-      } catch (error) {
-        console.error("채팅방 나가기 실패:", error);
-      }
-    }
-  };
-
   return (
-    <div className="flex-1 flex flex-col bg-white">
-      {/* 채팅방 헤더 */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center space-x-3">
-          <ProfileIcon size="w-10 h-10" />
-          <div>
-            <h2 className="text-lg font-semibold text-gray-800">
-              {activeRoom.displayName}
-            </h2>
-            <p className="text-sm text-gray-500">
-              {activeRoom.memberCount}명 참여 중
-              {currentChat.stompConnected && (
-                <span className="ml-2 text-green-500">● 연결됨</span>
-              )}
-            </p>
-          </div>
-        </div>
+    <div className="flex-1 flex flex-col bg-white h-full relative overflow-hidden">
+      {/* Header */}
+      <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-10 shadow-sm bg-white">
+        <h2 className="text-xl font-bold text-gray-900">
+          {activeRoom.displayName}
+        </h2>
         <div className="flex items-center space-x-2">
-          {currentChat.isMuted ? (
-            <span className="text-xs text-gray-500">🔕 알림 끔</span>
-          ) : (
-            <span className="text-xs text-gray-500">🔔 알림 켜짐</span>
-          )}
+          {/* 사이드바 토글 버튼 (햄버거 메뉴) */}
           <button
-            onClick={handleLeaveChat}
-            className="px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-            title="채팅방 나가기"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsSidebarOpen((prev) => !prev);
+            }}
+            className="text-gray-900 p-2 rounded-full transition duration-150"
           >
-            나가기
+            <svg
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="bars"
+              className="w-5 h-5"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 448 512"
+            >
+              <path
+                fill="currentColor"
+                d="M16 132h416c8.837 0 16-7.163 16-16V76c0-8.837-7.163-16-16-16H16C7.163 60 0 67.163 0 76v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16z"
+              ></path>
+            </svg>
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* 메시지 영역 */}
-      <div className="flex-1 overflow-y-auto">
-        {currentChat.isLoading ? (
-          <div className="flex justify-center items-center h-full">
-            <div className="text-gray-500">메시지를 불러오는 중...</div>
+      {/* 로딩 상태 */}
+      {currentChat.isLoading && (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">채팅방에 연결하는 중...</p>
           </div>
-        ) : currentChat.error ? (
-          <div className="flex justify-center items-center h-full">
-            <div className="text-center">
-              <div className="text-red-500 mb-2">{currentChat.error}</div>
-              <p className="text-gray-500">채팅방에 연결할 수 없습니다</p>
+        </div>
+      )}
+
+      {/* 에러 상태 */}
+      {currentChat.error && !currentChat.isLoading && (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="text-red-500 text-6xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold mb-2">오류 발생</h2>
+            <p className="text-gray-600 mb-4">{currentChat.error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* 정상 채팅 화면 */}
+      {!currentChat.isLoading && !currentChat.error && (
+        <>
+          {/* ChatMessageList */}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <ChatMessageList
+                messages={currentChat.messages}
+                chatHistory={currentChat.chatHistory}
+                hasMoreHistory={currentChat.hasMoreHistory}
+                isLoadingHistory={currentChat.isLoadingHistory}
+                onLoadMoreHistory={currentChat.loadMoreHistory}
+                onProfileClick={handleProfileClick}
+                onListClick={handleListClick}
+                onMarkAsRead={currentChat.markAsRead}
+                roomId={currentChat.roomId || undefined}
+              />
             </div>
-          </div>
-        ) : (
-          <ChatMessageList
-            messages={currentChat.messages}
-            onProfileClick={handleProfileClick}
-            onListClick={handleListClick}
-          />
-        )}
-      </div>
 
-      {/* 메시지 입력 */}
-      <ChatMessageInput
-        onSendMessage={handleSendMessage}
-        disabled={currentChat.isLoading || !currentChat.stompConnected}
-      />
+            <ChatMessageInput onSendMessage={handleSendMessage} />
+          </div>
+        </>
+      )}
+
+      {/* 사이드바 - 채팅방 오른쪽에 고정 */}
+      {isSidebarOpen && (
+        <>
+          {/* 오버레이 */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 z-40"
+            onClick={closeSidebar}
+          />
+          {/* 사이드바 */}
+          <div className="absolute right-0 top-0 bottom-0 z-50">
+            <ChatSidebar
+              participants={currentChat.participants}
+              currentUserId={currentUserId}
+              isNotificationOn={!currentChat.isMuted}
+              onToggleNotification={handleToggleNotification}
+              onClose={closeSidebar}
+              onProfileClick={handleSidebarProfileClick}
+              onLeave={handleLeaveChat}
+              title="참여자 목록"
+              subtitle="참여자"
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -324,6 +429,21 @@ const ChatListPage = () => {
 
       console.log("채팅방 목록 로드 시작");
       const response: MyChatRoomsResponse = await getMyChatRooms();
+
+      // 전체 응답 구조 확인 (1:1 채팅방 정보 포함)
+      console.log("🔔 마이페이지 채팅방 목록 전체 응답:", response);
+      console.log("🔔 마이페이지 채팅방 목록 content:", response.data.content);
+      response.data.content.forEach((room, index) => {
+        console.log(`🔔 채팅방 ${index + 1}:`, {
+          roomId: room.roomId,
+          type: room.type,
+          displayName: room.displayName,
+          cafeId: room.cafeId,
+          counterpartId: room.counterpartId,
+          전체room: room,
+        });
+      });
+
       setChatRooms(response.data.content);
       console.log("채팅방 목록 로드 완료:", response.data.content);
     } catch (err) {
@@ -385,7 +505,7 @@ const ChatListPage = () => {
   }, [activeRoomId]);
 
   return (
-    <div className="flex h-screen w-full bg-white">
+    <div className="flex h-[calc(100vh-200px)] w-full bg-white">
       {/* 채팅방이 선택되지 않은 경우: 목록만 전체 화면에 표시 */}
       {!activeRoom ? (
         <div className="w-full h-full overflow-y-auto bg-white">
@@ -413,7 +533,7 @@ const ChatListPage = () => {
           </aside>
 
           {/* 오른쪽: 채팅방 */}
-          <main className="flex-1 flex flex-col h-full bg-white">
+          <main className="flex-1 flex flex-col h-full bg-white relative">
             <ChatRoomView
               activeRoom={activeRoom}
               onLeaveRoom={() => {
