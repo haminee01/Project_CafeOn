@@ -444,6 +444,13 @@ export const useDmChat = ({
       });
       setIsLoading(true);
       setError(null);
+
+      // 이전 메시지 초기화
+      setMessages([]);
+      setChatHistory([]);
+      setParticipants([]);
+      setParticipantCount(0);
+
       setRoomId(existingRoomId);
       setIsJoined(true);
 
@@ -464,18 +471,10 @@ export const useDmChat = ({
         if (historyResponse.data.content.length > 0) {
           setChatHistory(historyResponse.data.content);
           setHasMoreHistory(historyResponse.data.hasNext);
-
-          const historyMessages: ChatMessage[] =
-            historyResponse.data.content.map((msg: ChatHistoryMessage) => ({
-              id: msg.chatId.toString(),
-              senderName: msg.senderNickname,
-              content: msg.message,
-              isMyMessage: msg.mine,
-              senderId: msg.senderNickname,
-              messageType: msg.messageType,
-            }));
-          setMessages(historyMessages);
         }
+        // existingRoomId가 있으면 마이페이지이므로 messages는 비워둠 (ChatMessageList에서 chatHistory를 변환)
+        // existingRoomId가 없으면 PrivateChatModal이므로 messages에 히스토리를 넣음
+        setMessages([]);
 
         // STOMP 연결
         console.log("STOMP 연결 시작 (기존 채팅방)");
@@ -564,6 +563,7 @@ export const useDmChat = ({
             setChatHistory(historyResponse.data.content);
             setHasMoreHistory(historyResponse.data.hasNext);
 
+            // PrivateChatModal에서는 messages에 히스토리를 넣어야 표시됨
             const historyMessages: ChatMessage[] =
               historyResponse.data.content.map((msg: ChatHistoryMessage) => ({
                 id: msg.chatId.toString(),
@@ -574,6 +574,8 @@ export const useDmChat = ({
                 messageType: msg.messageType,
               }));
             setMessages(historyMessages);
+          } else {
+            setMessages([]);
           }
           console.log("기존 1:1 채팅방 데이터 로드 완료");
         } catch (dataLoadError) {
@@ -655,6 +657,42 @@ export const useDmChat = ({
       console.log("STOMP 구독 시작");
       if (response.data.roomId) {
         subscribeToRoom(response.data.roomId.toString());
+      }
+
+      // 새 채팅방의 히스토리 로드
+      try {
+        console.log("새 채팅방 히스토리 로드 시작");
+        const historyResponse = await getChatHistory(newRoomId);
+        if (historyResponse.data.content.length > 0) {
+          setChatHistory(historyResponse.data.content);
+          setHasMoreHistory(historyResponse.data.hasNext);
+
+          // PrivateChatModal에서는 messages에 히스토리를 넣어야 표시됨
+          const historyMessages: ChatMessage[] =
+            historyResponse.data.content.map((msg: ChatHistoryMessage) => ({
+              id: msg.chatId.toString(),
+              senderName: msg.senderNickname,
+              content: msg.message,
+              isMyMessage: msg.mine,
+              senderId: msg.senderNickname,
+              messageType: msg.messageType,
+            }));
+          setMessages(historyMessages);
+          console.log(
+            "새 채팅방 히스토리 로드 완료:",
+            historyMessages.length,
+            "개 메시지"
+          );
+        } else {
+          console.log("새 채팅방에 히스토리가 없습니다.");
+          setChatHistory([]);
+          setHasMoreHistory(false);
+          setMessages([]);
+        }
+      } catch (historyError) {
+        console.error("새 채팅방 히스토리 로드 실패:", historyError);
+        setChatHistory([]);
+        setMessages([]);
       }
 
       console.log("1:1 채팅방 생성 완료");
@@ -860,92 +898,7 @@ export const useDmChat = ({
     }
   }, [roomId, stompConnected, subscribeToRoom]);
 
-  // 초기 데이터 로드 (한 번만 실행)
-  useEffect(() => {
-    console.log("=== 초기화 useEffect 실행 ===");
-    console.log("초기화 조건 확인:", {
-      counterpartId,
-      roomId,
-      roomIdType: typeof roomId,
-      roomIdValue: JSON.stringify(roomId),
-      isJoined,
-      participantsLength: participants.length,
-      chatHistoryLength: chatHistory.length,
-      messagesLength: messages.length,
-    });
-
-    // roomId가 "1"인 경우 실행하지 않음 (잘못된 상태)
-    if (roomId === "1") {
-      console.warn("⚠️ 잘못된 roomId(1) 감지, 데이터 로드 중단");
-      return;
-    }
-
-    if (counterpartId && roomId && isJoined) {
-      console.log("=== 데이터 로드 조건 만족, 로드 시작 ===");
-
-      // 참여자 목록 로드 (한 번만)
-      if (participants.length === 0) {
-        console.log("참여자 목록 로드 시작");
-        getChatParticipants(roomId)
-          .then((response) => {
-            const participantList: Participant[] = response.map(
-              (p: ChatParticipant) => ({
-                id: p.userId,
-                name: p.nickname, // 순수한 닉네임만 사용
-              })
-            );
-            setParticipants(participantList);
-            setParticipantCount(participantList.length);
-            console.log("참여자 목록 로드 완료:", participantList.length, "명");
-          })
-          .catch((err) => {
-            console.error("참여자 목록 로드 실패:", err);
-          });
-      }
-
-      // 채팅 히스토리 로드 (한 번만)
-      if (chatHistory.length === 0 && !isLoadingHistory) {
-        console.log("채팅 히스토리 로드 시작");
-        getChatHistory(roomId)
-          .then((response) => {
-            if (response.data.content.length > 0) {
-              setChatHistory(response.data.content);
-              setHasMoreHistory(response.data.hasNext);
-
-              const historyMessages: ChatMessage[] = response.data.content.map(
-                (msg: ChatHistoryMessage) => ({
-                  id: msg.chatId.toString(),
-                  senderName: msg.senderNickname,
-                  content: msg.message,
-                  isMyMessage: msg.mine,
-                  senderId: msg.senderNickname,
-                  messageType: msg.messageType,
-                })
-              );
-              setMessages(historyMessages);
-              console.log(
-                "채팅 히스토리 로드 완료:",
-                historyMessages.length,
-                "개 메시지"
-              );
-            } else {
-              console.log("채팅 히스토리가 비어있음");
-              setHasMoreHistory(false);
-            }
-          })
-          .catch((err) => {
-            console.error("채팅 히스토리 로드 실패:", err);
-            setHasMoreHistory(false);
-          });
-      }
-    } else {
-      console.log("데이터 로드 조건 불만족:", {
-        counterpartId: !!counterpartId,
-        roomId: !!roomId,
-        isJoined,
-      });
-    }
-  }, [counterpartId, roomId, isJoined]); // 의존성 배열에서 함수들과 상태값들 제거
+  // 초기 데이터 로드는 joinChat 함수에서 처리하므로 여기서는 제거
 
   // 채팅 읽음 처리
   const markAsRead = useCallback(async () => {
