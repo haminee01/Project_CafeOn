@@ -156,24 +156,33 @@ export const useDmChat = ({
 
   // STOMP 구독
   const subscribeToRoom = useCallback(
-    (roomId: string) => {
+    (targetRoomId: string) => {
       console.log("=== 1:1 채팅 STOMP 구독 시도 ===", {
-        roomId,
+        targetRoomId,
+        currentRoomId: roomId,
         stompConnected: stompClientRef.current?.connected,
         hasStompClient: !!stompClientRef.current,
       });
 
       // roomId가 "1"인 경우 구독하지 않음 (잘못된 상태)
-      if (roomId === "1") {
+      if (targetRoomId === "1") {
         console.error("❌ subscribeToRoom: 잘못된 roomId(1) 구독 시도 차단!");
         return;
       }
 
-      if (!stompClientRef.current?.connected || !roomId) {
+      if (!stompClientRef.current?.connected || !targetRoomId) {
         console.log("STOMP 구독 조건 불만족:", {
           stompConnected: stompClientRef.current?.connected,
-          roomId,
+          targetRoomId,
         });
+        return;
+      }
+
+      // 현재 활성화된 roomId와 일치하는지 확인
+      if (roomId && roomId !== targetRoomId) {
+        console.warn(
+          `⚠️ STOMP 구독 대상 roomId(${targetRoomId})가 현재 활성화된 roomId(${roomId})와 일치하지 않음. 구독 중단.`
+        );
         return;
       }
 
@@ -186,7 +195,7 @@ export const useDmChat = ({
 
       try {
         const subscription = stompClientRef.current.subscribe(
-          `/sub/rooms/${roomId}`,
+          `/sub/rooms/${targetRoomId}`,
           (message) => {
             try {
               const data: StompChatMessage = JSON.parse(message.body);
@@ -233,12 +242,12 @@ export const useDmChat = ({
         );
 
         subscriptionRef.current = subscription;
-        console.log(`1:1 채팅 STOMP 구독 성공: /sub/rooms/${roomId}`);
+        console.log(`1:1 채팅 STOMP 구독 성공: /sub/rooms/${targetRoomId}`);
       } catch (error) {
         console.error("1:1 채팅 STOMP 구독 실패:", error);
       }
     },
-    [currentUserNickname]
+    [currentUserNickname, roomId]
   );
 
   // STOMP 연결 해제
@@ -403,7 +412,29 @@ export const useDmChat = ({
       currentUserId,
       currentUserNickname,
       existingRoomId,
+      currentRoomId: roomId,
     });
+
+    // 이전 채팅방이 있고 새로운 채팅방으로 전환하는 경우 정리
+    if (roomId && existingRoomId && roomId !== existingRoomId) {
+      console.log("🔔 채팅방 전환: 이전 채팅방 정리", {
+        previousRoomId: roomId,
+        newRoomId: existingRoomId,
+      });
+      // 이전 STOMP 구독 해제
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
+      // 채팅방 데이터 및 상태 초기화 - 새 채팅방 준비
+      setMessages([]);
+      setChatHistory([]);
+      setParticipants([]);
+      setParticipantCount(0);
+      setRoomId(null);
+      setIsJoined(false);
+      console.log("🔔 새 채팅방을 위해 상태 완전 초기화");
+    }
 
     // 마이페이지에서 이미 존재하는 채팅방인 경우
     if (existingRoomId) {
@@ -760,19 +791,61 @@ export const useDmChat = ({
     }
   }, [roomId, isMuted, saveMutedStateToStorage]);
 
-  // 컴포넌트 마운트 시 1:1 채팅방 참여
+  // 이전 existingRoomId 추적
+  const previousExistingRoomIdRef = useRef<string | undefined>(undefined);
+
+  // existingRoomId가 바뀔 때 이전 채팅방 상태 정리 및 새 채팅방 준비
   useEffect(() => {
-    // existingRoomId 또는 counterpartId가 있으면 참여
-    // 에러가 있으면 재시도하지 않음 (무한 루프 방지)
-    if (
-      (existingRoomId || counterpartId) &&
-      !isJoined &&
-      !isLoading &&
-      !error
-    ) {
+    if (!existingRoomId) return;
+
+    // 이전과 같은 경우 무시
+    if (previousExistingRoomIdRef.current === existingRoomId) {
+      return;
+    }
+
+    console.log("🔔 existingRoomId 변경 감지:", {
+      previousExistingRoomId: previousExistingRoomIdRef.current,
+      currentRoomId: roomId,
+      newExistingRoomId: existingRoomId,
+    });
+
+    // 이전 채팅방 STOMP 구독 해제
+    if (subscriptionRef.current) {
+      console.log("🔔 이전 채팅방 STOMP 구독 해제");
+      subscriptionRef.current.unsubscribe();
+      subscriptionRef.current = null;
+    }
+
+    // 상태 초기화하여 새 채팅방 준비
+    setIsJoined(false);
+    setRoomId(null);
+    setMessages([]);
+    setChatHistory([]);
+    setParticipants([]);
+    setParticipantCount(0);
+    setError(null);
+
+    // 이전 existingRoomId 업데이트
+    previousExistingRoomIdRef.current = existingRoomId;
+  }, [existingRoomId]);
+
+  // existingRoomId가 바뀔 때 새로운 채팅방 참여 시작
+  useEffect(() => {
+    if (!existingRoomId) return;
+
+    console.log("🔔 existingRoomId가 변경되어 채팅방 참여 시작:", {
+      existingRoomId,
+      currentRoomId: roomId,
+      isJoined,
+      isLoading,
+    });
+
+    // 상태가 준비되었고 아직 조인되지 않은 경우에만 조인
+    if (!isJoined && !isLoading && !error) {
+      console.log("🔔 새 채팅방 자동 조인 시작");
       joinChat();
     }
-  }, [existingRoomId, counterpartId, isJoined, isLoading, error, joinChat]);
+  }, [existingRoomId, isJoined, isLoading, error, joinChat, roomId]);
 
   // roomId가 설정되면 STOMP 구독
   useEffect(() => {

@@ -157,22 +157,12 @@ const ChatRoomView: React.FC<{
     displayName: activeRoom?.displayName,
     cafeId: activeRoom?.cafeId,
     counterpartId: activeRoom?.counterpartId,
+    counterpartUserId: activeRoom?.counterpartUserId,
     cafeIdString: activeRoom?.cafeId?.toString(),
   });
 
-  // 1:1 채팅 훅 (type이 PRIVATE인 경우)
-  // 마이페이지 채팅방 목록에서는 counterpartId가 undefined
-  // roomId가 64인 경우 "64"를 사용 (이미 존재하는 채팅방이므로)
-  // 유효성 검사를 통과하도록 숫자 문자열만 사용
-  const dmChatCounterpartId =
-    isDmChat && activeRoom?.roomId ? activeRoom.roomId.toString() : "";
-
-  console.log("🔔 1:1 채팅 counterpartId 설정:", {
-    isDmChat,
-    roomId: activeRoom?.roomId,
-    counterpartId: dmChatCounterpartId,
-  });
-
+  // key를 사용하여 채팅방이 바뀔 때마다 완전히 재마운트
+  const dmChatKey = activeRoom?.roomId || "no-room";
   const dmChat = useDmChat({
     counterpartId: "", // 빈 문자열로 설정하여 자동 가입 방지
     counterpartName: activeRoom?.displayName || "",
@@ -458,12 +448,25 @@ const ChatListPage = () => {
   };
 
   const handleRoomClick = (roomId: number) => {
+    console.log("🔔 채팅방 클릭:", {
+      roomId,
+      previousActiveRoomId: activeRoomId,
+    });
+
     setActiveRoomId(roomId);
     const room = chatRooms.find((r) => r.roomId === roomId);
-    setActiveRoom(room || null);
+    console.log("🔔 찾은 채팅방:", room);
+
+    if (!room) {
+      console.error("🔔 채팅방을 찾을 수 없습니다:", roomId);
+      return;
+    }
+
+    setActiveRoom(room);
+    console.log("🔔 활성 채팅방 설정 완료:", room);
 
     // 선택된 채팅방의 읽지 않은 메시지 개수를 0으로 업데이트
-    if (room && room.unreadCount > 0) {
+    if (room.unreadCount > 0) {
       setChatRooms((prevRooms) =>
         prevRooms.map((r) =>
           r.roomId === roomId ? { ...r, unreadCount: 0 } : r
@@ -477,18 +480,19 @@ const ChatListPage = () => {
     router.replace(`/mypage/chats?${params.toString()}`, { scroll: false });
   };
 
-  // URL 파라미터에서 채팅방 ID 읽기
+  // URL 파라미터에서 채팅방 ID 읽기 (초기 로드 시에만)
   useEffect(() => {
     const roomParam = searchParams.get("room");
-    if (roomParam && chatRooms.length > 0) {
+    if (roomParam && chatRooms.length > 0 && !activeRoom) {
       const roomId = parseInt(roomParam);
       const room = chatRooms.find((r) => r.roomId === roomId);
-      if (room) {
+      if (room && activeRoomId !== roomId) {
+        console.log("🔔 URL에서 채팅방 로드:", room);
         setActiveRoomId(roomId);
         setActiveRoom(room);
       }
     }
-  }, [searchParams, chatRooms]);
+  }, [searchParams, chatRooms, activeRoom, activeRoomId]);
 
   useEffect(() => {
     loadChatRooms();
