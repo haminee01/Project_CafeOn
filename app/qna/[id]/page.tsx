@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useQuestionDetail, useAnswerList } from "@/hooks/useQnA";
 import { QuestionVisibility } from "@/types/qna";
 import { useAuth } from "@/hooks/useAuth";
+import Header from "@/components/common/Header";
+import Footer from "@/components/common/Footer";
 
 interface QuestionDetailPageProps {
   params: Promise<{
@@ -60,8 +62,12 @@ export default function QuestionDetailPage({
   // 로딩 상태 표시
   if (isLoading) {
     return (
-      <div className="p-8 bg-white min-h-full flex items-center justify-center">
-        <div className="text-gray-500">문의를 불러오는 중...</div>
+      <div className="flex flex-col min-h-screen bg-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-gray-500">문의를 불러오는 중...</div>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -69,25 +75,29 @@ export default function QuestionDetailPage({
   // 에러 상태 표시
   if (error) {
     return (
-      <div className="p-8 bg-white min-h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-600 mb-2">오류가 발생했습니다.</div>
-          <div className="text-gray-500 mb-4">{error}</div>
-          <div className="space-x-2">
-            <button
-              onClick={refetch}
-              className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
-            >
-              다시 시도
-            </button>
-            <button
-              onClick={handleBack}
-              className="bg-gray-500 text-white text-sm px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
-            >
-              뒤로가기
-            </button>
+      <div className="flex flex-col min-h-screen bg-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-red-600 mb-2">오류가 발생했습니다.</div>
+            <div className="text-gray-500 mb-4">{error}</div>
+            <div className="space-x-2">
+              <button
+                onClick={refetch}
+                className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+              >
+                다시 시도
+              </button>
+              <button
+                onClick={handleBack}
+                className="bg-gray-500 text-white text-sm px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+              >
+                뒤로가기
+              </button>
+            </div>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -95,25 +105,31 @@ export default function QuestionDetailPage({
   // 문의가 없는 경우
   if (!question) {
     return (
-      <div className="p-8 bg-white min-h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-gray-500 mb-4">문의를 찾을 수 없습니다.</div>
-          <button
-            onClick={handleBack}
-            className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
-          >
-            뒤로가기
-          </button>
+      <div className="flex flex-col min-h-screen bg-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-gray-500 mb-4">문의를 찾을 수 없습니다.</div>
+            <button
+              onClick={handleBack}
+              className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+            >
+              뒤로가기
+            </button>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="bg-white min-h-full">
-      <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-8">
-        {/* 헤더 영역 */}
-        <header className="mb-6">
+    <div className="flex flex-col min-h-screen bg-white">
+      <Header />
+      <div className="flex-grow">
+        <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-8">
+          {/* 헤더 영역 */}
+          <div className="mb-6">
           <div className="flex items-center justify-between">
             <button
               onClick={handleBack}
@@ -146,7 +162,7 @@ export default function QuestionDetailPage({
               </span>
             </div>
           </div>
-        </header>
+        </div>
 
         {/* 문의 내용 */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -262,7 +278,9 @@ export default function QuestionDetailPage({
             </div>
           </div>
         )}
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }

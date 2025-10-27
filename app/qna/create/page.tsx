@@ -6,6 +6,8 @@ import { useCreateQuestion } from "@/hooks/useQnA";
 import { QuestionVisibility } from "@/types/qna";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/common/Toast";
+import Header from "@/components/common/Header";
+import Footer from "@/components/common/Footer";
 
 export default function CreateQuestionPage() {
   const router = useRouter();
@@ -82,8 +84,12 @@ export default function CreateQuestionPage() {
   // 인증 로딩 중
   if (authLoading) {
     return (
-      <div className="p-8 bg-white min-h-full flex items-center justify-center">
-        <div className="text-gray-500">로딩 중...</div>
+      <div className="flex flex-col min-h-screen bg-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-gray-500">로딩 중...</div>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -91,27 +97,33 @@ export default function CreateQuestionPage() {
   // 로그인하지 않은 경우
   if (!isLoggedIn) {
     return (
-      <div className="p-8 bg-white min-h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-gray-500 mb-4">로그인이 필요합니다.</div>
-          <button
-            onClick={() => router.push("/login")}
-            className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
-          >
-            로그인하기
-          </button>
+      <div className="flex flex-col min-h-screen bg-white">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-gray-500 mb-4">로그인이 필요합니다.</div>
+            <button
+              onClick={() => router.push("/login")}
+              className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+            >
+              로그인하기
+            </button>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="bg-white min-h-full">
-      <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-8">
-        {/* 헤더 영역 */}
-        <header className="mb-6">
-          <h1 className="text-2xl font-bold">문의 작성</h1>
-        </header>
+    <div className="flex flex-col min-h-screen bg-white">
+      <Header />
+      <div className="flex-grow">
+        <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-8">
+          {/* 헤더 영역 */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold">문의 작성</h1>
+          </div>
 
         {/* 문의 작성 폼 */}
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -212,8 +224,10 @@ export default function CreateQuestionPage() {
             </button>
           </div>
         </form>
+        </div>
       </div>
       <ToastContainer />
+      <Footer />
     </div>
   );
 }

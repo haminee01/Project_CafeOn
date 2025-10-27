@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Pagination from "@/components/common/Pagination";
 import { useQuestionList } from "@/hooks/useQnA";
 import { QuestionVisibility } from "@/types/qna";
+import Header from "@/components/common/Header";
+import Footer from "@/components/common/Footer";
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -241,61 +243,65 @@ export default function QnAPage() {
   };
 
   return (
-    <div className="bg-white min-h-full">
-      <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-8">
-        {/* 헤더 영역 */}
-        <header className="mb-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">QnA</h1>
-            <button
-              onClick={handleCreateQuestion}
-              className="bg-[#6E4213] text-white px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
-            >
-              문의 작성
-            </button>
-          </div>
-        </header>
-
-        {/* 검색 영역 */}
-        <div className="mb-6">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="문의 제목으로 검색..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6E4213] focus:border-transparent"
-            />
-            <button
-              type="submit"
-              className="bg-[#6E4213] text-white px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
-            >
-              검색
-            </button>
-            {searchKeyword && (
+    <div className="flex flex-col min-h-screen bg-white">
+      <Header />
+      <div className="flex-grow">
+        <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-8">
+          {/* 페이지 타이틀 영역 */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center">
+              <h1 className="text-2xl font-bold">QnA</h1>
               <button
-                type="button"
-                onClick={handleClearSearch}
-                className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                onClick={handleCreateQuestion}
+                className="bg-[#6E4213] text-white px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
               >
-                초기화
+                문의 작성
               </button>
-            )}
-          </form>
-          {searchKeyword && (
-            <div className="mt-2 text-sm text-gray-600">
-              검색어: "{searchKeyword}"
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* 문의 목록 및 페이지네이션 */}
-        <QuestionList
-          currentPage={currentPage}
-          onPageChange={handlePageChange}
-          keyword={searchKeyword}
-        />
+          {/* 검색 영역 */}
+          <div className="mb-6">
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="문의 제목으로 검색..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6E4213] focus:border-transparent"
+              />
+              <button
+                type="submit"
+                className="bg-[#6E4213] text-white px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+              >
+                검색
+              </button>
+              {searchKeyword && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                >
+                  초기화
+                </button>
+              )}
+            </form>
+            {searchKeyword && (
+              <div className="mt-2 text-sm text-gray-600">
+                검색어: "{searchKeyword}"
+              </div>
+            )}
+          </div>
+
+          {/* 문의 목록 및 페이지네이션 */}
+          <QuestionList
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            keyword={searchKeyword}
+          />
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }
