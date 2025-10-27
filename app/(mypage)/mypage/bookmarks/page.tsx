@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Pagination from "@/components/common/Pagination";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHeart as faHeartSolid } from "@fortawesome/free-solid-svg-icons";
-import { getWishlist, toggleWishlist } from "@/lib/api";
+import { getWishlist, deleteWishlist } from "@/lib/api";
 
 // 북마크 카테고리 목록 정의 (한글)
 const bookmarkCategories = [
@@ -167,7 +167,7 @@ export default function MyBookmarksPage() {
 
       console.log("북마크 해제 시도:", { cafeId, category: categoryEn });
 
-      await toggleWishlist(cafeId, categoryEn);
+      await deleteWishlist(cafeId, categoryEn);
 
       // 1. 토스트 메시지 설정
       const message = `[${name}] 북마크가 해제되었습니다.`;

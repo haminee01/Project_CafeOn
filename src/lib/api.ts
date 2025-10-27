@@ -465,6 +465,58 @@ export async function toggleWishlist(cafeId: number, category: string) {
   }
 }
 
+// 위시리스트 제거 (DELETE)
+export async function deleteWishlist(cafeId: number, category: string) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const queryParams = new URLSearchParams({ category });
+
+    console.log("위시리스트 삭제 API 호출:", {
+      url: `${API_BASE_URL}/api/my/wishlist/${cafeId}?${queryParams.toString()}`,
+      method: "DELETE",
+      category,
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/my/wishlist/${cafeId}?${queryParams.toString()}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+
+      let errorData: any = {};
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        // JSON 파싱 실패 시 빈 객체 유지
+      }
+
+      const errorMessage =
+        errorData.message ||
+        (response.status === 500
+          ? "서버 내부 오류가 발생했습니다."
+          : `위시리스트 제거 실패 (${response.status})`);
+
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("위시리스트 제거 API 호출 실패:", error);
+    throw error;
+  }
+}
+
 // 특정 카페의 위시리스트 카테고리 조회
 export async function getWishlistCategories(cafeId: number) {
   try {
