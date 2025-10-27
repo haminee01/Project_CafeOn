@@ -1,0 +1,119 @@
+import React from "react";
+import ProfileIcon from "./ProfileIcon";
+import { ChatSidebarProps } from "@/types/chat";
+
+const ChatSidebar: React.FC<ChatSidebarProps> = ({
+  participants,
+  currentUserId,
+  isNotificationOn,
+  onToggleNotification,
+  onClose,
+  onProfileClick,
+  onLeave,
+  title = "참여자 목록",
+  subtitle,
+}) => {
+  return (
+    <>
+      {/* 사이드바 (참여자 목록) 오버레이 */}
+      <div
+        className="absolute inset-0 bg-black bg-opacity-20 z-30"
+        onClick={onClose}
+      />
+
+      {/* 사이드바 본체 */}
+      <div
+        className={`absolute inset-y-0 right-0 w-64 bg-white shadow-2xl transition-transform duration-300 ease-in-out z-40`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col h-full border-l border-gray-200">
+          {/* 사이드바 헤더 */}
+          <div className="flex items-center justify-between p-4 border-b border-[#999999]">
+            <h3 className="text-lg font-bold">{title}</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* 참여자 목록 리스트 */}
+          <div className="p-4 flex-1 overflow-y-auto">
+            {subtitle && (
+              <p className="text-sm font-semibold mb-3 text-gray-600">
+                {subtitle} ({participants.length})
+              </p>
+            )}
+            <div className="space-y-3">
+              {participants
+                .sort((a, b) => {
+                  // 현재 사용자를 맨 위로 정렬
+                  if (a.id === currentUserId) return -1;
+                  if (b.id === currentUserId) return 1;
+                  return 0;
+                })
+                .map((user) => (
+                  <div
+                    key={user.id}
+                    className={`flex items-center space-x-3 p-2 rounded-md transition duration-150 ${
+                      user.id !== currentUserId && onProfileClick
+                        ? "cursor-pointer hover:bg-gray-100"
+                        : ""
+                    }`}
+                    onClick={(e) => {
+                      if (user.id !== currentUserId && onProfileClick) {
+                        onProfileClick(user, e);
+                      }
+                    }}
+                  >
+                    <ProfileIcon variant="default" />
+                    <span className="font-medium text-gray-800">
+                      {user.name} {user.id === currentUserId ? "(나)" : ""}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* 하단 액션 버튼 */}
+          <div className="p-4 mt-auto border-t border-[#CDCDCD] flex space-x-2">
+            <button
+              onClick={onToggleNotification}
+              className={`w-full px-4 py-2 rounded-lg shadow-md transition text-sm ${
+                isNotificationOn
+                  ? "bg-[#8d5e33] text-white hover:bg-[#6E4213]"
+                  : "bg-gray-400 text-[#6E4213] hover:bg-gray-500"
+              }`}
+            >
+              {isNotificationOn ? "알림끄기" : "알림켜기"}
+            </button>
+            {onLeave && (
+              <button
+                onClick={onLeave}
+                className="w-full px-4 py-2 bg-gray-200 text-[#6E4213] rounded-lg shadow-md hover:bg-gray-300 transition text-sm"
+              >
+                나가기
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default ChatSidebar;
