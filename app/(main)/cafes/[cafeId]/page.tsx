@@ -110,7 +110,12 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
         <ChatRoomModal onClose={() => setShowChatModal(false)} cafe={cafe} />
       )}
       {showReportModal && (
-        <ReportModal onClose={() => setShowReportModal(false)} />
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          targetType="post"
+          targetId={0}
+        />
       )}
       {showSaveModal && (
         <SaveModal onClose={() => setShowSaveModal(false)} cafe={cafe} />

@@ -1,0 +1,172 @@
+[1mdiff --git a/src/types/Post.ts b/src/types/Post.ts[m
+[1mindex 6a87d98..47e674e 100644[m
+[1m--- a/src/types/Post.ts[m
+[1m+++ b/src/types/Post.ts[m
+[36m@@ -13,15 +13,15 @@[m [mexport interface MyPost {[m
+ [m
+ // 댓글 타입 정의[m
+ export interface MyComment {[m
+[31m-  id: number;[m
+[32m+[m[32m  commentId: number;[m
+[32m+[m[32m  parentId: number | null;[m
+[32m+[m[32m  postId: number;[m
+[32m+[m[32m  authorName: string;[m
+   content: string;[m
+[31m-  postTitle: string;[m
+   createdAt: string;[m
+[31m-  likes: number;[m
+[31m-  children?: MyComment[];[m
+[31m-  author?: string;[m
+[31m-  likedByMe?: boolean;[m
+[31m-  parent_id?: number;[m
+[32m+[m[32m  children: MyComment[];[m
+[32m+[m[32m  likeCount: number;[m
+[32m+[m[32m  likedByMe: boolean;[m
+ }[m
+ [m
+ // 좋아요한 글 타입 정의[m
+[36m@@ -37,11 +37,15 @@[m [mexport interface MyLikedPost {[m
+ [m
+ // 좋아요한 댓글 타입 정의[m
+ export interface MyLikedComment {[m
+[31m-  id: number;[m
+[32m+[m[32m  commentId: number;[m
+[32m+[m[32m  parentId: number | null;[m
+[32m+[m[32m  postId: number;[m
+[32m+[m[32m  authorName: string;[m
+   content: string;[m
+[31m-  postTitle: string;[m
+   createdAt: string;[m
+[31m-  likes: number;[m
+[32m+[m[32m  children: MyLikedComment[];[m
+[32m+[m[32m  likeCount: number;[m
+[32m+[m[32m  likedByMe: boolean;[m
+ }[m
+ [m
+ // Spring Boot Page 객체 구조[m
+[36m@@ -119,125 +123,3 @@[m [mexport interface MyLikedCommentsParams {[m
+   page?: number;[m
+   size?: number;[m
+ }[m
+[31m-[m
+[31m-// 게시글 타입[m
+[31m-export type PostType = "GENERAL" | "QUESTION" | "INFO";[m
+[31m-[m
+[31m-// 커뮤니티 관련 타입들[m
+[31m-export interface PostListItem {[m
+[31m-  id: number;[m
+[31m-  type: PostType;[m
+[31m-  title: string;[m
+[31m-  author: string;[m
+[31m-  created_at: string;[m
+[31m-  views: number;[m
+[31m-  likes: number;[m
+[31m-  comments: number;[m
+[31m-}[m
+[31m-[m
+[31m-export interface PostListResponse {[m
+[31m-  posts: PostListItem[];[m
+[31m-  pages: number;[m
+[31m-}[m
+[31m-[m
+[31m-export interface PostDetail {[m
+[31m-  id: number;[m
+[31m-  type: PostType;[m
+[31m-  title: string;[m
+[31m-  author: string;[m
+[31m-  created_at: string;[m
+[31m-  views: number;[m
+[31m-  likes: number;[m
+[31m-  comments: number;[m
+[31m-  content: string;[m
+[31m-  Images: string[];[m
+[31m-  likedByMe: boolean;[m
+[31m-}[m
+[31m-[m
+[31m-export interface PostCreateResponse {[m
+[31m-  id: number;[m
+[31m-  message: string;[m
+[31m-}[m
+[31m-[m
+[31m-export interface PostUpdateRequest {[m
+[31m-  title: string;[m
+[31m-  content: string;[m
+[31m-  type: PostType;[m
+[31m-  image?: File[];[m
+[31m-}[m
+[31m-[m
+[31m-export interface PostUpdateResponse {[m
+[31m-  message: string;[m
+[31m-}[m
+[31m-[m
+[31m-export interface PostDeleteResponse {[m
+[31m-  message: string;[m
+[31m-}[m
+[31m-[m
+[31m-export interface PostLikeResponse {[m
+[31m-  message: string;[m
+[31m-  data: {[m
+[31m-    liked: boolean;[m
+[31m-    likes: number;[m
+[31m-  };[m
+[31m-}[m
+[31m-[m
+[31m-export interface Comment {[m
+[31m-  id: number;[m
+[31m-  author: string;[m
+[31m-  content: string;[m
+[31m-  likes: number;[m
+[31m-  created_at: string;[m
+[31m-  replies: Comment[];[m
+[31m-  likedByMe: boolean;[m
+[31m-  parent_id: number | null;[m
+[31m-  children: Comment[];[m
+[31m-}[m
+[31m-[m
+[31m-export interface CommentCreateRequest {[m
+[31m-  content: string;[m
+[31m-  parentId?: number;[m
+[31m-}[m
+[31m-[m
+[31m-export interface CommentCreateResponse {[m
+[31m-  message: string;[m
+[31m-  data: {[m
+[31m-    commentId: number;[m
+[31m-    content: string;[m
+[31m-    authorName: string;[m
+[31m-    createdAt: string;[m
+[31m-    likeCount: number;[m
+[31m-    likedByMe: boolean;[m
+[31m-    parentId: number | null;[m
+[31m-    children: any[];[m
+[31m-  };[m
+[31m-}[m
+[31m-[m
+[31m-export interface CommentUpdateResponse {[m
+[31m-  message: string;[m
+[31m-}[m
+[31m-[m
+[31m-export interface CommentDeleteResponse {[m
+[31m-  message: string;[m
+[31m-}[m
+[31m-[m
+[31m-export interface CommentLikeResponse {[m
+[31m-  message: string;[m
+[31m-  data: {[m
+[31m-    commentId: number;[m
+[31m-    liked: boolean;[m
+[31m-    likes: number;[m
+[31m-  };[m
+[31m-}[m
+[31m-[m
+[31m-export interface ReportRequest {[m
+[31m-  targetType: "POST" | "COMMENT";[m
+[31m-  targetId: number;[m
+[31m-  reason: string;[m
+[31m-  description?: string;[m
+[31m-}[m
+[31m-[m
+[31m-export interface ReportResponse {[m
+[31m-  message: string;[m
+[31m-  reportId: number;[m
+[31m-}[m
