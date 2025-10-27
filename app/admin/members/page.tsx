@@ -122,18 +122,8 @@ export default function AdminMembersPage() {
 
   // 정지 해제 확인 모달 관련 함수들
   const handleSuspensionConfirmClick = () => {
-    // 정지 해제는 바로 처리
-    if (selectedMember) {
-      setMembers(prevMembers => 
-        prevMembers.map(member => 
-          member.id === selectedMember.id 
-            ? { ...member, status: "active" }
-            : member
-        )
-      );
-    }
     setShowSuspensionConfirmModal(false);
-    setSelectedMember(null);
+    setShowSuspensionModal(true);
   };
 
   const handleSuspensionConfirmCancel = () => {

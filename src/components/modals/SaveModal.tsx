@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface SaveModalProps {
   onClose: () => void;
@@ -14,6 +15,7 @@ interface SaveModalProps {
 export default function SaveModal({ onClose, cafe }: SaveModalProps) {
   useEscapeKey(onClose);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { showToast } = useToastContext();
 
   const categories = [
     {
@@ -60,6 +62,10 @@ export default function SaveModal({ onClose, cafe }: SaveModalProps) {
     console.log("저장된 카테고리:", selectedCategories);
     console.log("카페:", cafe);
     // 실제 구현에서는 API 호출로 저장
+    showToast(
+      `${selectedCategories.length}개 카테고리에 저장되었습니다!`,
+      "success"
+    );
     onClose();
   };
 

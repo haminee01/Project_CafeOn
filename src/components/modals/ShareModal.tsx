@@ -5,6 +5,7 @@ import Image from "next/image";
 import { socialSharePlatforms } from "@/data/modalData";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { useKakaoInit } from "../../hooks/useKakaoInit";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface ShareModalProps {
   onClose: () => void;
@@ -21,6 +22,7 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [isLocalhost, setIsLocalhost] = useState(false);
+  const { showToast } = useToastContext();
 
   useEffect(() => {
     // 현재 페이지 URL 가져오기
@@ -49,6 +51,7 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("링크 복사 실패:", err);
+      showToast("링크 복사에 실패했습니다.", "error");
     }
   };
 
@@ -60,6 +63,10 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
       case "instagram":
         // Instagram은 직접 공유 API가 제한적이므로 클립보드에 복사
         navigator.clipboard.writeText(`${text}\n${url}`);
+        showToast(
+          "링크가 클립보드에 복사되었습니다. Instagram에 붙여넣기 해주세요.",
+          "success"
+        );
         break;
       case "kakao":
         // Kakao Talk 공유
@@ -75,11 +82,19 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
                 console.log("카카오 SDK 재초기화 완료");
               } catch (error) {
                 console.error("카카오 SDK 초기화 실패:", error);
+                showToast(
+                  "카카오톡 공유 초기화에 실패했습니다. 링크가 클립보드에 복사됩니다.",
+                  "error"
+                );
                 navigator.clipboard.writeText(`${text}\n${url}`);
                 return;
               }
             } else {
               console.error("카카오 앱 키가 설정되지 않았습니다.");
+              showToast(
+                "카카오톡 공유를 위해 앱 키를 설정해주세요. 링크가 클립보드에 복사되었습니다.",
+                "error"
+              );
               navigator.clipboard.writeText(`${text}\n${url}`);
               return;
             }
@@ -111,12 +126,20 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
             console.log("카카오톡 공유 성공");
           } catch (error) {
             console.error("카카오톡 공유 실패:", error);
+            showToast(
+              "카카오톡 공유에 실패했습니다. 링크가 클립보드에 복사됩니다.",
+              "error"
+            );
             navigator.clipboard.writeText(`${text}\n${url}`);
           }
         } else {
           // Kakao SDK가 로드되지 않았으면 클립보드에 복사
           console.warn("Kakao SDK가 로드되지 않았습니다.");
           navigator.clipboard.writeText(`${text}\n${url}`);
+          showToast(
+            "카카오톡 SDK가 로드되지 않았습니다. 링크가 클립보드에 복사되었습니다.",
+            "error"
+          );
         }
         break;
       case "naver":

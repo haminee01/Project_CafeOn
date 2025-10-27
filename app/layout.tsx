@@ -2,7 +2,7 @@ import Script from "next/script";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import GoogleMapsLoader from "@/components/map/GoogleMapsLoader";
-import { AuthProvider } from "@/contexts/AuthContext";
+import ToastProvider from "@/components/common/ToastProvider";
 import "./globals.css";
 
 export default function RootLayout({
@@ -15,18 +15,18 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="min-h-screen" suppressHydrationWarning={true}>
-        <AuthProvider>
+        <ToastProvider>
           <main>{children}</main>
+        </ToastProvider>
 
-          {/* Kakao SDK for sharing */}
-          <Script
-            src="https://t1.kakaocdn.net/kakao_js_sdk/v1/kakao.min.js"
-            strategy="afterInteractive"
-          />
+        {/* Kakao SDK for sharing */}
+        <Script
+          src="https://t1.kakaocdn.net/kakao_js_sdk/v1/kakao.min.js"
+          strategy="afterInteractive"
+        />
 
-          {/* Google Maps API 스크립트 */}
-          <GoogleMapsLoader apiKey={API_KEY} />
-        </AuthProvider>
+        {/* Google Maps API 스크립트 */}
+        <GoogleMapsLoader apiKey={API_KEY} />
       </body>
     </html>
   );

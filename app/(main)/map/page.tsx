@@ -6,32 +6,10 @@ import Map from "@/components/map/Map";
 import { mockCafes } from "@/data/mockCafes";
 
 type TabType = "home" | "saved" | "popular";
-type SavedCategoryType = "all" | "hideout" | "work" | "atmosphere" | "taste" | "planned";
 
 export default function MapPage() {
   const [selectedCafe, setSelectedCafe] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("home");
-  const [savedCategory, setSavedCategory] = useState<SavedCategoryType>("all");
-
-  // 저장 탭 카테고리별 데이터
-  const getSavedCafesByCategory = () => {
-    switch (savedCategory) {
-      case "all":
-        return mockCafes.slice(0, 8); // 전체 저장된 카페
-      case "hideout":
-        return mockCafes.slice(0, 3); // 나만의 아지트
-      case "work":
-        return mockCafes.slice(3, 6); // 작업하기 좋은
-      case "atmosphere":
-        return mockCafes.slice(6, 9); // 분위기
-      case "taste":
-        return mockCafes.slice(9, 12); // 커피, 디저트 맛집
-      case "planned":
-        return mockCafes.slice(12, 15); // 방문예정, 찜
-      default:
-        return mockCafes.slice(0, 8);
-    }
-  };
 
   // 탭별 카페 데이터
   const getCafesByTab = () => {
@@ -39,7 +17,7 @@ export default function MapPage() {
       case "home":
         return mockCafes; // 선택된 구의 전체 카페 (현재는 모든 카페)
       case "saved":
-        return getSavedCafesByCategory(); // 저장된 카페 (카테고리별)
+        return mockCafes.slice(0, 3); // 저장된 카페 (예시)
       case "popular":
         return mockCafes.slice(0, 5); // 인기 카페 (예시)
       default:
@@ -62,74 +40,6 @@ export default function MapPage() {
           <h2 className="text-lg font-semibold text-primary">CafeOn.</h2>
         </div>
         
-        {/* 저장 탭 하위 카테고리 탭들 - 위쪽에 배치 */}
-        {activeTab === "saved" && (
-          <div className="px-4 pb-2">
-            <div className="flex gap-1 flex-wrap max-w-full">
-              <button
-                onClick={() => setSavedCategory("all")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
-                  savedCategory === "all"
-                    ? "bg-amber-100 text-amber-800 border border-amber-300"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                전체
-              </button>
-              <button
-                onClick={() => setSavedCategory("hideout")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
-                  savedCategory === "hideout"
-                    ? "bg-amber-100 text-amber-800 border border-amber-300"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                나만의 아지트
-              </button>
-              <button
-                onClick={() => setSavedCategory("work")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
-                  savedCategory === "work"
-                    ? "bg-amber-100 text-amber-800 border border-amber-300"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                작업하기 좋은
-              </button>
-              <button
-                onClick={() => setSavedCategory("atmosphere")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
-                  savedCategory === "atmosphere"
-                    ? "bg-amber-100 text-amber-800 border border-amber-300"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                분위기
-              </button>
-              <button
-                onClick={() => setSavedCategory("taste")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
-                  savedCategory === "taste"
-                    ? "bg-amber-100 text-amber-800 border border-amber-300"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                커피, 디저트 맛집
-              </button>
-              <button
-                onClick={() => setSavedCategory("planned")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
-                  savedCategory === "planned"
-                    ? "bg-amber-100 text-amber-800 border border-amber-300"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                방문예정, 찜
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* 메인 콘텐츠 영역 */}
         <div className="flex flex-1 px-4 pb-4 min-h-0">
           {/* 탭 버튼들 */}
@@ -206,25 +116,11 @@ export default function MapPage() {
                       {cafe.name}
                     </h3>
                     <p className="text-sm text-gray-600 mb-2">
-                      {activeTab === "saved" && savedCategory === "hideout" && "나만의 아지트 카페"}
-                      {activeTab === "saved" && savedCategory === "work" && "작업하기 좋은 카페"}
-                      {activeTab === "saved" && savedCategory === "atmosphere" && "분위기 좋은 카페"}
-                      {activeTab === "saved" && savedCategory === "taste" && "커피, 디저트 맛집"}
-                      {activeTab === "saved" && savedCategory === "planned" && "방문예정, 찜한 카페"}
-                      {activeTab === "saved" && savedCategory === "all" && "저장된 카페"}
-                      {activeTab === "home" && "영업 중 리뷰 999+"}
-                      {activeTab === "popular" && "인기 카페 리뷰 999+"}
+                      영업 중 리뷰 999+
                     </p>
                     <div className="flex gap-2">
                       <button className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                        {activeTab === "saved" && savedCategory === "hideout" && "🏠 나만의 아지트"}
-                        {activeTab === "saved" && savedCategory === "work" && "💻 작업하기 좋은"}
-                        {activeTab === "saved" && savedCategory === "atmosphere" && "✨ 분위기"}
-                        {activeTab === "saved" && savedCategory === "taste" && "☕ 맛집"}
-                        {activeTab === "saved" && savedCategory === "planned" && "📅 방문예정"}
-                        {activeTab === "saved" && savedCategory === "all" && "💾 저장됨"}
-                        {activeTab === "home" && "베이커리"}
-                        {activeTab === "popular" && "🔥 인기"}
+                        베이커리
                       </button>
                     </div>
                   </div>

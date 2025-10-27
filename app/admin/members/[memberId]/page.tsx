@@ -1,26 +1,23 @@
 "use client";
 
-import { use, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 
 interface MemberDetailPageProps {
-  params: Promise<{
+  params: {
     memberId: string;
-  }>;
+  };
 }
 
 export default function MemberDetailPage({ params }: MemberDetailPageProps) {
   const router = useRouter();
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [suspensionReason, setSuspensionReason] = useState("");
-  
-  // Next.js 15에서 params는 Promise이므로 React.use()로 unwrap
-  const { memberId } = use(params);
 
   // 실제로는 API에서 가져올 데이터
   const member = {
-    id: parseInt(memberId),
+    id: parseInt(params.memberId),
     name: "김이름",
     email: "test@test.com",
     nickname: "닉네임님",
@@ -87,7 +84,7 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
       </div>
 
       {/* 회원 상세 정보 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 max-w-4xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 max-w-2xl mx-auto">
         {/* 프로필 이미지 */}
         <div className="flex justify-center mb-6">
           <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -139,7 +136,7 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
           <div className="flex items-center">
             <label className="w-20 text-sm font-medium text-gray-700">패널티</label>
             <div className="flex-1 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              <span className="text-md text-red-600">{totalPenaltyCount}회</span>
+              <span className="text-lg font-semibold text-red-600">{totalPenaltyCount}회</span>
             </div>
           </div>
         </div>
@@ -183,6 +180,13 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
         >
           뒤로가기
         </Button>
+          <Button 
+            color="warning" 
+            size="md"
+            onClick={handleSuspensionClick}
+          >
+            {member.status === "active" ? "정지" : "정지 해제"}
+          </Button>
         </div>
       </div>
 

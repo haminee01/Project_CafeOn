@@ -6,72 +6,59 @@ import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
 import Header from "@/components/common/Header";
-import { useAuth } from "@/contexts/AuthContext";
-import { login as loginAPI, requestPasswordReset } from "@/lib/api";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetError, setResetError] = useState("");
-  const [isResetLoading, setIsResetLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { login: authLogin } = useAuth();
+  const { showToast } = useToastContext();
 
   // ESC 키 이벤트 처리
   useEscapeKey(() => {
     if (showPasswordReset) {
       setShowPasswordReset(false);
     }
-    if (showSuccessModal) {
-      setShowSuccessModal(false);
-    }
   });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
 
     try {
       // 로그인 API 호출
-      const response = await loginAPI({ email, password });
-      console.log("로그인 성공:", response);
-      console.log("사용자 역할:", response.data?.role);
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (response.data && response.data.token) {
-        const { token, refreshToken } = response.data;
-        // 임시로 이메일 기반으로 role 판단
-        const userRole = email === "reum01060106@gmail.com" ? "ADMIN" : (response.data.role || "USER");
+      if (response.ok) {
+        const data = await response.json();
 
-        console.log("최종 사용자 역할:", userRole);
+        // 토큰 저장
+        localStorage.setItem("accessToken", data.data.token);
 
-        // AuthContext에 로그인 정보 저장
-        authLogin(token, refreshToken, {
-          userId: response.data.userId || "",
+        // 사용자 정보 저장 (임시로 테스트 사용자 정보)
+        const userInfo = {
+          id: "91d728c6-86b3-4d1d-965c-c9bcf62fe0de",
+          username: "테스트",
           email: email,
-          nickname: response.data.nickname || email,
-          role: userRole,
-        });
+        };
+        localStorage.setItem("userInfo", JSON.stringify(userInfo));
 
-        // 사용자 역할에 따라 리다이렉트
-        if (userRole === "ADMIN") {
-          console.log("ADMIN으로 리다이렉트");
-          router.push("/admin");
-        } else {
-          console.log("일반 사용자로 리다이렉트");
-          router.push("/");
-        }
+        console.log("로그인 성공:", data);
+        router.push("/");
+      } else {
+        const errorData = await response.json();
+        console.error("로그인 실패:", errorData);
+        showToast("로그인에 실패했습니다.", "error");
       }
-    } catch (err: any) {
-      console.error("로그인 실패:", err);
-      setError(err.message || "로그인에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error("로그인 오류:", error);
+      showToast("로그인 중 오류가 발생했습니다.", "error");
     }
   };
 
@@ -88,35 +75,7 @@ export default function LoginPage() {
   };
 
   const handlePasswordReset = () => {
-    setResetEmail(email); // 현재 입력된 이메일로 초기화
-    setResetError("");
     setShowPasswordReset(true);
-  };
-
-  const handlePasswordResetSubmit = async () => {
-    if (!resetEmail.trim()) {
-      setResetError("이메일을 입력해주세요.");
-      return;
-    }
-
-    setIsResetLoading(true);
-    setResetError("");
-
-    try {
-      await requestPasswordReset(resetEmail);
-      setShowPasswordReset(false);
-      setShowSuccessModal(true);
-    } catch (err: any) {
-      console.error("비밀번호 재설정 실패:", err);
-      setResetError(err.message || "비밀번호 재설정 요청에 실패했습니다.");
-    } finally {
-      setIsResetLoading(false);
-    }
-  };
-
-  const handleSuccessModalClose = () => {
-    setShowSuccessModal(false);
-    setResetEmail("");
   };
 
   const handleSignup = () => {
@@ -143,13 +102,6 @@ export default function LoginPage() {
 
           {/* 로그인 폼 */}
           <form onSubmit={handleLogin} className="space-y-3">
-            {/* 에러 메시지 */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-                {error}
-              </div>
-            )}
-
             {/* 이메일 입력 */}
             <div>
               <input
@@ -160,7 +112,6 @@ export default function LoginPage() {
                 placeholder="이메일을 입력하세요"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 required
-                disabled={isLoading}
               />
             </div>
 
@@ -175,13 +126,11 @@ export default function LoginPage() {
                   placeholder="비밀번호를 입력하세요"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                   required
-                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={handlePasswordReset}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-primary hover:text-primary/80 transition-colors"
-                  disabled={isLoading}
                 >
                   비밀번호를 잊으셨나요?
                 </button>
@@ -189,14 +138,8 @@ export default function LoginPage() {
             </div>
 
             {/* 로그인 버튼 */}
-            <Button
-              type="submit"
-              disabled={isLoading}
-              color="primary"
-              size="md"
-              className="w-full"
-            >
-              {isLoading ? "로그인 중..." : "로그인"}
+            <Button type="submit" color="primary" size="md" className="w-full">
+              로그인
             </Button>
 
             {/* 회원가입 버튼 */}
@@ -274,23 +217,15 @@ export default function LoginPage() {
               비밀번호 재설정
             </h2>
             <p className="text-gray-600 mb-6">
-              가입하신 이메일 주소를 입력하시면 임시 비밀번호를 보내드립니다.
+              가입하신 이메일 주소를 입력하시면 비밀번호 재설정 링크를
+              보내드립니다.
             </p>
 
-            <div className="space-y-4">
-              {resetError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-                  {resetError}
-                </div>
-              )}
-
+            <form className="space-y-4">
               <input
                 type="email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
                 placeholder="이메일 주소"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                disabled={isResetLoading}
               />
 
               <div className="flex gap-3">
@@ -300,64 +235,19 @@ export default function LoginPage() {
                   size="md"
                   onClick={() => setShowPasswordReset(false)}
                   className="flex-1"
-                  disabled={isResetLoading}
                 >
                   취소
                 </Button>
                 <Button
-                  type="button"
+                  type="submit"
                   color="primary"
                   size="md"
-                  onClick={handlePasswordResetSubmit}
                   className="flex-1"
-                  disabled={isResetLoading}
                 >
-                  {isResetLoading ? "전송 중..." : "전송"}
+                  전송
                 </Button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 성공 모달 */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
-                전송 완료!
-              </h2>
-              <p className="text-gray-600 mb-6">
-                임시 비밀번호가 <strong>{resetEmail}</strong>로 발송되었습니다.
-                <br />
-                메일함을 확인해주세요.
-              </p>
-              <Button
-                type="button"
-                color="primary"
-                size="md"
-                onClick={handleSuccessModalClose}
-                className="w-full"
-              >
-                확인
-              </Button>
-            </div>
+            </form>
           </div>
         </div>
       )}

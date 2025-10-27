@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  BaseModal, 
-  ConfirmModal, 
-  InputModal, 
-  InfoModal, 
+import {
+  BaseModal,
+  ConfirmModal,
+  InputModal,
+  InfoModal,
   CheckboxModal,
   DeleteConfirmModal,
-  PenaltyModal 
+  PenaltyModal,
 } from "./index";
 import Button from "@/components/common/Button";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 // 모달 사용 예시 컴포넌트 (개발/테스트용)
 export default function ModalExamples() {
@@ -21,54 +22,66 @@ export default function ModalExamples() {
   const [showCheckboxModal, setShowCheckboxModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPenaltyModal, setShowPenaltyModal] = useState(false);
+  const { showToast } = useToastContext();
 
   const [checkboxOptions, setCheckboxOptions] = useState([
-    { id: "option1", label: "옵션 1", description: "첫 번째 옵션입니다", checked: false },
-    { id: "option2", label: "옵션 2", description: "두 번째 옵션입니다", checked: true },
-    { id: "option3", label: "옵션 3", description: "세 번째 옵션입니다", checked: false }
+    {
+      id: "option1",
+      label: "옵션 1",
+      description: "첫 번째 옵션입니다",
+      checked: false,
+    },
+    {
+      id: "option2",
+      label: "옵션 2",
+      description: "두 번째 옵션입니다",
+      checked: true,
+    },
+    {
+      id: "option3",
+      label: "옵션 3",
+      description: "세 번째 옵션입니다",
+      checked: false,
+    },
   ]);
 
   const handleCheckboxChange = (id: string, checked: boolean) => {
-    setCheckboxOptions(prev => 
-      prev.map(option => 
-        option.id === id ? { ...option, checked } : option
-      )
+    setCheckboxOptions((prev) =>
+      prev.map((option) => (option.id === id ? { ...option, checked } : option))
     );
   };
 
   const infoItems = [
     { label: "이름", value: "홍길동", type: "text" as const },
-    { label: "상태", value: "활성", type: "badge" as const, badgeColor: "green" as const },
-    { label: "등급", value: "VIP", type: "badge" as const, badgeColor: "blue" as const },
-    { label: "가입일", value: "2024.01.01", type: "text" as const }
+    {
+      label: "상태",
+      value: "활성",
+      type: "badge" as const,
+      badgeColor: "green" as const,
+    },
+    {
+      label: "등급",
+      value: "VIP",
+      type: "badge" as const,
+      badgeColor: "blue" as const,
+    },
+    { label: "가입일", value: "2024.01.01", type: "text" as const },
   ];
 
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold mb-6">모달 컴포넌트 예시</h1>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Button onClick={() => setShowBaseModal(true)}>
-          기본 모달
-        </Button>
-        <Button onClick={() => setShowConfirmModal(true)}>
-          확인 모달
-        </Button>
-        <Button onClick={() => setShowInputModal(true)}>
-          입력 모달
-        </Button>
-        <Button onClick={() => setShowInfoModal(true)}>
-          정보 모달
-        </Button>
+        <Button onClick={() => setShowBaseModal(true)}>기본 모달</Button>
+        <Button onClick={() => setShowConfirmModal(true)}>확인 모달</Button>
+        <Button onClick={() => setShowInputModal(true)}>입력 모달</Button>
+        <Button onClick={() => setShowInfoModal(true)}>정보 모달</Button>
         <Button onClick={() => setShowCheckboxModal(true)}>
           체크박스 모달
         </Button>
-        <Button onClick={() => setShowDeleteModal(true)}>
-          삭제 확인 모달
-        </Button>
-        <Button onClick={() => setShowPenaltyModal(true)}>
-          페널티 모달
-        </Button>
+        <Button onClick={() => setShowDeleteModal(true)}>삭제 확인 모달</Button>
+        <Button onClick={() => setShowPenaltyModal(true)}>페널티 모달</Button>
       </div>
 
       {/* 기본 모달 */}
@@ -80,9 +93,7 @@ export default function ModalExamples() {
       >
         <p>이것은 기본 모달입니다. 자유롭게 내용을 추가할 수 있습니다.</p>
         <div className="mt-4">
-          <Button onClick={() => setShowBaseModal(false)}>
-            닫기
-          </Button>
+          <Button onClick={() => setShowBaseModal(false)}>닫기</Button>
         </div>
       </BaseModal>
 
@@ -91,7 +102,7 @@ export default function ModalExamples() {
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={() => {
-          alert("확인되었습니다!");
+          showToast("확인되었습니다!", "success");
           setShowConfirmModal(false);
         }}
         title="확인 모달"
@@ -106,7 +117,7 @@ export default function ModalExamples() {
         isOpen={showInputModal}
         onClose={() => setShowInputModal(false)}
         onConfirm={(value) => {
-          alert(`입력된 값: ${value}`);
+          showToast(`입력된 값: ${value}`, "success");
           setShowInputModal(false);
         }}
         title="입력 모달"
@@ -130,14 +141,18 @@ export default function ModalExamples() {
         isOpen={showCheckboxModal}
         onClose={() => setShowCheckboxModal(false)}
         onConfirm={() => {
-          const selected = checkboxOptions.filter(opt => opt.checked);
-          alert(`선택된 항목: ${selected.map(opt => opt.label).join(", ")}`);
+          const selected = checkboxOptions.filter((opt) => opt.checked);
+          showToast(
+            `선택된 항목: ${selected.map((opt) => opt.label).join(", ")}`,
+            "success"
+          );
           setShowCheckboxModal(false);
         }}
         title="체크박스 모달"
-        options={checkboxOptions.map(option => ({
+        options={checkboxOptions.map((option) => ({
           ...option,
-          onChange: (checked: boolean) => handleCheckboxChange(option.id, checked)
+          onChange: (checked: boolean) =>
+            handleCheckboxChange(option.id, checked),
         }))}
       />
 
@@ -146,7 +161,7 @@ export default function ModalExamples() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={() => {
-          alert("삭제되었습니다!");
+          showToast("삭제되었습니다!", "success");
           setShowDeleteModal(false);
         }}
         title="삭제 확인"
@@ -159,7 +174,7 @@ export default function ModalExamples() {
         isOpen={showPenaltyModal}
         onClose={() => setShowPenaltyModal(false)}
         onConfirm={(reason) => {
-          alert(`페널티 사유: ${reason}`);
+          showToast(`페널티 사유: ${reason}`, "success");
           setShowPenaltyModal(false);
         }}
         memberName="홍길동"

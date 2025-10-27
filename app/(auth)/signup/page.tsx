@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 import Header from "@/components/common/Header";
-import { useAuth } from "@/contexts/AuthContext";
-import { signup, login } from "@/lib/api";
 
 interface ChatMessage {
   id: string;
@@ -36,7 +34,6 @@ interface SignupStep {
 
 export default function SignupPage() {
   const router = useRouter();
-  const { login: authLogin } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     nickname: "",
@@ -332,48 +329,13 @@ export default function SignupPage() {
   };
 
   // 회원가입 처리
-  const handleSignup = async () => {
-    try {
-      const signupData = {
-        email: formData.email,
-        password: formData.password,
-        nickname: formData.nickname,
-      };
-
-      // 회원가입 API 호출
-      const signupResponse = await signup(signupData);
-      console.log("회원가입 성공:", signupResponse);
-
-      // 회원가입 성공 후 자동 로그인
-      const loginResponse = await login({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      // 로그인 성공 시 토큰 저장 및 홈으로 리다이렉트
-      if (loginResponse.data && loginResponse.data.token) {
-        const { token, refreshToken } = loginResponse.data;
-        const userData = {
-          userId: signupResponse.data?.userId || "",
-          email: formData.email,
-          nickname: formData.nickname,
-        };
-
-        // AuthContext의 login 함수 호출
-        authLogin(token, refreshToken, userData);
-
-        // 홈으로 리다이렉트
-        router.push("/");
-      }
-    } catch (error: any) {
-      console.error("회원가입/로그인 실패:", error);
-      // 에러 메시지 표시
-      addMessage(
-        `오류가 발생했습니다: ${error.message || "다시 시도해주세요."}`,
-        "bot"
-      );
-      setIsComplete(false);
-    }
+  const handleSignup = () => {
+    const signupData = {
+      ...formData,
+      profileImage: profileImage || null,
+    };
+    console.log("회원가입 데이터:", signupData);
+    router.push("/login");
   };
 
   // 프로필 이미지 업로드 처리

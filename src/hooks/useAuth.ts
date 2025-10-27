@@ -12,17 +12,8 @@ const decodeToken = (token: string): Partial<User> | null => {
     const payload = token.split(".")[1];
     const decoded = JSON.parse(atob(payload));
 
-    console.log("JWT 토큰 디코딩 결과:", {
-      sub: decoded.sub,
-      userId: decoded.userId,
-      role: decoded.role,
-      nickname: decoded.nickname,
-      username: decoded.username,
-      email: decoded.email,
-    });
-
     // JWT에 nickname이 있으면 사용, 없으면 기본값 사용
-    const userId = decoded.userId || decoded.sub; // userId 우선, 없으면 sub 사용
+    const userId = decoded.sub;
     const username = decoded.nickname || decoded.username || "사용자";
 
     return {
@@ -47,16 +38,7 @@ export const useAuth = () => {
         const token = localStorage.getItem("accessToken");
         const userInfo = localStorage.getItem("userInfo");
 
-        console.log(
-          "🔍 useAuth - 토큰 확인:",
-          token ? "토큰 존재" : "토큰 없음"
-        );
-        console.log(
-          "🔍 useAuth - 토큰 값:",
-          token ? `${token.substring(0, 20)}...` : "null"
-        );
-
-        if (token && token !== "null" && token !== "undefined") {
+        if (token) {
           // userInfo가 있으면 사용, 없으면 토큰에서 추출
           if (userInfo) {
             const parsedUser = JSON.parse(userInfo);
