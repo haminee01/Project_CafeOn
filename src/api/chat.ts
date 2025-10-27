@@ -979,8 +979,21 @@ export const createDmChat = async (
         response.statusText
       );
 
-      // 403, 404, 500 에러인 경우 에러 throw (기본값 반환하지 않음)
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // 에러 응답 본문 파싱
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+        console.error("1:1 채팅방 생성 실패 상세:", errorData);
+      } catch (parseError) {
+        const errorText = await response.text();
+        console.error("1:1 채팅방 생성 실패 응답:", errorText);
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      }
+
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();

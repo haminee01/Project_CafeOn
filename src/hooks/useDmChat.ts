@@ -415,7 +415,7 @@ export const useDmChat = ({
       setError(null);
       setRoomId(existingRoomId);
       setIsJoined(true);
-      
+
       try {
         // 참여자 목록 로드
         const participantsResponse = await getChatParticipants(existingRoomId);
@@ -461,14 +461,12 @@ export const useDmChat = ({
       }
     }
 
-    // counterpartId 유효성 검사
+    // counterpartId 유효성 검사 (최소한만 확인)
     if (
       !counterpartId ||
+      counterpartId.trim() === "" ||
       counterpartId === "user-me" ||
-      counterpartId === "1" ||
-      counterpartId === "user-1" ||
-      counterpartId.startsWith("user-") ||
-      counterpartId.length < 2 // 최소 2자 이상 (test, user 등도 허용)
+      counterpartId === "user-1"
     ) {
       const errorMsg = `유효하지 않은 상대방 ID: ${counterpartId}`;
       console.error("=== 1:1 채팅방 참여 실패 ===", {
@@ -766,7 +764,12 @@ export const useDmChat = ({
   useEffect(() => {
     // existingRoomId 또는 counterpartId가 있으면 참여
     // 에러가 있으면 재시도하지 않음 (무한 루프 방지)
-    if ((existingRoomId || counterpartId) && !isJoined && !isLoading && !error) {
+    if (
+      (existingRoomId || counterpartId) &&
+      !isJoined &&
+      !isLoading &&
+      !error
+    ) {
       joinChat();
     }
   }, [existingRoomId, counterpartId, isJoined, isLoading, error, joinChat]);
