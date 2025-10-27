@@ -9,16 +9,16 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             <Link
               href="/notification"
-              className="text-gray-800 font-normal text-base"
+              className="text-gray-800 font-medium text-lg"
             >
               <IoNotificationsOutline className="w-6 h-6 text-gray-600" />
             </Link>
-            <Link href="/faq" className="text-gray-800 font-normal text-base">
-              FAQ
+            <Link href="/qna" className="text-gray-800 font-medium text-lg">
+              QnA
             </Link>
             <Link
               href="/community"
-              className="text-gray-800 font-normal text-base"
+              className="text-gray-800 font-medium text-lg"
             >
               ToCafe
             </Link>
@@ -33,13 +33,10 @@ const Header = () => {
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link
-              href="/mypage"
-              className="text-gray-800 font-normal text-base"
-            >
+            <Link href="/mypage" className="text-gray-800 font-medium text-lg">
               마이페이지
             </Link>
-            <Link href="/login" className="text-gray-800 font-normal text-base">
+            <Link href="/login" className="text-gray-800 font-medium text-lg">
               로그인
             </Link>
           </div>
