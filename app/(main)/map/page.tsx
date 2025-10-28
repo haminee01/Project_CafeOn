@@ -1,33 +1,112 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/common/Header";
 import Map from "@/components/map/Map";
 import { mockCafes } from "@/data/mockCafes";
+import { getWishlist } from "@/lib/api";
 
 type TabType = "home" | "saved" | "popular";
 type SavedCategoryType = "all" | "hideout" | "work" | "atmosphere" | "taste" | "planned";
+
+interface WishlistItem {
+  wishlistId: number;
+  cafeId: number;
+  name: string;
+  category: string;
+}
 
 export default function MapPage() {
   const [selectedCafe, setSelectedCafe] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [savedCategory, setSavedCategory] = useState<SavedCategoryType>("all");
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // 카테고리 매핑
+  const categoryMap: Record<SavedCategoryType, string> = {
+    all: "all",
+    hideout: "HIDEOUT",
+    work: "WORK",
+    atmosphere: "ATMOSPHERE",
+    taste: "TASTE",
+    planned: "PLANNED"
+  };
+
+  // 위시리스트 조회
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    // 로그인된 경우에만 위시리스트 조회
+    if (activeTab === "saved" && token) {
+      fetchWishlist();
+    } else {
+      setWishlistItems([]);
+      setLoading(false);
+    }
+  }, [activeTab, savedCategory]);
+
+  const fetchWishlist = async () => {
+    setLoading(true);
+    try {
+      const params: any = {
+        page: 0,
+        size: 20
+      };
+
+      // "all"이 아닌 경우 카테고리 필터 추가
+      if (savedCategory !== "all") {
+        params.category = categoryMap[savedCategory];
+      }
+
+      const response = await getWishlist(params);
+      const items = response?.data?.content || response?.content || [];
+      setWishlistItems(items);
+    } catch (error: any) {
+      console.error("위시리스트 조회 실패:", error);
+      
+      // 403 또는 401 에러인 경우 (권한 없음)
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        console.log("로그인이 필요합니다.");
+        // 토큰 제거
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+      }
+      
+      setWishlistItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 저장 탭 카테고리별 데이터
   const getSavedCafesByCategory = () => {
+    // 위시리스트가 있으면 위시리스트에서 가져오기
+    if (wishlistItems.length > 0) {
+      const categoryFilter = savedCategory === "all" 
+        ? wishlistItems 
+        : wishlistItems.filter(item => item.category === categoryMap[savedCategory]);
+      
+      // 위시리스트 카페를 mockCafes와 매칭
+      return categoryFilter.map(item => {
+        const cafe = mockCafes.find(c => c.cafe_id === item.cafeId.toString());
+        return cafe;
+      }).filter(Boolean) || [];
+    }
+
+    // 위시리스트가 없으면 mock 데이터
     switch (savedCategory) {
       case "all":
-        return mockCafes.slice(0, 8); // 전체 저장된 카페
+        return mockCafes.slice(0, 8);
       case "hideout":
-        return mockCafes.slice(0, 3); // 나만의 아지트
+        return mockCafes.slice(0, 3);
       case "work":
-        return mockCafes.slice(3, 6); // 작업하기 좋은
+        return mockCafes.slice(3, 6);
       case "atmosphere":
-        return mockCafes.slice(6, 9); // 분위기
+        return mockCafes.slice(6, 9);
       case "taste":
-        return mockCafes.slice(9, 12); // 커피, 디저트 맛집
+        return mockCafes.slice(9, 12);
       case "planned":
-        return mockCafes.slice(12, 15); // 방문예정, 찜
+        return mockCafes.slice(12, 15);
       default:
         return mockCafes.slice(0, 8);
     }
@@ -48,6 +127,7 @@ export default function MapPage() {
   };
 
   const currentCafes = getCafesByTab();
+  const isLoggedIn = localStorage.getItem("accessToken");
 
   return (
     <div className="min-h-screen relative">
@@ -184,7 +264,36 @@ export default function MapPage() {
           
           {/* 카페 카드 리스트 */}
           <div className="space-y-3 flex-1 overflow-y-auto ml-4">
-            {currentCafes.map((cafe) => (
+            {/* 로그인 안내 메시지 */}
+            {activeTab === "saved" && !isLoggedIn && !loading && (
+              <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                <svg className="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  로그인이 필요합니다
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  저장된 카페를 보려면 로그인해주세요
+                </p>
+                <button
+                  onClick={() => window.location.href = "/login"}
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  로그인하기
+                </button>
+              </div>
+            )}
+            {loading && <div className="text-center py-4 text-gray-500">로딩 중...</div>}
+            {!loading && activeTab === "saved" && isLoggedIn && wishlistItems.length === 0 && !loading && (
+              <div className="text-center py-8 text-gray-500">
+                <p className="mb-2">저장된 카페가 없습니다.</p>
+                <p className="text-sm">카페를 저장하면 여기에 표시됩니다.</p>
+              </div>
+            )}
+            {!loading && currentCafes.length > 0 && currentCafes.map((cafe) => {
+              if (!cafe) return null;
+              return (
               <div
                 key={cafe.cafe_id}
                 className={`p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -230,7 +339,8 @@ export default function MapPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

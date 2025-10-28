@@ -20,7 +20,7 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
   showAllButton = true,
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
-  const cardsPerPage = 5;
+  const cardsPerPage = 4; // 4개로 제한
   const totalPages = Math.ceil(cafes.length / cardsPerPage);
 
   const goToPrevious = () => {
@@ -112,8 +112,8 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
           </button>
         </div>
 
-        {/* 카페 카드 그리드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        {/* 카페 카드 그리드 - 한 줄로 제한 */}
+        <div className="grid grid-cols-4 gap-6">
           {currentCafes.map((cafe) => (
             <CafeCard key={cafe.cafe_id} cafe={cafe} />
           ))}

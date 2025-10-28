@@ -38,7 +38,7 @@ export default function HomePage() {
 
       <div>
         <CafeCarousel
-          cafes={mockCafes.slice(0, 8)}
+          cafes={mockCafes.slice(0, 4)}
           title="요즘 뜨고 있는 카페"
           description="최근 사람들이 많이 찾는 카페를 엄선했습니다."
           showAllButton={true}
@@ -47,7 +47,7 @@ export default function HomePage() {
 
       <div>
         <CafeCarousel
-          cafes={mockCafes.slice(8, 16)}
+          cafes={mockCafes.slice(4, 8)}
           title="찜 많은 카페"
           description="다른 사람들이 찜해둔 카페들 입니다."
           showAllButton={true}
@@ -56,7 +56,7 @@ export default function HomePage() {
 
       <div>
         <CafeCarousel
-          cafes={mockCafes.slice(16, 24)}
+          cafes={mockCafes.slice(8, 12)}
           title="이런 카페는 어때요?"
           description="추천 드리는 카페입니다."
           showAllButton={true}
@@ -65,7 +65,7 @@ export default function HomePage() {
 
       <div>
         <CafeCarousel
-          cafes={mockCafes.slice(24, 32)}
+          cafes={mockCafes.slice(12, 16)}
           title="---님 맞춤 카페"
           description="---님, 이런 카페들은 어떤가요? -님의 취향을 반영한 카페들 입니다."
           showAllButton={true}

@@ -1,27 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Pagination from "@/components/common/Pagination";
 import SearchBar from "@/components/common/SearchBar";
 import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
+import { getAdminMembers, addAdminPenalty, suspendAdminUser } from "@/lib/api";
+
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  penaltyCount: number;
+}
 
 export default function AdminMembersPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [members, setMembers] = useState([
-    { id: 1, name: "김철수", email: "kim@example.com", status: "active", penaltyCount: 0 },
-    { id: 2, name: "이영희", email: "lee@example.com", status: "active", penaltyCount: 2 },
-    { id: 3, name: "박민수", email: "park@example.com", status: "suspended", penaltyCount: 5 },
-    { id: 4, name: "최유리", email: "choi@example.com", status: "active", penaltyCount: 0 },
-    { id: 5, name: "정대현", email: "jung@example.com", status: "active", penaltyCount: 1 },
-    { id: 6, name: "한지민", email: "han@example.com", status: "suspended", penaltyCount: 8 },
-    { id: 7, name: "강동원", email: "kang@example.com", status: "active", penaltyCount: 0 },
-    { id: 8, name: "송혜교", email: "song@example.com", status: "active", penaltyCount: 3 }
-  ]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [useMockData, setUseMockData] = useState(false);
+
+  const mockMembers = [
+    { id: "1", name: "김철수", email: "kim@example.com", status: "active", penaltyCount: 0 },
+    { id: "2", name: "이영희", email: "lee@example.com", status: "active", penaltyCount: 2 },
+    { id: "3", name: "박민수", email: "park@example.com", status: "suspended", penaltyCount: 5 },
+    { id: "4", name: "최유리", email: "choi@example.com", status: "active", penaltyCount: 0 },
+    { id: "5", name: "정대현", email: "jung@example.com", status: "active", penaltyCount: 1 },
+    { id: "6", name: "한지민", email: "han@example.com", status: "suspended", penaltyCount: 8 },
+    { id: "7", name: "강동원", email: "kang@example.com", status: "active", penaltyCount: 0 },
+    { id: "8", name: "송혜교", email: "song@example.com", status: "active", penaltyCount: 3 }
+  ];
+
+  // 회원 목록 조회
+  useEffect(() => {
+    fetchMembers();
+  }, [activeTab, currentPage, searchTerm]);
+
+  const fetchMembers = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        setMembers(mockMembers);
+        setUseMockData(true);
+        setLoading(false);
+        return;
+      }
+
+      const status = activeTab === "all" ? undefined : activeTab.toUpperCase();
+      const response = await getAdminMembers({
+        page: currentPage - 1,
+        size: 10,
+        search: searchTerm,
+        status
+      });
+
+      // API 응답 구조에 따라 조정
+      const memberList = response?.data?.content || response?.content || [];
+      setMembers(memberList);
+      setUseMockData(false);
+    } catch (error) {
+      console.error("회원 목록 조회 실패:", error);
+      setMembers(mockMembers);
+      setUseMockData(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 모달 상태
   const [showPenaltyModal, setShowPenaltyModal] = useState(false);
@@ -65,18 +115,29 @@ export default function AdminMembersPage() {
     setShowPenaltyModal(true);
   };
 
-  const handlePenaltyConfirm = () => {
+  const handlePenaltyConfirm = async () => {
     if (selectedMember && penaltyReason.trim()) {
-      setMembers(prevMembers => 
-        prevMembers.map(member => 
-          member.id === selectedMember.id 
-            ? { ...member, penaltyCount: member.penaltyCount + 1 }
-            : member
-        )
-      );
-      setShowPenaltyModal(false);
-      setSelectedMember(null);
-      setPenaltyReason("");
+      try {
+        if (!useMockData) {
+          await addAdminPenalty(selectedMember.id, {
+            reason: penaltyReason,
+            reason_code: "DISCOMFORT"
+          });
+        }
+        
+        setMembers(prevMembers => 
+          prevMembers.map(member => 
+            member.id === selectedMember.id 
+              ? { ...member, penaltyCount: member.penaltyCount + 1 }
+              : member
+          )
+        );
+        setShowPenaltyModal(false);
+        setSelectedMember(null);
+        setPenaltyReason("");
+      } catch (error) {
+        console.error("페널티 부여 실패:", error);
+      }
     }
   };
 
@@ -99,18 +160,29 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleSuspensionConfirm = () => {
+  const handleSuspensionConfirm = async () => {
     if (selectedMember && suspensionReason.trim()) {
-      setMembers(prevMembers => 
-        prevMembers.map(member => 
-          member.id === selectedMember.id 
-            ? { ...member, status: member.status === "active" ? "suspended" : "active" }
-            : member
-        )
-      );
-      setShowSuspensionModal(false);
-      setSelectedMember(null);
-      setSuspensionReason("");
+      try {
+        if (!useMockData) {
+          await suspendAdminUser(selectedMember.id, {
+            duration: "7d",
+            reason: suspensionReason
+          });
+        }
+        
+        setMembers(prevMembers => 
+          prevMembers.map(member => 
+            member.id === selectedMember.id 
+              ? { ...member, status: member.status === "active" ? "suspended" : "active" }
+              : member
+          )
+        );
+        setShowSuspensionModal(false);
+        setSelectedMember(null);
+        setSuspensionReason("");
+      } catch (error) {
+        console.error("회원 정지 실패:", error);
+      }
     }
   };
 
@@ -121,16 +193,27 @@ export default function AdminMembersPage() {
   };
 
   // 정지 해제 확인 모달 관련 함수들
-  const handleSuspensionConfirmClick = () => {
-    // 정지 해제는 바로 처리
+  const handleSuspensionConfirmClick = async () => {
     if (selectedMember) {
-      setMembers(prevMembers => 
-        prevMembers.map(member => 
-          member.id === selectedMember.id 
-            ? { ...member, status: "active" }
-            : member
-        )
-      );
+      try {
+        if (!useMockData) {
+          // 정지 해제는 suspend API로 status를 변경
+          await suspendAdminUser(selectedMember.id, {
+            duration: "0d",
+            reason: "정지 해제"
+          });
+        }
+        
+        setMembers(prevMembers => 
+          prevMembers.map(member => 
+            member.id === selectedMember.id 
+              ? { ...member, status: "active" }
+              : member
+          )
+        );
+      } catch (error) {
+        console.error("정지 해제 실패:", error);
+      }
     }
     setShowSuspensionConfirmModal(false);
     setSelectedMember(null);

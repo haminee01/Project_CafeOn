@@ -108,6 +108,100 @@ export async function getCafeDetailWithLocation(
   }
 }
 
+// ==================== MyPage API ====================
+
+// 위시리스트 조회
+export async function getWishlist(params?: {
+  page?: number;
+  size?: number;
+  category?: string;
+  sort?: string;
+}) {
+  try {
+    const response = await apiClient.get("/api/my/wishlist", { params });
+    return response.data;
+  } catch (error: any) {
+    console.error("위시리스트 조회 API 호출 실패:", error);
+    throw new Error(error.message || "위시리스트 조회 실패");
+  }
+}
+
+// 특정 카페의 위시리스트 카테고리 조회
+export async function getWishlistCategories(cafeId: string) {
+  try {
+    const response = await apiClient.get(`/api/my/wishlist/${cafeId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("위시리스트 카테고리 조회 API 호출 실패:", error);
+    throw new Error(error.message || "카테고리 조회 실패");
+  }
+}
+
+// ==================== Admin API ====================
+
+// 관리자 회원 목록 조회
+export async function getAdminMembers(params?: {
+  page?: number;
+  size?: number;
+  search?: string;
+  status?: string;
+}) {
+  try {
+    const response = await apiClient.get("/api/admin/users", { params });
+    return response.data;
+  } catch (error: any) {
+    console.error("Admin 회원 목록 API 호출 실패:", error);
+
+    if (error.response?.status === 403) {
+      throw new Error("관리자 권한이 필요합니다.");
+    }
+
+    throw new Error(
+      error.message ||
+        `회원 목록 조회 실패 (${error.response?.status || "unknown"})`
+    );
+  }
+}
+
+// 관리자 회원 상세 조회
+export async function getAdminMemberDetail(userId: string) {
+  try {
+    const response = await apiClient.get(`/api/admin/users/${userId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Admin 회원 상세 API 호출 실패:", error);
+    throw new Error(error.message || "회원 상세 조회 실패");
+  }
+}
+
+// 관리자 페널티 부여
+export async function addAdminPenalty(userId: string, data: {
+  reason: string;
+  reason_code: string;
+}) {
+  try {
+    const response = await apiClient.post(`/api/admin/users/${userId}/penalty`, data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Admin 페널티 부여 API 호출 실패:", error);
+    throw new Error(error.message || "페널티 부여 실패");
+  }
+}
+
+// 관리자 회원 정지
+export async function suspendAdminUser(userId: string, data: {
+  duration: string;
+  reason: string;
+}) {
+  try {
+    const response = await apiClient.post(`/api/admin/users/${userId}/suspend`, data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Admin 회원 정지 API 호출 실패:", error);
+    throw new Error(error.message || "회원 정지 실패");
+  }
+}
+
 // ==================== Admin Inquiries API ====================
 
 // 관리자 문의 목록 조회
