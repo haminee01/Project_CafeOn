@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import Header from "@/components/common/Header";
 import { mockCafes } from "@/data/mockCafes";
 import { createCafeDetail, getSimilarCafes } from "@/data/cafeUtils";
@@ -12,23 +12,25 @@ import ShareModal from "@/components/modals/ShareModal";
 import ChatRoomModal from "@/components/modals/ChatRoomModal";
 import ReportModal from "@/components/modals/ReportModal";
 import ReviewWriteModal from "@/components/modals/ReviewWriteModal";
-import SaveModal from "@/components/modals/SaveModal";
+// SaveModal은 더 이상 사용하지 않음 (위시리스트 기능으로 대체)
 import Footer from "@/components/common/Footer";
 import { useEscapeKey } from "../../../../src/hooks/useEscapeKey";
 
 interface CafeDetailPageProps {
-  params: {
+  params: Promise<{
     cafeId: string;
-  };
+  }>;
 }
 
 export default function CafeDetailPage({ params }: CafeDetailPageProps) {
+  const resolvedParams = use(params);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showReviewWriteModal, setShowReviewWriteModal] = useState(false);
-  const [showSaveModal, setShowSaveModal] = useState(false);
+  // showSaveModal은 더 이상 사용하지 않음
   const [editingReview, setEditingReview] = useState<any>(null);
+  const [refreshReviews, setRefreshReviews] = useState(0); // 리뷰 새로고침 트리거
 
   // ESC 키 이벤트 처리
   useEscapeKey(() => {
@@ -38,11 +40,11 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
     else if (showReviewWriteModal) {
       setShowReviewWriteModal(false);
       setEditingReview(null);
-    } else if (showSaveModal) setShowSaveModal(false);
+    }
   });
 
   // mockCafes에서 카페 데이터 찾기
-  const cafeData = mockCafes.find((c) => c.cafe_id === params.cafeId);
+  const cafeData = mockCafes.find((c) => c.cafe_id === resolvedParams.cafeId);
 
   // 기본값으로 문래 마이스페이스 사용 (cafe_id: "33")
   const defaultCafe = mockCafes.find((c) => c.cafe_id === "33") || mockCafes[0];
@@ -58,7 +60,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   const handleShare = () => setShowShareModal(true);
   const handleChatRoom = () => setShowChatModal(true);
   const handleReportReview = () => setShowReportModal(true);
-  const handleSave = () => setShowSaveModal(true);
+  // onSave는 더 이상 사용하지 않음 (위시리스트 기능으로 대체)
   const handleWriteReview = () => {
     setEditingReview(null);
     setShowReviewWriteModal(true);
@@ -69,18 +71,21 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
     setShowReviewWriteModal(true);
   };
 
+  // 리뷰 작성 완료 후 새로고침 트리거
+  const handleReviewSubmitted = () => {
+    setRefreshReviews((prev) => prev + 1);
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
       {/* 카페 메인 정보 섹션 */}
       <CafeInfoSection
         cafe={cafe}
-        cafeId={params.cafeId}
-        latitude={selectedCafe.latitude}
-        longitude={selectedCafe.longitude}
+        cafeId={resolvedParams.cafeId}
         onChatRoom={handleChatRoom}
         onShare={handleShare}
-        onSave={handleSave}
+        onSave={() => {}} // 더 이상 사용하지 않음
         onWriteReview={handleWriteReview}
       />
 
@@ -89,10 +94,11 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
 
       {/* 리뷰 섹션 */}
       <ReviewSection
-        reviews={cafe.reviews}
+        cafeId={resolvedParams.cafeId}
         onReportReview={handleReportReview}
         onWriteReview={handleWriteReview}
         onEditReview={handleEditReview}
+        refreshTrigger={refreshReviews}
       />
 
       {/* 유사 카페 추천 섹션 */}
@@ -103,7 +109,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
         <ShareModal
           onClose={() => setShowShareModal(false)}
           cafe={cafe}
-          cafeId={params.cafeId}
+          cafeId={resolvedParams.cafeId}
         />
       )}
       {showChatModal && (
@@ -112,9 +118,6 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       {showReportModal && (
         <ReportModal onClose={() => setShowReportModal(false)} />
       )}
-      {showSaveModal && (
-        <SaveModal onClose={() => setShowSaveModal(false)} cafe={cafe} />
-      )}
       {showReviewWriteModal && (
         <ReviewWriteModal
           onClose={() => {
@@ -122,7 +125,9 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
             setEditingReview(null);
           }}
           cafe={cafe}
+          cafeId={resolvedParams.cafeId}
           editReview={editingReview}
+          onReviewSubmitted={handleReviewSubmitted}
         />
       )}
 

@@ -17,7 +17,7 @@ const Header = () => {
     setIsNotificationOpen(false);
   };
 
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isLoading } = useAuth();
 
   return (
     <header>
@@ -57,7 +57,13 @@ const Header = () => {
           </div>
 
           <div className="flex items-center space-x-6">
-            {isAuthenticated ? (
+            {isLoading ? (
+              // 로딩 중일 때는 스켈레톤 표시
+              <div className="flex items-center space-x-6">
+                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ) : isAuthenticated ? (
               <>
                 <Link
                   href="/mypage"
@@ -75,16 +81,16 @@ const Header = () => {
             ) : (
               <>
                 <Link
-                  href="/mypage"
-                  className="text-gray-800 font-normal text-base"
-                >
-                  마이페이지
-                </Link>
-                <Link
                   href="/login"
-                  className="text-gray-800 font-normal text-base"
+                  className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
                 >
                   로그인
+                </Link>
+                <Link
+                  href="/signup"
+                  className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+                >
+                  회원가입
                 </Link>
               </>
             )}

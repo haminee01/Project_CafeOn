@@ -1,31 +1,36 @@
 import { Cafe } from "@/types/cafe";
-import { 
-  cafesWithLastOrder, 
-  lastOrderTimes, 
-  closedDaysMap, 
-  specialCafeInfo, 
-  specialReviews, 
-  similarCafesMap, 
-  defaultReviews, 
-  defaultImages, 
+import {
+  cafesWithLastOrder,
+  lastOrderTimes,
+  closedDaysMap,
+  specialCafeInfo,
+  specialReviews,
+  similarCafesMap,
+  defaultReviews,
+  defaultImages,
   defaultTags,
   CafeHoursDetail,
-  CafeReview
+  CafeReview,
 } from "./cafeDetails";
 
 // 카페별 영업시간 상세 정보 생성 함수
 export function getHoursDetail(cafe: Cafe): CafeHoursDetail {
   const hasLastOrder = cafesWithLastOrder.includes(cafe.cafe_id);
-  
-  const lastOrderTime = hasLastOrder ? lastOrderTimes[cafe.open_hours] || "22:00" : null;
-  const hoursDisplay = hasLastOrder && lastOrderTime ? `${cafe.open_hours} (라스트오더 ${lastOrderTime})` : cafe.open_hours;
+
+  const lastOrderTime = hasLastOrder
+    ? lastOrderTimes[cafe.open_hours] || "22:00"
+    : null;
+  const hoursDisplay =
+    hasLastOrder && lastOrderTime
+      ? `${cafe.open_hours} (라스트오더 ${lastOrderTime})`
+      : cafe.open_hours;
 
   return {
     status: "영업 중",
     lastOrder: lastOrderTime,
     fullHours: hoursDisplay,
     breakTime: cafe.cafe_id === "33" ? "브레이크타임 없음" : "15:00 - 16:00",
-    closedDays: getClosedDays(cafe.cafe_id)
+    closedDays: getClosedDays(cafe.cafe_id),
   };
 }
 
@@ -36,18 +41,20 @@ export function getClosedDays(cafeId: string): string {
 
 // 카페별 특별 정보 가져오기
 export function getSpecialInfo(cafeId: string) {
-  return specialCafeInfo[cafeId] || {
-    slogan: "완벽한 커피 한 잔을 위해",
-    phone: "02-1234-5678",
-    subway: "가장 가까운 지하철역에서 도보 5분",
-    tags: defaultTags
-  };
+  return (
+    specialCafeInfo[cafeId] || {
+      slogan: "완벽한 커피 한 잔을 위해",
+      phone: "02-1234-5678",
+      subway: "가장 가까운 지하철역에서 도보 5분",
+      tags: defaultTags,
+    }
+  );
 }
 
 // 카페별 리뷰 생성
 export function getCafeReviews(cafe: Cafe): CafeReview[] {
   const specialReview = specialReviews[cafe.cafe_id];
-  
+
   // 특별 리뷰가 있는 경우에만 첫 번째 리뷰 생성
   if (specialReview) {
     const firstReview: CafeReview = {
@@ -57,10 +64,10 @@ export function getCafeReviews(cafe: Cafe): CafeReview[] {
       date: "2024.01.15",
       likes: 12,
       images: [
-        "/api/placeholder/300/300",
-        "/api/placeholder/300/300",
-        "/api/placeholder/300/300"
-      ]
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=300&h=300&fit=crop&crop=center",
+        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=300&h=300&fit=crop&crop=center",
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=300&fit=crop&crop=center",
+      ],
     };
     return [firstReview, ...defaultReviews];
   }
@@ -72,19 +79,19 @@ export function getCafeReviews(cafe: Cafe): CafeReview[] {
 // 유사 카페 목록 가져오기
 export function getSimilarCafes(cafeId: string, allCafes: Cafe[]): Cafe[] {
   const similarIds = similarCafesMap[cafeId];
-  
+
   if (similarIds) {
-    return allCafes.filter(cafe => similarIds.includes(cafe.cafe_id));
+    return allCafes.filter((cafe) => similarIds.includes(cafe.cafe_id));
   }
-  
-  return allCafes.filter(cafe => cafe.cafe_id !== cafeId).slice(0, 4);
+
+  return allCafes.filter((cafe) => cafe.cafe_id !== cafeId).slice(0, 4);
 }
 
 // 카페 상세 정보 생성
 export function createCafeDetail(cafe: Cafe) {
   const specialInfo = getSpecialInfo(cafe.cafe_id);
   const hoursDetail = getHoursDetail(cafe);
-  
+
   return {
     id: cafe.cafe_id,
     name: cafe.name,
@@ -93,12 +100,10 @@ export function createCafeDetail(cafe: Cafe) {
     address: cafe.address,
     subway: specialInfo.subway,
     phone: specialInfo.phone,
-    hours: hoursDetail.lastOrder 
-      ? `${cafe.open_hours}`
-      : cafe.open_hours,
+    hours: hoursDetail.lastOrder ? `${cafe.open_hours}` : cafe.open_hours,
     hoursDetail,
     images: defaultImages,
     tags: specialInfo.tags,
-    reviews: getCafeReviews(cafe)
+    reviews: getCafeReviews(cafe),
   };
 }

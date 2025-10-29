@@ -14,7 +14,7 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
   const router = useRouter();
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [suspensionReason, setSuspensionReason] = useState("");
-  
+
   // Next.js 15에서 params는 Promise이므로 React.use()로 unwrap
   const { memberId } = use(params);
 
@@ -27,7 +27,8 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
     keywords: ["#데이트", "#우중카페", "#카공"],
     penaltyScore: 2,
     status: "active",
-    profileImage: "/api/placeholder/120/120",
+    profileImage:
+      "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=120&h=120&fit=crop&crop=center",
   };
 
   // 페널티 내역 데이터
@@ -36,28 +37,28 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
       id: 1,
       reason: "부적절한 리뷰 작성",
       date: "2024.01.20",
-      admin: "관리자1"
+      admin: "관리자1",
     },
     {
       id: 2,
       reason: "스팸 댓글 작성",
       date: "2024.01.15",
-      admin: "관리자2"
+      admin: "관리자2",
     },
     {
       id: 3,
       reason: "허위 정보 유포",
       date: "2024.01.10",
-      admin: "관리자1"
-    }
+      admin: "관리자1",
+    },
   ];
 
   // 페널티 총 횟수 계산
   const totalPenaltyCount = penaltyHistory.length;
-  
+
   // 페널티 내역을 최신순으로 정렬
-  const sortedPenaltyHistory = [...penaltyHistory].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+  const sortedPenaltyHistory = [...penaltyHistory].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
   const handleSuspensionClick = () => {
@@ -91,22 +92,34 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
         {/* 프로필 이미지 */}
         <div className="flex justify-center mb-6">
           <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-            <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            <svg
+              className="w-16 h-16 text-gray-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                clipRule="evenodd"
+              />
             </svg>
           </div>
         </div>
 
         {/* 닉네임 */}
         <div className="text-center mb-8">
-          <h2 className="text-xl font-semibold text-gray-900">{member.nickname}</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {member.nickname}
+          </h2>
         </div>
 
         {/* 회원 정보 폼 */}
         <div className="space-y-4">
           {/* 이름 */}
           <div className="flex items-center">
-            <label className="w-20 text-sm font-medium text-gray-700">이름</label>
+            <label className="w-20 text-sm font-medium text-gray-700">
+              이름
+            </label>
             <div className="flex-1 p-3 border border-gray-200 rounded-lg bg-gray-50">
               {member.name}
             </div>
@@ -114,7 +127,9 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
 
           {/* 이메일 */}
           <div className="flex items-center">
-            <label className="w-20 text-sm font-medium text-gray-700">이메일</label>
+            <label className="w-20 text-sm font-medium text-gray-700">
+              이메일
+            </label>
             <div className="flex-1 p-3 border border-gray-200 rounded-lg bg-gray-50">
               {member.email}
             </div>
@@ -122,11 +137,16 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
 
           {/* 키워드 */}
           <div className="flex items-center">
-            <label className="w-20 text-sm font-medium text-gray-700">키워드</label>
+            <label className="w-20 text-sm font-medium text-gray-700">
+              키워드
+            </label>
             <div className="flex-1 p-3 border border-gray-200 rounded-lg bg-gray-50">
               <div className="flex flex-wrap gap-2">
                 {member.keywords.map((keyword, index) => (
-                  <span key={index} className="px-2 py-1 bg-secondary text-white text-sm rounded">
+                  <span
+                    key={index}
+                    className="px-2 py-1 bg-secondary text-white text-sm rounded"
+                  >
                     {keyword}
                   </span>
                 ))}
@@ -134,26 +154,36 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
             </div>
           </div>
 
-
           {/* 패널티 */}
           <div className="flex items-center">
-            <label className="w-20 text-sm font-medium text-gray-700">패널티</label>
+            <label className="w-20 text-sm font-medium text-gray-700">
+              패널티
+            </label>
             <div className="flex-1 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              <span className="text-md text-red-600">{totalPenaltyCount}회</span>
+              <span className="text-md text-red-600">
+                {totalPenaltyCount}회
+              </span>
             </div>
           </div>
         </div>
 
         {/* 페널티 내역 섹션 */}
         <div className="mt-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">페널티 내역</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            페널티 내역
+          </h3>
           <div className="space-y-3">
             {sortedPenaltyHistory.length > 0 ? (
               sortedPenaltyHistory.map((penalty) => (
-                <div key={penalty.id} className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div
+                  key={penalty.id}
+                  className="bg-red-50 border border-red-200 rounded-lg p-4"
+                >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{penalty.reason}</p>
+                      <p className="font-medium text-gray-900">
+                        {penalty.reason}
+                      </p>
                       <p className="text-sm text-gray-600 mt-1">
                         {penalty.date} • {penalty.admin}
                       </p>
@@ -176,13 +206,9 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
 
         {/* 액션 버튼 */}
         <div className="flex justify-end gap-2 mt-8">
-        <Button 
-          color="gray" 
-          size="md"
-          onClick={() => router.back()}
-        >
-          뒤로가기
-        </Button>
+          <Button color="gray" size="md" onClick={() => router.back()}>
+            뒤로가기
+          </Button>
         </div>
       </div>
 
@@ -201,15 +227,11 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none mb-6"
             />
             <div className="flex gap-3 justify-end">
-              <Button 
-                color="gray" 
-                size="md"
-                onClick={handleSuspensionCancel}
-              >
+              <Button color="gray" size="md" onClick={handleSuspensionCancel}>
                 취소
               </Button>
-              <Button 
-                color="warning" 
+              <Button
+                color="warning"
                 size="md"
                 onClick={handleSuspensionConfirm}
                 disabled={!suspensionReason.trim()}

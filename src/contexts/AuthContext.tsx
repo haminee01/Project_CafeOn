@@ -16,6 +16,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean; // 로딩 상태 추가
   login: (token: string, refreshToken: string, userData?: User) => void;
   logout: () => void;
   updateUser: (userData: User) => void;
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // 초기 로딩 상태
   const router = useRouter();
 
   // 초기 로드 시 로컬 스토리지에서 인증 정보 복원
@@ -39,6 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(JSON.parse(storedUser));
       setIsAuthenticated(true);
     }
+
+    // 로딩 완료
+    setIsLoading(false);
   }, []);
 
   const login = (
@@ -86,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         token,
         isAuthenticated,
+        isLoading,
         login,
         logout,
         updateUser,

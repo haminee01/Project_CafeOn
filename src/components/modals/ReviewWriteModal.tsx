@@ -4,35 +4,106 @@ import { useState, useEffect } from "react";
 import { CafeReview } from "@/data/cafeDetails";
 import Button from "@/components/common/Button";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
+import { createReview, updateReview } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import Toast from "../common/Toast";
 
 interface ReviewWriteModalProps {
   onClose: () => void;
   cafe: {
     name: string;
   };
+  cafeId: string;
   editReview?: CafeReview; // 수정할 리뷰 데이터
+  onReviewSubmitted?: () => void; // 리뷰 작성 완료 후 콜백
 }
 
-export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWriteModalProps) {
+export default function ReviewWriteModal({
+  onClose,
+  cafe,
+  cafeId,
+  editReview,
+  onReviewSubmitted,
+}: ReviewWriteModalProps) {
   useEscapeKey(onClose);
+  const { isAuthenticated, user } = useAuth();
   const isEditMode = !!editReview;
   const [reviewContent, setReviewContent] = useState(editReview?.content || "");
+  const [rating, setRating] = useState(editReview?.rating || 5);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>(editReview?.images || []);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>(
+    editReview?.images || []
+  );
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
 
-  const handleSubmit = () => {
-    if (isEditMode) {
-      console.log('리뷰 수정:', reviewContent);
-      // 실제 구현에서는 리뷰 수정 로직
-    } else {
-      console.log('리뷰 작성:', reviewContent);
-      // 실제 구현에서는 리뷰 작성 로직
+  const handleSubmit = async () => {
+    if (!isAuthenticated) {
+      setToast({
+        message: "로그인이 필요한 서비스입니다.",
+        type: "error",
+      });
+      return;
     }
-    onClose();
+
+    if (!reviewContent.trim()) {
+      setToast({
+        message: "리뷰 내용을 입력해주세요.",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      if (isEditMode && editReview) {
+        // 리뷰 수정
+        await updateReview(editReview.id.toString(), {
+          content: reviewContent,
+          rating: rating,
+          images: selectedImages,
+        });
+        setToast({
+          message: "리뷰가 수정되었습니다.",
+          type: "success",
+        });
+      } else {
+        // 리뷰 작성
+        await createReview(cafeId, {
+          content: reviewContent,
+          rating: rating,
+          images: selectedImages,
+        });
+        setToast({
+          message: "리뷰가 작성되었습니다.",
+          type: "success",
+        });
+      }
+
+      // 성공 시 즉시 모달 닫기 및 리뷰 목록 새로고침
+      onClose();
+      if (onReviewSubmitted) {
+        onReviewSubmitted();
+      }
+    } catch (error: any) {
+      console.error("리뷰 처리 실패:", error);
+      setToast({
+        message: isEditMode
+          ? "리뷰 수정에 실패했습니다."
+          : "리뷰 작성에 실패했습니다.",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = () => {
-    console.log('리뷰 삭제');
+    console.log("리뷰 삭제");
     // 실제 구현에서는 리뷰 삭제 로직
     onClose();
   };
@@ -41,29 +112,29 @@ export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWr
     const files = event.target.files;
     if (files) {
       const newFiles = Array.from(files).slice(0, 5 - selectedImages.length); // 최대 5개까지
-      const newUrls = newFiles.map(file => URL.createObjectURL(file));
-      
-      setSelectedImages(prev => [...prev, ...newFiles]);
-      setImagePreviewUrls(prev => [...prev, ...newUrls]);
+      const newUrls = newFiles.map((file) => URL.createObjectURL(file));
+
+      setSelectedImages((prev) => [...prev, ...newFiles]);
+      setImagePreviewUrls((prev) => [...prev, ...newUrls]);
     }
   };
 
   const handleRemoveImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreviewUrls(prev => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviewUrls((prev) => {
       URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
     });
   };
 
   const handleImageAreaClick = () => {
-    document.getElementById('image-upload')?.click();
+    document.getElementById("image-upload")?.click();
   };
 
   // 컴포넌트 언마운트 시 메모리 정리
   useEffect(() => {
     return () => {
-      imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+      imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
 
@@ -74,11 +145,21 @@ export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWr
           {/* 사용자 정보 */}
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              <svg
+                className="w-8 h-8 text-gray-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
-            <span className="font-bold text-gray-900">{isEditMode ? editReview?.user : "Sunwon903"}</span>
+            <span className="font-bold text-gray-900">
+              {isEditMode ? editReview?.user : user?.nickname || "사용자"}
+            </span>
           </div>
           <Button
             onClick={onClose}
@@ -86,16 +167,61 @@ export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWr
             size="sm"
             className="!p-1 !min-w-0"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </Button>
-              </div>
-
-
+        </div>
 
         <div className="space-y-6">
+          {/* 별점 선택 */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">별점</label>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  className="focus:outline-none"
+                >
+                  <svg
+                    className={`w-8 h-8 ${
+                      star <= rating ? "text-yellow-400" : "text-gray-300"
+                    }`}
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </button>
+              ))}
+              <span className="ml-2 text-sm text-gray-600">{rating}점</span>
+            </div>
+          </div>
 
+          {/* 리뷰 내용 */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              리뷰 내용
+            </label>
+            <textarea
+              value={reviewContent}
+              onChange={(e) => setReviewContent(e.target.value)}
+              placeholder="카페에 대한 솔직한 리뷰를 작성해주세요..."
+              className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none"
+            />
+          </div>
 
           {/* 이미지 영역 */}
           <div className="space-y-4">
@@ -107,7 +233,7 @@ export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWr
               onChange={handleImageUpload}
               className="hidden"
             />
-            
+
             {imagePreviewUrls.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
                 {imagePreviewUrls.map((url, index) => (
@@ -129,18 +255,30 @@ export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWr
                 ))}
               </div>
             ) : (
-              <div 
+              <div
                 onClick={handleImageAreaClick}
                 className="bg-gray-200 h-64 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors border-2 border-dashed border-gray-400"
               >
-                <svg className="w-12 h-12 text-gray-600 mb-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                <svg
+                  className="w-12 h-12 text-gray-600 mb-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                    clipRule="evenodd"
+                  />
                 </svg>
-                <p className="text-gray-600 text-sm">사진을 첨부하려면 클릭하세요</p>
-                <p className="text-gray-400 text-xs mt-1">최대 5장까지 첨부 가능</p>
+                <p className="text-gray-600 text-sm">
+                  사진을 첨부하려면 클릭하세요
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  최대 5장까지 첨부 가능
+                </p>
               </div>
             )}
-            
+
             {imagePreviewUrls.length > 0 && imagePreviewUrls.length < 5 && (
               <Button
                 onClick={handleImageAreaClick}
@@ -153,49 +291,46 @@ export default function ReviewWriteModal({ onClose, cafe, editReview }: ReviewWr
             )}
           </div>
 
-          {/* 리뷰 내용 작성 */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">리뷰 글 작성</h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <textarea
-                value={reviewContent}
-                onChange={(e) => setReviewContent(e.target.value)}
-                className="w-full bg-transparent border-none outline-none resize-none"
-                rows={6}
-                placeholder="어떤 경험을 했나요?"
-              />
-            </div>
-          </div>
-
           {/* 액션 버튼 */}
           <div className="flex justify-between">
             {isEditMode && (
-              <Button
-                onClick={handleDelete}
-                color="warning"
-                size="md"
-              >
+              <Button onClick={handleDelete} color="warning" size="md">
                 삭제하기
               </Button>
             )}
-            <div className={`flex gap-3 ${isEditMode ? 'ml-auto' : ''}`}>
-              <Button
-                onClick={onClose}
-                color="gray"
-                size="md"
-              >
+            <div className={`flex gap-3 ${isEditMode ? "ml-auto" : ""}`}>
+              <Button onClick={onClose} color="gray" size="md">
                 취소
               </Button>
               <Button
                 onClick={handleSubmit}
                 color="primary"
                 size="md"
+                disabled={loading || !reviewContent.trim()}
               >
-                {isEditMode ? '수정 완료' : '작성 완료'}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    {isEditMode ? "수정 중..." : "작성 중..."}
+                  </div>
+                ) : isEditMode ? (
+                  "수정 완료"
+                ) : (
+                  "작성 완료"
+                )}
               </Button>
             </div>
           </div>
         </div>
+
+        {/* 토스트 */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
     </div>
   );

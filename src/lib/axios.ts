@@ -38,8 +38,11 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // 401 에러 시 토큰 갱신 시도
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 401, 403 에러 시 토큰 갱신 시도
+    if (
+      (error.response?.status === 401 || error.response?.status === 403) &&
+      !originalRequest._retry
+    ) {
       originalRequest._retry = true;
 
       try {
@@ -52,8 +55,12 @@ apiClient.interceptors.response.use(
             }
           );
 
-          const { accessToken } = response.data;
+          const { data } = response.data;
+          const { accessToken, refreshToken: newRefreshToken } = data;
+
+          // 새 토큰들 저장
           localStorage.setItem("accessToken", accessToken);
+          localStorage.setItem("refreshToken", newRefreshToken);
 
           // 원래 요청 재시도
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;

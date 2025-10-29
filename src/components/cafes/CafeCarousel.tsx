@@ -113,7 +113,7 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
         </div>
 
         {/* 카페 카드 그리드 - 한 줄로 제한 */}
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-4 gap-4">
           {currentCafes.map((cafe) => (
             <CafeCard key={cafe.cafe_id} cafe={cafe} />
           ))}

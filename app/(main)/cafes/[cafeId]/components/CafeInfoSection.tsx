@@ -3,55 +3,35 @@
 import { useState, useEffect } from "react";
 import { CafeDetail } from "@/data/cafeDetails";
 import Button from "@/components/common/Button";
-import { sendUserLocation } from "@/lib/api";
+import { getWishlistCategories } from "@/lib/api";
+import WishlistModal from "@/components/modals/WishlistModal";
+import LoginPromptModal from "@/components/modals/LoginPromptModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CafeInfoSectionProps {
   cafe: CafeDetail;
   cafeId: string;
-  latitude?: number;
-  longitude?: number;
   onChatRoom: () => void;
   onShare: () => void;
   onSave: () => void;
   onWriteReview: () => void;
 }
 
-// 두 지점 간의 거리를 계산하는 함수 (Haversine formula)
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // 지구의 반지름 (km)
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c; // km 단위
-  return distance;
-}
-
 export default function CafeInfoSection({
   cafe,
   cafeId,
-  latitude,
-  longitude,
   onChatRoom,
   onShare,
   onSave,
   onWriteReview,
 }: CafeInfoSectionProps) {
+  const { isAuthenticated } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showHoursDetail, setShowHoursDetail] = useState<boolean>(false);
-  const [distance, setDistance] = useState<number | null>(null);
-  const [loadingLocation, setLoadingLocation] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [showWishlistModal, setShowWishlistModal] = useState(false);
+  const [wishlistCategories, setWishlistCategories] = useState<string[]>([]);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % cafe.images.length);
@@ -63,90 +43,38 @@ export default function CafeInfoSection({
     );
   };
 
-  // 현재 위치 가져오기 및 백엔드로 전송
-  const getCurrentLocation = async () => {
-    if (!latitude || !longitude) {
-      setLocationError("카페 위치 정보가 없습니다.");
-      return;
-    }
-
-    setLoadingLocation(true);
-    setLocationError(null);
-
-    if (!navigator.geolocation) {
-      setLocationError("위치 서비스가 지원되지 않습니다.");
-      setLoadingLocation(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude: userLat, longitude: userLon } = position.coords;
-
-        try {
-          // 백엔드로 사용자 위치 전송
-          const response = await sendUserLocation(cafeId, userLat, userLon);
-
-          // 백엔드에서 계산된 거리가 있으면 사용, 없으면 프론트에서 계산
-          if (response?.distance !== undefined) {
-            setDistance(response.distance);
-            console.log("백엔드에서 거리 계산 완료:", response.distance);
-          } else {
-            // 백엔드 응답이 없거나 거리 정보가 없을 경우 프론트엔드에서 계산
-            const dist = calculateDistance(
-              userLat,
-              userLon,
-              latitude,
-              longitude
-            );
-            setDistance(dist);
-            console.log("프론트엔드에서 거리 계산 완료:", dist);
-          }
-        } catch (error) {
-          console.error("백엔드 전송 실패, 프론트엔드에서 계산:", error);
-          // 백엔드 전송 실패 시 프론트엔드에서 계산
-          const dist = calculateDistance(userLat, userLon, latitude, longitude);
-          setDistance(dist);
-        }
-
-        setLoadingLocation(false);
-      },
-      (error) => {
-        console.error("위치 정보 가져오기 실패:", error);
-        let errorMessage = "위치 정보를 가져올 수 없습니다.";
-
-        if (error.code === error.PERMISSION_DENIED) {
-          errorMessage = "위치 권한이 거부되었습니다.";
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          errorMessage = "위치 정보를 사용할 수 없습니다.";
-        } else if (error.code === error.TIMEOUT) {
-          errorMessage = "위치 정보 요청 시간이 초과되었습니다.";
-        }
-
-        setLocationError(errorMessage);
-        setLoadingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+  // 위시리스트 카테고리 로드
+  const loadWishlistCategories = async () => {
+    try {
+      setWishlistLoading(true);
+      const response = await getWishlistCategories(cafeId);
+      if (response?.data) {
+        setWishlistCategories(response.data);
       }
-    );
+    } catch (error: any) {
+      console.error("위시리스트 카테고리 로드 실패:", error);
+      // 403 오류인 경우 로그인 유도 모달 표시
+      if (error?.response?.status === 403) {
+        setShowLoginPrompt(true);
+      }
+      // 백엔드 서버가 실행되지 않은 경우 빈 배열로 초기화
+      setWishlistCategories([]);
+    } finally {
+      setWishlistLoading(false);
+    }
   };
 
-  // 컴포넌트 마운트 시 자동으로 거리 계산
-  useEffect(() => {
-    if (latitude && longitude) {
-      getCurrentLocation();
+  // 위시리스트 모달 열기 (로그인 상태 확인)
+  const handleWishlistClick = () => {
+    // 로그인하지 않은 상태에서 저장 버튼 클릭 시 즉시 로그인 유도 모달 표시
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true);
+      return;
     }
-  }, [latitude, longitude]);
 
-  // 거리를 포맷팅하는 함수
-  const formatDistance = (dist: number) => {
-    if (dist < 1) {
-      return `${Math.round(dist * 1000)}m`;
-    }
-    return `${dist.toFixed(1)}km`;
+    // 로그인한 상태에서만 위시리스트 모달 열기
+    loadWishlistCategories();
+    setShowWishlistModal(true);
   };
 
   return (
@@ -155,9 +83,88 @@ export default function CafeInfoSection({
         {/* 좌측 이미지 영역 */}
         <div className="relative">
           <div className="aspect-[4/3] bg-gray-200 rounded-lg overflow-hidden relative">
-            <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-500">
-              카페 이미지
-            </div>
+            {cafe.images && cafe.images.length > 0 ? (
+              <img
+                src={cafe.images[currentImageIndex]}
+                alt={`${cafe.name} 이미지`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // 이미지 로드 실패 시 기본 이미지로 대체
+                  e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`
+                    <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="100%" height="100%" fill="#f3f4f6"/>
+                      <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-family="Arial, sans-serif" font-size="18">
+                        ☕ 카페 이미지
+                      </text>
+                    </svg>
+                  `)}`;
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <div className="text-6xl mb-2">☕</div>
+                  <div className="text-lg font-medium">카페 이미지</div>
+                </div>
+              </div>
+            )}
+
+            {/* 이미지 네비게이션 버튼 (여러 이미지가 있을 때만) */}
+            {cafe.images && cafe.images.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={nextImage}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+
+                {/* 이미지 인디케이터 */}
+                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                  {cafe.images.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentImageIndex
+                          ? "bg-white"
+                          : "bg-white bg-opacity-50"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -192,39 +199,6 @@ export default function CafeInfoSection({
               <div className="flex-1 min-w-0">
                 <p className="text-gray-900 font-medium">{cafe.address}</p>
                 <p className="text-sm text-gray-600 mt-1">{cafe.subway}</p>
-                {loadingLocation && (
-                  <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                    <svg
-                      className="animate-spin h-3 w-3"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    거리 계산 중...
-                  </p>
-                )}
-                {distance !== null && !loadingLocation && (
-                  <p className="text-sm text-primary font-medium mt-1">
-                    현재 위치에서 {formatDistance(distance)}
-                  </p>
-                )}
-                {locationError && !loadingLocation && (
-                  <p className="text-sm text-red-500 mt-1">{locationError}</p>
-                )}
               </div>
             </div>
 
@@ -328,17 +302,45 @@ export default function CafeInfoSection({
             </Button>
             <div className="flex gap-2">
               <button
-                onClick={onSave}
-                className="flex flex-col items-center justify-center border border-primary rounded-lg h-12 w-20 hover:bg-gray-50 transition-colors"
+                onClick={handleWishlistClick}
+                className={`flex flex-col items-center justify-center border rounded-lg h-12 w-20 transition-colors ${
+                  wishlistCategories.length > 0
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-primary hover:bg-gray-50"
+                }`}
               >
-                <svg
-                  className="w-5 h-5 text-primary mb-1"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
+                {wishlistLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mb-1"></div>
+                ) : (
+                  <svg
+                    className={`w-5 h-5 mb-1 ${
+                      wishlistCategories.length > 0
+                        ? "text-primary"
+                        : "text-primary"
+                    }`}
+                    fill={
+                      wishlistCategories.length > 0 ? "currentColor" : "none"
+                    }
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                )}
+                <span
+                  className={`text-xs ${
+                    wishlistCategories.length > 0
+                      ? "text-primary font-medium"
+                      : "text-gray-900"
+                  }`}
                 >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                <span className="text-xs text-gray-900">저장</span>
+                  {wishlistCategories.length > 0 ? "위시리스트" : "저장"}
+                </span>
               </button>
               <button
                 onClick={onShare}
@@ -374,6 +376,26 @@ export default function CafeInfoSection({
           </div>
         </div>
       </div>
+
+      {/* 위시리스트 모달 */}
+      {showWishlistModal && (
+        <WishlistModal
+          onClose={() => {
+            setShowWishlistModal(false);
+            loadWishlistCategories(); // 모달 닫을 때 위시리스트 상태 새로고침
+          }}
+          cafeId={cafeId}
+          cafeName={cafe.name}
+        />
+      )}
+
+      {/* 로그인 유도 모달 */}
+      {showLoginPrompt && (
+        <LoginPromptModal
+          onClose={() => setShowLoginPrompt(false)}
+          message="로그인 후 위시리스트 기능을 이용할 수 있습니다."
+        />
+      )}
     </div>
   );
 }

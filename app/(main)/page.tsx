@@ -25,14 +25,10 @@ const searchPlaceholders = [
 ];
 
 export default function HomePage() {
-
   return (
     <div className="min-h-screen px-4 md:px-8 lg:px-12 xl:px-20">
       <Header />
-      <SearchBar 
-        placeholders={searchPlaceholders}
-        animatePlaceholder={true}
-      />
+      <SearchBar placeholders={searchPlaceholders} animatePlaceholder={true} />
 
       <Map className="mb-10" />
 

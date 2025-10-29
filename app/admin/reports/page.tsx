@@ -40,77 +40,92 @@ export default function AdminReportsPage() {
   });
 
   const reports: Report[] = [
-    { 
-      id: 1, 
+    {
+      id: 1,
       type: "review",
-      content: "부적절한 리뷰 내용입니다.", 
-      status: "unprocessed", 
+      content: "부적절한 리뷰 내용입니다.",
+      status: "unprocessed",
       date: "2024.01.01",
       reporter: "신고자1",
       reportedUser: "리뷰작성자1",
       reason: "욕설 및 비방",
       originalContent: "여기 맛있네요.... 정말 맛있어요! 강력 추천합니다.",
-      originalImages: ["/api/placeholder/400/300", "/api/placeholder/400/300"]
+      originalImages: [
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
+        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&crop=center",
+      ],
     },
-    { 
-      id: 2, 
+    {
+      id: 2,
       type: "post",
-      content: "스팸성 게시글입니다.", 
-      status: "unprocessed", 
+      content: "스팸성 게시글입니다.",
+      status: "unprocessed",
       date: "2024.01.02",
       reporter: "신고자2",
       reportedUser: "게시글작성자1",
       reason: "스팸",
       originalTitle: "카페 추천해요",
       originalContent: "어쩌구 저쩌구 내용입니다...",
-      originalImages: ["/api/placeholder/400/300"]
+      originalImages: [
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
+      ],
     },
-    { 
-      id: 3, 
+    {
+      id: 3,
       type: "review",
-      content: "허위 정보가 포함된 리뷰입니다.", 
-      status: "processed", 
+      content: "허위 정보가 포함된 리뷰입니다.",
+      status: "processed",
       date: "2024.01.03",
       reporter: "신고자3",
       reportedUser: "리뷰작성자2",
       reason: "허위정보",
       originalContent: "어쩌구 저쩌구 리뷰 내용...",
-      adminComment: "신고 내용을 검토한 결과, 허위 정보가 포함되어 있음을 확인했습니다. 해당 리뷰를 삭제 처리하였습니다.",
+      adminComment:
+        "신고 내용을 검토한 결과, 허위 정보가 포함되어 있음을 확인했습니다. 해당 리뷰를 삭제 처리하였습니다.",
       processedDate: "2024.01.03",
-      processedBy: "관리자1"
+      processedBy: "관리자1",
     },
-    { 
-      id: 4, 
+    {
+      id: 4,
       type: "post",
-      content: "부적절한 게시글입니다.", 
-      status: "unprocessed", 
+      content: "부적절한 게시글입니다.",
+      status: "unprocessed",
       date: "2024.01.04",
       reporter: "신고자4",
       reportedUser: "게시글작성자2",
       reason: "음란물",
       originalTitle: "카페 후기",
       originalContent: "어쩌구 저쩌구 게시글 내용...",
-      originalImages: ["/api/placeholder/400/300", "/api/placeholder/400/300", "/api/placeholder/400/300"]
+      originalImages: [
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
+        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&crop=center",
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=300&fit=crop&crop=center",
+      ],
     },
-    { 
-      id: 5, 
+    {
+      id: 5,
       type: "review",
-      content: "중복 리뷰입니다.", 
-      status: "processed", 
+      content: "중복 리뷰입니다.",
+      status: "processed",
       date: "2024.01.05",
       reporter: "신고자5",
       reportedUser: "리뷰작성자3",
       reason: "중복게시",
       originalContent: "어쩌구 저쩌구 중복 리뷰...",
-      originalImages: ["/api/placeholder/400/300"],
-      adminComment: "동일한 사용자가 같은 카페에 중복으로 작성한 리뷰를 확인했습니다. 중복 리뷰를 삭제하고 경고 조치를 취했습니다.",
+      originalImages: [
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
+      ],
+      adminComment:
+        "동일한 사용자가 같은 카페에 중복으로 작성한 리뷰를 확인했습니다. 중복 리뷰를 삭제하고 경고 조치를 취했습니다.",
       processedDate: "2024.01.05",
-      processedBy: "관리자2"
-    }
+      processedBy: "관리자2",
+    },
   ];
 
-  const filteredReports = reports.filter(report => 
-    activeTab === "unprocessed" ? report.status === "unprocessed" : report.status === "processed"
+  const filteredReports = reports.filter((report) =>
+    activeTab === "unprocessed"
+      ? report.status === "unprocessed"
+      : report.status === "processed"
   );
 
   const itemsPerPage = 5;
@@ -204,26 +219,30 @@ export default function AdminReportsPage() {
       {/* 신고 목록 */}
       <div className="space-y-4">
         {filteredReports.map((report) => (
-          <div 
-            key={report.id} 
+          <div
+            key={report.id}
             className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => handleDetailClick(report)}
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    report.type === "post" 
-                      ? "bg-blue-100 text-blue-800" 
-                      : "bg-green-100 text-green-800"
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      report.type === "post"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
+                  >
                     {report.type === "post" ? "게시글신고" : "리뷰신고"}
                   </span>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    report.status === "unprocessed" 
-                      ? "bg-red-100 text-red-800" 
-                      : "bg-gray-100 text-gray-800"
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      report.status === "unprocessed"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
                     {report.status === "unprocessed" ? "미처리" : "처리완료"}
                   </span>
                 </div>
@@ -250,7 +269,9 @@ export default function AdminReportsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">신고 내역 상세보기</h3>
+              <h3 className="text-xl font-semibold text-gray-900">
+                신고 내역 상세보기
+              </h3>
               <button
                 onClick={handleCloseModal}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -266,50 +287,70 @@ export default function AdminReportsPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">신고 유형:</span>
-                    <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
-                      selectedReport.type === "post" 
-                        ? "bg-blue-100 text-blue-800" 
-                        : "bg-green-100 text-green-800"
-                    }`}>
-                      {selectedReport.type === "post" ? "게시글신고" : "리뷰신고"}
+                    <span
+                      className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
+                        selectedReport.type === "post"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {selectedReport.type === "post"
+                        ? "게시글신고"
+                        : "리뷰신고"}
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-600">신고자:</span>
-                    <span className="ml-2 font-medium">{selectedReport.reporter}</span>
+                    <span className="ml-2 font-medium">
+                      {selectedReport.reporter}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">신고된 사용자:</span>
-                    <span className="ml-2 font-medium">{selectedReport.reportedUser}</span>
+                    <span className="ml-2 font-medium">
+                      {selectedReport.reportedUser}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">신고일:</span>
-                    <span className="ml-2 font-medium">{selectedReport.date}</span>
+                    <span className="ml-2 font-medium">
+                      {selectedReport.date}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">신고 사유:</span>
-                    <span className="ml-2 font-medium">{selectedReport.reason}</span>
+                    <span className="ml-2 font-medium">
+                      {selectedReport.reason}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">처리 상태:</span>
-                    <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
-                      selectedReport.status === "unprocessed" 
-                        ? "bg-red-100 text-red-800" 
-                        : "bg-gray-100 text-gray-800"
-                    }`}>
-                      {selectedReport.status === "unprocessed" ? "미처리" : "처리완료"}
+                    <span
+                      className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
+                        selectedReport.status === "unprocessed"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {selectedReport.status === "unprocessed"
+                        ? "미처리"
+                        : "처리완료"}
                     </span>
                   </div>
                   {selectedReport.processedDate && (
                     <div>
                       <span className="text-gray-600">처리일:</span>
-                      <span className="ml-2 font-medium">{selectedReport.processedDate}</span>
+                      <span className="ml-2 font-medium">
+                        {selectedReport.processedDate}
+                      </span>
                     </div>
                   )}
                   {selectedReport.processedBy && (
                     <div>
                       <span className="text-gray-600">처리자:</span>
-                      <span className="ml-2 font-medium">{selectedReport.processedBy}</span>
+                      <span className="ml-2 font-medium">
+                        {selectedReport.processedBy}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -330,45 +371,56 @@ export default function AdminReportsPage() {
                 </h4>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   {selectedReport.originalTitle && (
-                    <h5 className="font-medium text-gray-900 mb-2">{selectedReport.originalTitle}</h5>
+                    <h5 className="font-medium text-gray-900 mb-2">
+                      {selectedReport.originalTitle}
+                    </h5>
                   )}
-                  <p className="text-gray-900 whitespace-pre-wrap mb-4">{selectedReport.originalContent}</p>
-                  
+                  <p className="text-gray-900 whitespace-pre-wrap mb-4">
+                    {selectedReport.originalContent}
+                  </p>
+
                   {/* 첨부 이미지 */}
-                  {selectedReport.originalImages && selectedReport.originalImages.length > 0 && (
-                    <div className="mt-4">
-                      <h6 className="text-sm font-medium text-gray-700 mb-2">첨부 이미지</h6>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {selectedReport.originalImages.map((image, index) => (
-                          <div key={index} className="relative group">
-                            <img
-                              src={image}
-                              alt={`첨부 이미지 ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                              onClick={() => {
-                                // 이미지 확대 모달 또는 새 탭에서 열기
-                                window.open(image, '_blank');
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
-                              <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                클릭하여 확대
-                              </span>
+                  {selectedReport.originalImages &&
+                    selectedReport.originalImages.length > 0 && (
+                      <div className="mt-4">
+                        <h6 className="text-sm font-medium text-gray-700 mb-2">
+                          첨부 이미지
+                        </h6>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {selectedReport.originalImages.map((image, index) => (
+                            <div key={index} className="relative group">
+                              <img
+                                src={image}
+                                alt={`첨부 이미지 ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => {
+                                  // 이미지 확대 모달 또는 새 탭에서 열기
+                                  window.open(image, "_blank");
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                  클릭하여 확대
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               </div>
 
               {/* 관리자 코멘트 */}
               {selectedReport.adminComment && (
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">관리자 코멘트</h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    관리자 코멘트
+                  </h4>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-gray-900 whitespace-pre-wrap">{selectedReport.adminComment}</p>
+                    <p className="text-gray-900 whitespace-pre-wrap">
+                      {selectedReport.adminComment}
+                    </p>
                   </div>
                 </div>
               )}
@@ -376,19 +428,11 @@ export default function AdminReportsPage() {
 
             {/* 액션 버튼 */}
             <div className="flex justify-end gap-3 mt-6">
-              <Button 
-                color="gray" 
-                size="md"
-                onClick={handleCloseModal}
-              >
+              <Button color="gray" size="md" onClick={handleCloseModal}>
                 닫기
               </Button>
               {selectedReport.status === "unprocessed" && (
-                <Button 
-                  color="primary" 
-                  size="md"
-                  onClick={handleProcessClick}
-                >
+                <Button color="primary" size="md" onClick={handleProcessClick}>
                   처리하기
                 </Button>
               )}
@@ -406,10 +450,12 @@ export default function AdminReportsPage() {
             </h3>
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                <span className="font-medium">신고 유형:</span> {selectedReport.type === "post" ? "게시글신고" : "리뷰신고"}
+                <span className="font-medium">신고 유형:</span>{" "}
+                {selectedReport.type === "post" ? "게시글신고" : "리뷰신고"}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">신고 사유:</span> {selectedReport.reason}
+                <span className="font-medium">신고 사유:</span>{" "}
+                {selectedReport.reason}
               </p>
             </div>
             <div className="mb-6">
@@ -438,24 +484,24 @@ export default function AdminReportsPage() {
                   onChange={(e) => setDeleteContent(e.target.checked)}
                   className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                 />
-                <label htmlFor="deleteContent" className="ml-2 text-sm text-gray-700">
+                <label
+                  htmlFor="deleteContent"
+                  className="ml-2 text-sm text-gray-700"
+                >
                   {selectedReport.type === "post" ? "게시글" : "리뷰"} 삭제
                 </label>
               </div>
               <p className="text-xs text-gray-500 mt-1 ml-6">
-                {selectedReport.type === "post" ? "게시글" : "리뷰"}을 삭제하면 복구할 수 없습니다.
+                {selectedReport.type === "post" ? "게시글" : "리뷰"}을 삭제하면
+                복구할 수 없습니다.
               </p>
             </div>
             <div className="flex gap-3 justify-end">
-              <Button 
-                color="gray" 
-                size="md"
-                onClick={handleProcessCancel}
-              >
+              <Button color="gray" size="md" onClick={handleProcessCancel}>
                 취소
               </Button>
-              <Button 
-                color="primary" 
+              <Button
+                color="primary"
                 size="md"
                 onClick={handleProcessConfirm}
                 disabled={!adminComment.trim()}
@@ -478,27 +524,21 @@ export default function AdminReportsPage() {
               <p className="text-gray-600 mb-4">
                 <span className="font-medium text-red-600">
                   {selectedReport.type === "post" ? "게시글" : "리뷰"}
-                </span>을 삭제하시겠습니까?
+                </span>
+                을 삭제하시겠습니까?
               </p>
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-800">
-                  ⚠️ 삭제된 {selectedReport.type === "post" ? "게시글" : "리뷰"}은 복구할 수 없습니다.
+                  ⚠️ 삭제된 {selectedReport.type === "post" ? "게시글" : "리뷰"}
+                  은 복구할 수 없습니다.
                 </p>
               </div>
             </div>
             <div className="flex gap-3 justify-end">
-              <Button 
-                color="gray" 
-                size="md"
-                onClick={handleDeleteCancel}
-              >
+              <Button color="gray" size="md" onClick={handleDeleteCancel}>
                 취소
               </Button>
-              <Button 
-                color="warning" 
-                size="md"
-                onClick={handleDeleteConfirm}
-              >
+              <Button color="warning" size="md" onClick={handleDeleteConfirm}>
                 삭제하기
               </Button>
             </div>

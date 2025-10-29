@@ -69,46 +69,141 @@ export async function requestPasswordReset(email: string) {
 
 // ==================== Cafe API ====================
 
-// 사용자 위치를 백엔드로 전송하고 거리 계산 결과를 받아오는 함수
-export async function sendUserLocation(
+// ==================== MyPage API ====================
+
+// ==================== Review API ====================
+
+// 카페별 리뷰 목록 조회 (현재는 카페 상세 정보에 포함되어 있음)
+export async function getCafeReviews(cafeId: string) {
+  try {
+    const response = await apiClient.get(`/api/cafes/${cafeId}/reviews`);
+    return response.data || [];
+  } catch (error: any) {
+    console.error("카페 리뷰 목록 조회 실패:", error);
+    throw new Error(error.message || "리뷰 목록 조회 실패");
+  }
+}
+
+// 리뷰 작성
+export async function createReview(
   cafeId: string,
-  latitude: number,
-  longitude: number
+  reviewData: {
+    content: string;
+    rating: number;
+    images?: File[];
+  }
 ) {
   try {
-    const response = await apiClient.post(`/api/cafes/${cafeId}/distance`, {
-      userLatitude: latitude,
-      userLongitude: longitude,
+    const formData = new FormData();
+
+    // 리뷰 데이터를 JSON으로 변환하여 추가
+    formData.append(
+      "review",
+      JSON.stringify({
+        content: reviewData.content,
+        rating: reviewData.rating,
+      })
+    );
+
+    // 이미지 파일들 추가
+    if (reviewData.images && reviewData.images.length > 0) {
+      reviewData.images.forEach((image) => {
+        formData.append("images", image);
+      });
+    }
+
+    const response = await apiClient.post(
+      `/api/cafes/${cafeId}/reviews`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("리뷰 작성 실패:", error);
+    throw new Error(error.message || "리뷰 작성 실패");
+  }
+}
+
+// 리뷰 수정
+export async function updateReview(
+  reviewId: string,
+  reviewData: {
+    content: string;
+    rating: number;
+    images?: File[];
+  }
+) {
+  try {
+    const formData = new FormData();
+
+    // 리뷰 데이터를 JSON으로 변환하여 추가
+    formData.append(
+      "review",
+      JSON.stringify({
+        content: reviewData.content,
+        rating: reviewData.rating,
+      })
+    );
+
+    // 이미지 파일들 추가
+    if (reviewData.images && reviewData.images.length > 0) {
+      reviewData.images.forEach((image) => {
+        formData.append("images", image);
+      });
+    }
+
+    const response = await apiClient.put(`/api/reviews/${reviewId}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
     return response.data;
   } catch (error: any) {
-    console.error("거리 계산 API 호출 실패:", error);
-    throw new Error(error.message || "거리 계산 요청 실패");
+    console.error("리뷰 수정 실패:", error);
+    throw new Error(error.message || "리뷰 수정 실패");
   }
 }
 
-// 카페 상세 정보 조회 시 사용자 위치 전송
-export async function getCafeDetailWithLocation(
-  cafeId: string,
-  userLatitude?: number,
-  userLongitude?: number
-) {
+// 리뷰 삭제
+export async function deleteReview(reviewId: string) {
   try {
-    const params: any = {};
-    if (userLatitude !== undefined && userLongitude !== undefined) {
-      params.userLatitude = userLatitude.toString();
-      params.userLongitude = userLongitude.toString();
-    }
-
-    const response = await apiClient.get(`/api/cafes/${cafeId}`, { params });
+    const response = await apiClient.delete(`/api/reviews/${reviewId}`);
     return response.data;
   } catch (error: any) {
-    console.error("카페 상세 정보 API 호출 실패:", error);
-    throw new Error(error.message || "카페 상세 정보 조회 실패");
+    console.error("리뷰 삭제 실패:", error);
+    throw new Error(error.message || "리뷰 삭제 실패");
   }
 }
 
-// ==================== MyPage API ====================
+// 리뷰 신고 상태 확인
+export async function checkReviewReportStatus(reviewId: string) {
+  try {
+    const response = await apiClient.get(
+      `/api/reviews/${reviewId}/reports/status`
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("리뷰 신고 상태 확인 실패:", error);
+    throw new Error(error.message || "리뷰 신고 상태 확인 실패");
+  }
+}
+
+// 리뷰 신고
+export async function reportReview(reviewId: string, content: string) {
+  try {
+    const response = await apiClient.post(`/api/reviews/${reviewId}/reports`, {
+      content,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error("리뷰 신고 실패:", error);
+    throw new Error(error.message || "리뷰 신고 실패");
+  }
+}
 
 // 위시리스트 조회
 export async function getWishlist(params?: {
@@ -133,7 +228,49 @@ export async function getWishlistCategories(cafeId: string) {
     return response.data;
   } catch (error: any) {
     console.error("위시리스트 카테고리 조회 API 호출 실패:", error);
+
+    // 백엔드 서버가 실행되지 않은 경우 모킹된 응답 반환
+    if (
+      error.code === "ERR_NETWORK" ||
+      error.message?.includes("Network Error")
+    ) {
+      console.log("백엔드 서버가 실행되지 않음. 모킹된 응답을 반환합니다.");
+      return {
+        message: "카테고리 조회 완료 (모킹)",
+        data: [],
+      };
+    }
+
     throw new Error(error.message || "카테고리 조회 실패");
+  }
+}
+
+// 위시리스트 추가/제거 (토글)
+export async function toggleWishlist(cafeId: string, category: string) {
+  try {
+    const response = await apiClient.post(
+      `/api/my/wishlist/${cafeId}?category=${category}`
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("위시리스트 토글 API 호출 실패:", error);
+
+    // 백엔드 서버가 실행되지 않은 경우 모킹된 응답 반환
+    if (
+      error.code === "ERR_NETWORK" ||
+      error.message?.includes("Network Error")
+    ) {
+      console.log("백엔드 서버가 실행되지 않음. 모킹된 응답을 반환합니다.");
+      return {
+        message: "위시리스트가 반영되었습니다. (모킹)",
+        data: {
+          cafeId: parseInt(cafeId),
+          wished: true,
+        },
+      };
+    }
+
+    throw new Error(error.message || "위시리스트 처리 실패");
   }
 }
 
@@ -175,12 +312,18 @@ export async function getAdminMemberDetail(userId: string) {
 }
 
 // 관리자 페널티 부여
-export async function addAdminPenalty(userId: string, data: {
-  reason: string;
-  reason_code: string;
-}) {
+export async function addAdminPenalty(
+  userId: string,
+  data: {
+    reason: string;
+    reason_code: string;
+  }
+) {
   try {
-    const response = await apiClient.post(`/api/admin/users/${userId}/penalty`, data);
+    const response = await apiClient.post(
+      `/api/admin/users/${userId}/penalty`,
+      data
+    );
     return response.data;
   } catch (error: any) {
     console.error("Admin 페널티 부여 API 호출 실패:", error);
@@ -189,12 +332,18 @@ export async function addAdminPenalty(userId: string, data: {
 }
 
 // 관리자 회원 정지
-export async function suspendAdminUser(userId: string, data: {
-  duration: string;
-  reason: string;
-}) {
+export async function suspendAdminUser(
+  userId: string,
+  data: {
+    duration: string;
+    reason: string;
+  }
+) {
   try {
-    const response = await apiClient.post(`/api/admin/users/${userId}/suspend`, data);
+    const response = await apiClient.post(
+      `/api/admin/users/${userId}/suspend`,
+      data
+    );
     return response.data;
   } catch (error: any) {
     console.error("Admin 회원 정지 API 호출 실패:", error);
