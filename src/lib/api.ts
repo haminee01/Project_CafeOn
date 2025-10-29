@@ -69,6 +69,49 @@ export async function requestPasswordReset(email: string) {
 
 // ==================== Cafe API ====================
 
+// 카페 상세 정보 조회
+export async function getCafeDetail(cafeId: string) {
+  try {
+    const response = await apiClient.get(`/api/cafes/${cafeId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("카페 상세 정보 조회 실패:", error);
+    throw new Error(error.message || "카페 상세 정보 조회 실패");
+  }
+}
+
+// 근처 카페 조회 (지도 페이지용)
+export async function getNearbyCafes(params: {
+  latitude: number;
+  longitude: number;
+  radius?: number;
+}) {
+  try {
+    const response = await apiClient.get("/api/cafes/nearby", {
+      params: {
+        latitude: params.latitude,
+        longitude: params.longitude,
+        radius: params.radius || 1000,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error("근처 카페 조회 실패:", error);
+    throw new Error(error.message || "근처 카페 조회 실패");
+  }
+}
+
+// 랜덤 카페 10개 조회
+export async function getRandomCafes() {
+  try {
+    const response = await apiClient.get("/api/cafes/random10");
+    return response.data;
+  } catch (error: any) {
+    console.error("랜덤 카페 조회 실패:", error);
+    throw new Error(error.message || "랜덤 카페 조회 실패");
+  }
+}
+
 // ==================== MyPage API ====================
 
 // ==================== Review API ====================
