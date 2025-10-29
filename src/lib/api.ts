@@ -94,10 +94,10 @@ export async function getNearbyCafes(params: {
         radius: params.radius || 1000,
       },
     });
-    
+
     // 백엔드 응답 형식에 따라 처리
     const data = response.data?.data || response.data;
-    
+
     // 배열인지 확인
     return Array.isArray(data) ? data : [];
   } catch (error: any) {
@@ -112,11 +112,11 @@ export async function getNearbyCafes(params: {
 export async function getRandomCafes() {
   try {
     const response = await apiClient.get("/api/cafes/random10");
-    
+
     // 백엔드 응답 형식에 따라 처리
     // 만약 { data: [...] } 형태면 data를 반환, 아니면 직접 배열 반환
     const data = response.data?.data || response.data;
-    
+
     // 배열인지 확인
     return Array.isArray(data) ? data : [];
   } catch (error: any) {
