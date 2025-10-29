@@ -89,7 +89,14 @@ export default function MapPage() {
         longitude: userLocation.longitude,
         radius: 2000, // 2km 반경
       });
-      setNearbyCafes(cafes);
+      
+      // API가 배열을 반환하면 그대로 사용, 아니면 fallback
+      if (Array.isArray(cafes) && cafes.length > 0) {
+        setNearbyCafes(cafes);
+      } else {
+        // 빈 배열 또는 잘못된 데이터면 mock 데이터 사용
+        setNearbyCafes(mockCafes.slice(0, 10));
+      }
     } catch (error: any) {
       console.error("근처 카페 조회 실패:", error);
       // API 실패 시 mock 데이터로 fallback

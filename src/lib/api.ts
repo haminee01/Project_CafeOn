@@ -97,7 +97,9 @@ export async function getNearbyCafes(params: {
     return response.data;
   } catch (error: any) {
     console.error("근처 카페 조회 실패:", error);
-    throw new Error(error.message || "근처 카페 조회 실패");
+    // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
+    console.warn("근처 카페 API 실패, 빈 배열 반환");
+    return [];
   }
 }
 
@@ -108,7 +110,9 @@ export async function getRandomCafes() {
     return response.data;
   } catch (error: any) {
     console.error("랜덤 카페 조회 실패:", error);
-    throw new Error(error.message || "랜덤 카페 조회 실패");
+    // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
+    console.warn("랜덤 카페 API 실패, 빈 배열 반환");
+    return [];
   }
 }
 
