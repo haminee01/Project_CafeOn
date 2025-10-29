@@ -697,3 +697,224 @@ export async function getChatMessagesWithUnreadCount(roomId: string) {
     throw error;
   }
 }
+
+// ==================== Review API ====================
+
+// 리뷰 이미지 타입
+export interface ReviewImage {
+  imageId: number;
+  originalFileName: string;
+  imageUrl: string;
+}
+
+// 내가 작성한 리뷰 타입
+export interface MyReview {
+  reviewId: number;
+  rating: number;
+  content: string;
+  createdAt: string;
+  reported: boolean;
+  cafeId: number;
+  cafeName: string;
+  reviewerId: string;
+  reviewerNickname: string;
+  reviewerProfileImageUrl: string | null;
+  images: ReviewImage[];
+}
+
+// 내가 작성한 리뷰 목록 조회 응답 타입
+export interface MyReviewsResponse {
+  message: string;
+  data: {
+    content: MyReview[];
+    pageable: {
+      pageNumber: number;
+      pageSize: number;
+      sort: {
+        empty: boolean;
+        unsorted: boolean;
+        sorted: boolean;
+      };
+      offset: number;
+      unpaged: boolean;
+      paged: boolean;
+    };
+    totalElements: number;
+    last: boolean;
+    totalPages: number;
+    size: number;
+    number: number;
+    sort: {
+      empty: boolean;
+      unsorted: boolean;
+      sorted: boolean;
+    };
+    first: boolean;
+    numberOfElements: number;
+    empty: boolean;
+  };
+}
+
+// 리뷰 수정 요청 타입
+export interface UpdateReviewRequest {
+  content: string;
+  rating: number;
+  images?: number[]; // 이미지 ID 배열 (기존 이미지 유지 시)
+}
+
+// 리뷰 수정 응답 타입
+export interface UpdateReviewResponse {
+  message: string;
+  data: {
+    reviewId: number;
+    rating: number;
+    content: string;
+    createdAt: string;
+    reported: boolean;
+    cafeId: number;
+    cafeName: string;
+    reviewerId: string;
+    reviewerNickname: string;
+    reviewerProfileImageUrl: string | null;
+    images: ReviewImage[];
+  };
+}
+
+// 내가 작성한 리뷰 목록 조회
+export async function getMyReviews(params?: {
+  page?: number;
+  size?: number;
+}): Promise<MyReviewsResponse> {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.page !== undefined)
+      queryParams.append("page", params.page.toString());
+    if (params?.size !== undefined)
+      queryParams.append("size", params.size.toString());
+
+    const url = `${API_BASE_URL}/api/my/reviews${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `리뷰 목록 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("내가 작성한 리뷰 조회 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 리뷰 수정
+export async function updateReview(
+  reviewId: number,
+  reviewData: UpdateReviewRequest
+): Promise<UpdateReviewResponse> {
+  try {
+    const token = localStorage.getItem("accessToken");
+
+    // FormData로 변환 (백엔드는 review 필드에 JSON 문자열을 요구함)
+    const formData = new FormData();
+
+    // review 필드에 JSON 문자열로 저장 (Postman 예시와 동일하게)
+    const reviewJson = JSON.stringify({
+      rating: reviewData.rating,
+      content: reviewData.content,
+    });
+    formData.append("review", reviewJson);
+
+    // images는 파일 업로드가 아니라 이미지 ID 배열인 경우,
+    // 백엔드에서 어떻게 처리하는지 확인 필요하지만 일단 제외
+    // (Postman에서는 images가 File 타입이므로 새 파일 업로드용)
+
+    const headers: HeadersInit = {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+
+    const response = await fetch(`${API_BASE_URL}/api/reviews/${reviewId}`, {
+      method: "PUT",
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      if (response.status === 403) {
+        throw new Error("리뷰를 수정할 권한이 없습니다.");
+      }
+
+      // 에러 응답 파싱 시도
+      let errorMessage = `리뷰 수정 실패 (${response.status})`;
+      try {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } else {
+          const text = await response.text();
+          if (text) errorMessage = text;
+        }
+      } catch (parseError) {
+        console.error("에러 응답 파싱 실패:", parseError);
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("리뷰 수정 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 리뷰 삭제
+export async function deleteReview(reviewId: number): Promise<void> {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/reviews/${reviewId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      if (response.status === 403) {
+        throw new Error("리뷰를 삭제할 권한이 없습니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `리뷰 삭제 실패 (${response.status})`
+      );
+    }
+  } catch (error) {
+    console.error("리뷰 삭제 API 호출 실패:", error);
+    throw error;
+  }
+}

@@ -5,19 +5,26 @@ import { CafeReview } from "@/data/cafeDetails";
 import Button from "@/components/common/Button";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { useToastContext } from "@/components/common/ToastProvider";
+import { updateReview } from "@/lib/api";
 
 interface ReviewWriteModalProps {
   onClose: () => void;
   cafe: {
     name: string;
   };
-  editReview?: CafeReview; // 수정할 리뷰 데이터
+  editReview?: CafeReview & {
+    rating?: number;
+    reviewId?: number;
+    existingImageIds?: number[];
+  }; // 수정할 리뷰 데이터
+  onEditComplete?: () => void; // 수정 완료 콜백
 }
 
 export default function ReviewWriteModal({
   onClose,
   cafe,
   editReview,
+  onEditComplete,
 }: ReviewWriteModalProps) {
   useEscapeKey(onClose);
   const isEditMode = !!editReview;
@@ -26,19 +33,37 @@ export default function ReviewWriteModal({
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>(
     editReview?.images || []
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToastContext();
 
-  const handleSubmit = () => {
-    if (isEditMode) {
-      console.log("리뷰 수정:", reviewContent);
-      // 실제 구현에서는 리뷰 수정 로직
-      showToast("리뷰가 수정되었습니다.", "success");
+  const handleSubmit = async () => {
+    if (isEditMode && editReview?.reviewId) {
+      try {
+        setIsSubmitting(true);
+        // 기존 이미지 ID 목록 (새 이미지 추가는 추후 구현, 일단 기존 이미지만 유지)
+        const existingImageIds = editReview.existingImageIds || [];
+
+        await updateReview(editReview.reviewId, {
+          content: reviewContent,
+          rating: editReview.rating || 5, // 기본값 5 (UI에 별점 선택이 없으므로 기존 값 유지)
+          images: existingImageIds, // 기존 이미지 ID 유지
+        });
+
+        showToast("리뷰가 수정되었습니다.", "success");
+        onEditComplete?.(); // 수정 완료 콜백 호출
+        onClose();
+      } catch (error: any) {
+        console.error("리뷰 수정 실패:", error);
+        showToast(error.message || "리뷰 수정에 실패했습니다.", "error");
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       console.log("리뷰 작성:", reviewContent);
       // 실제 구현에서는 리뷰 작성 로직
       showToast("리뷰가 작성되었습니다.", "success");
+      onClose();
     }
-    onClose();
   };
 
   const handleDelete = () => {
@@ -216,11 +241,25 @@ export default function ReviewWriteModal({
               </Button>
             )}
             <div className={`flex gap-3 ${isEditMode ? "ml-auto" : ""}`}>
-              <Button onClick={onClose} color="gray" size="md">
+              <Button
+                onClick={onClose}
+                color="gray"
+                size="md"
+                disabled={isSubmitting}
+              >
                 취소
               </Button>
-              <Button onClick={handleSubmit} color="primary" size="md">
-                {isEditMode ? "수정 완료" : "작성 완료"}
+              <Button
+                onClick={handleSubmit}
+                color="primary"
+                size="md"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "처리 중..."
+                  : isEditMode
+                  ? "수정 완료"
+                  : "작성 완료"}
               </Button>
             </div>
           </div>
