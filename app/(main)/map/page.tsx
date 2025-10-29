@@ -29,7 +29,10 @@ export default function MapPage() {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [nearbyCafes, setNearbyCafes] = useState<any[]>([]);
-  const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   // 카테고리 매핑
   const categoryMap: Record<SavedCategoryType, string> = {
@@ -52,12 +55,12 @@ export default function MapPage() {
         (error) => {
           console.error("위치 정보를 가져올 수 없습니다:", error);
           // 기본 위치 (서울 시청)
-          setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+          setUserLocation({ latitude: 37.5665, longitude: 126.978 });
         }
       );
     } else {
       // 기본 위치 (서울 시청)
-      setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+      setUserLocation({ latitude: 37.5665, longitude: 126.978 });
     }
   }, []);
 
@@ -82,14 +85,14 @@ export default function MapPage() {
 
   const fetchNearbyCafes = async () => {
     if (!userLocation) return;
-    
+
     try {
       const cafes = await getNearbyCafes({
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
         radius: 2000, // 2km 반경
       });
-      
+
       // API가 배열을 반환하면 그대로 사용, 아니면 fallback
       if (Array.isArray(cafes) && cafes.length > 0) {
         setNearbyCafes(cafes);

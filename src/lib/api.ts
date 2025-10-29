@@ -94,7 +94,12 @@ export async function getNearbyCafes(params: {
         radius: params.radius || 1000,
       },
     });
-    return response.data;
+    
+    // 백엔드 응답 형식에 따라 처리
+    const data = response.data?.data || response.data;
+    
+    // 배열인지 확인
+    return Array.isArray(data) ? data : [];
   } catch (error: any) {
     console.error("근처 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
@@ -107,7 +112,13 @@ export async function getNearbyCafes(params: {
 export async function getRandomCafes() {
   try {
     const response = await apiClient.get("/api/cafes/random10");
-    return response.data;
+    
+    // 백엔드 응답 형식에 따라 처리
+    // 만약 { data: [...] } 형태면 data를 반환, 아니면 직접 배열 반환
+    const data = response.data?.data || response.data;
+    
+    // 배열인지 확인
+    return Array.isArray(data) ? data : [];
   } catch (error: any) {
     console.error("랜덤 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
