@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Header from "@/components/common/Header";
 import Map from "@/components/map/Map";
 import SearchBar from "@/components/common/SearchBar";
 import CafeCarousel from "@/components/cafes/CafeCarousel";
 import { mockCafes } from "@/data/mockCafes";
+import { getRandomCafes } from "@/lib/api";
 import Footer from "@/components/common/Footer";
 
 const searchPlaceholders = [
@@ -25,6 +27,27 @@ const searchPlaceholders = [
 ];
 
 export default function HomePage() {
+  const [randomCafes, setRandomCafes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 랜덤 카페 조회
+  useEffect(() => {
+    const fetchRandomCafes = async () => {
+      try {
+        const cafes = await getRandomCafes();
+        setRandomCafes(cafes);
+      } catch (error: any) {
+        console.error("랜덤 카페 조회 실패:", error);
+        // API 실패 시 mock 데이터로 fallback
+        setRandomCafes(mockCafes.slice(8, 12));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRandomCafes();
+  }, []);
+
   return (
     <div className="min-h-screen px-4 md:px-8 lg:px-12 xl:px-20">
       <Header />
@@ -52,18 +75,9 @@ export default function HomePage() {
 
       <div>
         <CafeCarousel
-          cafes={mockCafes.slice(8, 12)}
+          cafes={randomCafes.length > 0 ? randomCafes : mockCafes.slice(8, 12)}
           title="이런 카페는 어때요?"
           description="추천 드리는 카페입니다."
-          showAllButton={true}
-        />
-      </div>
-
-      <div>
-        <CafeCarousel
-          cafes={mockCafes.slice(12, 16)}
-          title="---님 맞춤 카페"
-          description="---님, 이런 카페들은 어떤가요? -님의 취향을 반영한 카페들 입니다."
           showAllButton={true}
         />
       </div>

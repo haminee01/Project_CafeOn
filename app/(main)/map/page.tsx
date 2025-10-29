@@ -4,10 +4,16 @@ import { useState, useEffect } from "react";
 import Header from "@/components/common/Header";
 import Map from "@/components/map/Map";
 import { mockCafes } from "@/data/mockCafes";
-import { getWishlist } from "@/lib/api";
+import { getWishlist, getNearbyCafes } from "@/lib/api";
 
 type TabType = "home" | "saved" | "popular";
-type SavedCategoryType = "all" | "hideout" | "work" | "atmosphere" | "taste" | "planned";
+type SavedCategoryType =
+  | "all"
+  | "hideout"
+  | "work"
+  | "atmosphere"
+  | "taste"
+  | "planned";
 
 interface WishlistItem {
   wishlistId: number;
@@ -22,6 +28,8 @@ export default function MapPage() {
   const [savedCategory, setSavedCategory] = useState<SavedCategoryType>("all");
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [nearbyCafes, setNearbyCafes] = useState<any[]>([]);
+  const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
 
   // 카테고리 매핑
   const categoryMap: Record<SavedCategoryType, string> = {
@@ -30,8 +38,35 @@ export default function MapPage() {
     work: "WORK",
     atmosphere: "ATMOSPHERE",
     taste: "TASTE",
-    planned: "PLANNED"
+    planned: "PLANNED",
   };
+
+  // 사용자 위치 가져오기
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ latitude, longitude });
+        },
+        (error) => {
+          console.error("위치 정보를 가져올 수 없습니다:", error);
+          // 기본 위치 (서울 시청)
+          setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+        }
+      );
+    } else {
+      // 기본 위치 (서울 시청)
+      setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+    }
+  }, []);
+
+  // 근처 카페 조회
+  useEffect(() => {
+    if (userLocation && activeTab === "home") {
+      fetchNearbyCafes();
+    }
+  }, [userLocation, activeTab]);
 
   // 위시리스트 조회
   useEffect(() => {
@@ -45,12 +80,29 @@ export default function MapPage() {
     }
   }, [activeTab, savedCategory]);
 
+  const fetchNearbyCafes = async () => {
+    if (!userLocation) return;
+    
+    try {
+      const cafes = await getNearbyCafes({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        radius: 2000, // 2km 반경
+      });
+      setNearbyCafes(cafes);
+    } catch (error: any) {
+      console.error("근처 카페 조회 실패:", error);
+      // API 실패 시 mock 데이터로 fallback
+      setNearbyCafes(mockCafes.slice(0, 10));
+    }
+  };
+
   const fetchWishlist = async () => {
     setLoading(true);
     try {
       const params: any = {
         page: 0,
-        size: 20
+        size: 20,
       };
 
       // "all"이 아닌 경우 카테고리 필터 추가
@@ -63,7 +115,7 @@ export default function MapPage() {
       setWishlistItems(items);
     } catch (error: any) {
       console.error("위시리스트 조회 실패:", error);
-      
+
       // 403 또는 401 에러인 경우 (권한 없음)
       if (error.response?.status === 403 || error.response?.status === 401) {
         console.log("로그인이 필요합니다.");
@@ -71,7 +123,7 @@ export default function MapPage() {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
       }
-      
+
       setWishlistItems([]);
     } finally {
       setLoading(false);
@@ -82,15 +134,24 @@ export default function MapPage() {
   const getSavedCafesByCategory = () => {
     // 위시리스트가 있으면 위시리스트에서 가져오기
     if (wishlistItems.length > 0) {
-      const categoryFilter = savedCategory === "all" 
-        ? wishlistItems 
-        : wishlistItems.filter(item => item.category === categoryMap[savedCategory]);
-      
+      const categoryFilter =
+        savedCategory === "all"
+          ? wishlistItems
+          : wishlistItems.filter(
+              (item) => item.category === categoryMap[savedCategory]
+            );
+
       // 위시리스트 카페를 mockCafes와 매칭
-      return categoryFilter.map(item => {
-        const cafe = mockCafes.find(c => c.cafe_id === item.cafeId.toString());
-        return cafe;
-      }).filter(Boolean) || [];
+      return (
+        categoryFilter
+          .map((item) => {
+            const cafe = mockCafes.find(
+              (c) => c.cafe_id === item.cafeId.toString()
+            );
+            return cafe;
+          })
+          .filter(Boolean) || []
+      );
     }
 
     // 위시리스트가 없으면 mock 데이터
@@ -116,7 +177,7 @@ export default function MapPage() {
   const getCafesByTab = () => {
     switch (activeTab) {
       case "home":
-        return mockCafes; // 선택된 구의 전체 카페 (현재는 모든 카페)
+        return nearbyCafes.length > 0 ? nearbyCafes : mockCafes; // API 데이터 또는 mock 데이터
       case "saved":
         return getSavedCafesByCategory(); // 저장된 카페 (카테고리별)
       case "popular":
@@ -141,7 +202,7 @@ export default function MapPage() {
         <div className="px-4 pt-4 pb-2">
           <h2 className="text-lg font-semibold text-primary">CafeOn.</h2>
         </div>
-        
+
         {/* 저장 탭 하위 카테고리 탭들 - 위쪽에 배치 */}
         {activeTab === "saved" && (
           <div className="px-4 pb-2">
@@ -223,9 +284,18 @@ export default function MapPage() {
               }`}
             >
               <div className="flex flex-col items-center">
-                <svg width="20" height="26" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 0C5.373 0 0 5.373 0 12c0 7.5 12 20 12 20s12-12.5 12-20c0-6.627-5.373-12-12-12z" fill="currentColor"/>
-                  <circle cx="12" cy="12" r="6" fill="white"/>
+                <svg
+                  width="20"
+                  height="26"
+                  viewBox="0 0 24 32"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 0C5.373 0 0 5.373 0 12c0 7.5 12 20 12 20s12-12.5 12-20c0-6.627-5.373-12-12-12z"
+                    fill="currentColor"
+                  />
+                  <circle cx="12" cy="12" r="6" fill="white" />
                 </svg>
                 <span className="text-sm">지도 홈</span>
               </div>
@@ -239,8 +309,17 @@ export default function MapPage() {
               }`}
             >
               <div className="flex flex-col">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    fill="currentColor"
+                  />
                 </svg>
                 <span className="text-sm">저장</span>
               </div>
@@ -254,21 +333,40 @@ export default function MapPage() {
               }`}
             >
               <div className="flex flex-col items-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    fill="currentColor"
+                  />
                 </svg>
                 <span className="text-sm">인기</span>
               </div>
             </button>
           </div>
-          
+
           {/* 카페 카드 리스트 */}
           <div className="space-y-3 flex-1 overflow-y-auto ml-4">
             {/* 로그인 안내 메시지 */}
             {activeTab === "saved" && !isLoggedIn && !loading && (
               <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                <svg className="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                <svg
+                  className="w-16 h-16 text-gray-400 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
                 </svg>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   로그인이 필요합니다
@@ -277,70 +375,102 @@ export default function MapPage() {
                   저장된 카페를 보려면 로그인해주세요
                 </p>
                 <button
-                  onClick={() => window.location.href = "/login"}
+                  onClick={() => (window.location.href = "/login")}
                   className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
                 >
                   로그인하기
                 </button>
               </div>
             )}
-            {loading && <div className="text-center py-4 text-gray-500">로딩 중...</div>}
-            {!loading && activeTab === "saved" && isLoggedIn && wishlistItems.length === 0 && !loading && (
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-2">저장된 카페가 없습니다.</p>
-                <p className="text-sm">카페를 저장하면 여기에 표시됩니다.</p>
-              </div>
+            {loading && (
+              <div className="text-center py-4 text-gray-500">로딩 중...</div>
             )}
-            {!loading && currentCafes.length > 0 && currentCafes.map((cafe) => {
-              if (!cafe) return null;
-              return (
-              <div
-                key={cafe.cafe_id}
-                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selectedCafe === cafe.cafe_id
-                    ? "border-amber-300 bg-amber-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-                onClick={() => setSelectedCafe(cafe.cafe_id)}
-              >
-                <div className="flex gap-3">
-                  {/* 카페 이미지 플레이스홀더 */}
-                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <span className="text-gray-400 text-xs">이미지</span>
-                  </div>
+            {!loading &&
+              activeTab === "saved" &&
+              isLoggedIn &&
+              wishlistItems.length === 0 &&
+              !loading && (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-2">저장된 카페가 없습니다.</p>
+                  <p className="text-sm">카페를 저장하면 여기에 표시됩니다.</p>
+                </div>
+              )}
+            {!loading &&
+              currentCafes.length > 0 &&
+              currentCafes.map((cafe) => {
+                if (!cafe) return null;
+                return (
+                  <div
+                    key={cafe.cafe_id}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      selectedCafe === cafe.cafe_id
+                        ? "border-amber-300 bg-amber-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                    onClick={() => setSelectedCafe(cafe.cafe_id)}
+                  >
+                    <div className="flex gap-3">
+                      {/* 카페 이미지 플레이스홀더 */}
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-400 text-xs">이미지</span>
+                      </div>
 
-                  {/* 카페 정보 */}
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">
-                      {cafe.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {activeTab === "saved" && savedCategory === "hideout" && "나만의 아지트 카페"}
-                      {activeTab === "saved" && savedCategory === "work" && "작업하기 좋은 카페"}
-                      {activeTab === "saved" && savedCategory === "atmosphere" && "분위기 좋은 카페"}
-                      {activeTab === "saved" && savedCategory === "taste" && "커피, 디저트 맛집"}
-                      {activeTab === "saved" && savedCategory === "planned" && "방문예정, 찜한 카페"}
-                      {activeTab === "saved" && savedCategory === "all" && "저장된 카페"}
-                      {activeTab === "home" && "영업 중 리뷰 999+"}
-                      {activeTab === "popular" && "인기 카페 리뷰 999+"}
-                    </p>
-                    <div className="flex gap-2">
-                      <button className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                        {activeTab === "saved" && savedCategory === "hideout" && "🏠 나만의 아지트"}
-                        {activeTab === "saved" && savedCategory === "work" && "💻 작업하기 좋은"}
-                        {activeTab === "saved" && savedCategory === "atmosphere" && "✨ 분위기"}
-                        {activeTab === "saved" && savedCategory === "taste" && "☕ 맛집"}
-                        {activeTab === "saved" && savedCategory === "planned" && "📅 방문예정"}
-                        {activeTab === "saved" && savedCategory === "all" && "💾 저장됨"}
-                        {activeTab === "home" && "베이커리"}
-                        {activeTab === "popular" && "🔥 인기"}
-                      </button>
+                      {/* 카페 정보 */}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">
+                          {cafe.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {activeTab === "saved" &&
+                            savedCategory === "hideout" &&
+                            "나만의 아지트 카페"}
+                          {activeTab === "saved" &&
+                            savedCategory === "work" &&
+                            "작업하기 좋은 카페"}
+                          {activeTab === "saved" &&
+                            savedCategory === "atmosphere" &&
+                            "분위기 좋은 카페"}
+                          {activeTab === "saved" &&
+                            savedCategory === "taste" &&
+                            "커피, 디저트 맛집"}
+                          {activeTab === "saved" &&
+                            savedCategory === "planned" &&
+                            "방문예정, 찜한 카페"}
+                          {activeTab === "saved" &&
+                            savedCategory === "all" &&
+                            "저장된 카페"}
+                          {activeTab === "home" && "영업 중 리뷰 999+"}
+                          {activeTab === "popular" && "인기 카페 리뷰 999+"}
+                        </p>
+                        <div className="flex gap-2">
+                          <button className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                            {activeTab === "saved" &&
+                              savedCategory === "hideout" &&
+                              "🏠 나만의 아지트"}
+                            {activeTab === "saved" &&
+                              savedCategory === "work" &&
+                              "💻 작업하기 좋은"}
+                            {activeTab === "saved" &&
+                              savedCategory === "atmosphere" &&
+                              "✨ 분위기"}
+                            {activeTab === "saved" &&
+                              savedCategory === "taste" &&
+                              "☕ 맛집"}
+                            {activeTab === "saved" &&
+                              savedCategory === "planned" &&
+                              "📅 방문예정"}
+                            {activeTab === "saved" &&
+                              savedCategory === "all" &&
+                              "💾 저장됨"}
+                            {activeTab === "home" && "베이커리"}
+                            {activeTab === "popular" && "🔥 인기"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       </div>
