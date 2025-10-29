@@ -96,10 +96,14 @@ export async function getNearbyCafes(params: {
     });
 
     // 백엔드 응답 형식에 따라 처리
-    const data = response.data?.data || response.data;
+    // nearby API는 { cafes: [...] } 형태일 수도 있음
+    const cafesData = response.data?.cafes || response.data?.data || response.data;
 
-    // 배열인지 확인
-    return Array.isArray(data) ? data : [];
+    // 배열인지 확인하고 변환
+    if (Array.isArray(cafesData)) {
+      return cafesData.map(convertCafeResponseToCafe);
+    }
+    return [];
   } catch (error: any) {
     console.error("근처 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
@@ -108,17 +112,34 @@ export async function getNearbyCafes(params: {
   }
 }
 
+// 백엔드 카페 응답을 프론트엔드 Cafe 타입으로 변환
+function convertCafeResponseToCafe(cafe: any): any {
+  return {
+    cafe_id: String(cafe.cafeId || cafe.cafe_id || ""),
+    name: cafe.name || "",
+    address: cafe.address || "",
+    latitude: cafe.latitude || 0,
+    longitude: cafe.longitude || 0,
+    open_hours: cafe.openHours || cafe.open_hours || "",
+    avg_rating: cafe.avgRating || cafe.avg_rating || 0,
+    created_at: cafe.createdAt || cafe.created_at || "",
+    description: cafe.description || cafe.reviewsSummary || "",
+  };
+}
+
 // 랜덤 카페 10개 조회
 export async function getRandomCafes() {
   try {
     const response = await apiClient.get("/api/cafes/random10");
 
     // 백엔드 응답 형식에 따라 처리
-    // 만약 { data: [...] } 형태면 data를 반환, 아니면 직접 배열 반환
     const data = response.data?.data || response.data;
 
-    // 배열인지 확인
-    return Array.isArray(data) ? data : [];
+    // 배열인지 확인하고 변환
+    if (Array.isArray(data)) {
+      return data.map(convertCafeResponseToCafe);
+    }
+    return [];
   } catch (error: any) {
     console.error("랜덤 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
