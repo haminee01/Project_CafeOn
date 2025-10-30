@@ -25,6 +25,11 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const [searchValue, setSearchValue] = useState(value);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholder);
 
+  // value prop 변경 시 searchValue 동기화
+  useEffect(() => {
+    setSearchValue(value);
+  }, [value]);
+
   // placeholder 애니메이션 효과
   useEffect(() => {
     if (!animatePlaceholder || !placeholders || placeholders.length === 0) {
@@ -66,6 +71,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
+      e.preventDefault();
       handleSearch();
     }
   };

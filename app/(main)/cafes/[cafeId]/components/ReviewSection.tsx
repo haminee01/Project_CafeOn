@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { CafeReview } from "@/data/cafeDetails";
 import Button from "@/components/common/Button";
-import { getCafeReviews, deleteReview, reportReview } from "@/lib/api";
-import apiClient from "@/lib/axios";
+import { getCafeReviews, deleteReview, reportReview, getCafeDetail } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import Toast from "@/components/common/Toast";
 import ReportReviewModal from "@/components/modals/ReportReviewModal";
@@ -84,48 +83,90 @@ export default function ReviewSection({
     type: "success" | "error" | "info";
   } | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [sortBy, setSortBy] = useState<"latest" | "rating-high" | "rating-low" | "likes">("latest");
 
-  // 리뷰 새로고침 함수
-  const refreshReviews = async () => {
-    try {
-      setLoading(true);
-
-      // initialReviews가 있으면 사용
-      if (initialReviews && initialReviews.length > 0) {
-        // API 응답 형식의 리뷰를 프론트엔드 CafeReview 형식으로 변환
-        const transformedReviews: CafeReview[] = initialReviews.map((r: any) => ({
+  // initialReviews 또는 sortBy 변경 시 리뷰 목록 새로고침 및 정렬
+  useEffect(() => {
+    if (initialReviews && initialReviews.length > 0) {
+      // initialReviews가 있으면 변환 수행
+      const transformedReviews: CafeReview[] = initialReviews.map((r: any) => {
+        return {
           id: r.reviewId,
           user: r.reviewerNickname || "익명",
           rating: r.rating,
           content: r.content,
-          date: formatDate(r.createdAt), // 날짜 포맷팅 적용
-          likes: 0, // API에 없으므로 기본값
+          date: formatDate(r.createdAt),
+          likes: 0,
           images: r.images?.map((img: any) => img.publicUrl || img.url) || [],
           reviewerId: r.reviewerId,
-        }));
-        setReviews(transformedReviews);
-      } else {
-        setReviews([]);
-      }
-    } catch (error: any) {
-      console.error("리뷰 새로고침 실패:", error);
+        };
+      });
+
+      // sortBy에 따라 정렬
+      const sortedReviews = [...transformedReviews].sort((a, b) => {
+        switch (sortBy) {
+          case "rating-high":
+            return b.rating - a.rating;
+          case "rating-low":
+            return a.rating - b.rating;
+          case "likes":
+            return b.likes - a.likes;
+          case "latest":
+          default:
+            // 최신순은 날짜 기준 (먼저 날짜 문자열로 정렬, 그 다음 시간)
+            const dateA = new Date(a.date === "오늘" ? new Date() : a.date).getTime();
+            const dateB = new Date(b.date === "오늘" ? new Date() : b.date).getTime();
+            return dateB - dateA;
+        }
+      });
+
+      setReviews(sortedReviews);
+    } else {
       setReviews([]);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  // 리뷰 목록 로드
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialReviews, sortBy]);
+  
+  // refreshTrigger 변경 시 리뷰 목록 새로고침 (강제 API 재호출)
   useEffect(() => {
-    refreshReviews();
-  }, [cafeId, initialReviews]);
-
-  // 리뷰 작성 완료 후 새로고침 (주석 처리 - 백엔드 에러로 인해 임시 비활성화)
-  // useEffect(() => {
-  //   if (refreshTrigger && refreshTrigger > 0) {
-  //     refreshReviews();
-  //   }
-  // }, [refreshTrigger]);
+    if (refreshTrigger && refreshTrigger > 0) {
+      const forceRefreshReviews = async () => {
+        try {
+          setLoading(true);
+          
+          // refreshTrigger가 변경되면 강제로 API에서 다시 가져오기
+          const cafeData = await getCafeDetail(cafeId);
+          const reviewData = cafeData.reviews || [];
+          
+          if (reviewData && reviewData.length > 0) {
+            const transformedReviews: CafeReview[] = reviewData.map((r: any) => {
+              return {
+                id: r.reviewId,
+                user: r.reviewerNickname || "익명",
+                rating: r.rating,
+                content: r.content,
+                date: formatDate(r.createdAt),
+                likes: 0,
+                images: r.images?.map((img: any) => img.publicUrl || img.url) || [],
+                reviewerId: r.reviewerId,
+              };
+            });
+            setReviews(transformedReviews);
+          } else {
+            setReviews([]);
+          }
+        } catch (error: any) {
+          console.error("리뷰 새로고침 실패:", error);
+          // 에러가 발생해도 기존 리뷰는 유지
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      forceRefreshReviews();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]);
 
   const toggleMenu = (reviewId: number, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -136,13 +177,28 @@ export default function ReviewSection({
   const isMyReview = (review: CafeReview) => {
     if (!user || !isAuthenticated) return false;
 
+    // JWT 토큰에서 userId 추출 (user.userId가 없을 경우 대비)
+    let currentUserId = user.userId;
+    
+    // user.userId가 비어 있으면 JWT에서 추출 시도
+    if (!currentUserId) {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          currentUserId = payload.sub || "";
+        }
+      } catch (e) {
+        console.error("JWT 파싱 실패:", e);
+      }
+    }
+
     // reviewerId가 있으면 사용자 ID로 비교
     if (review.reviewerId) {
-      return user.userId === review.reviewerId;
+      return currentUserId === review.reviewerId;
     }
 
     // reviewerId가 없으면 false 반환 (안전한 기본값)
-    // 실제로는 백엔드에서 사용자 ID를 제공해야 함
     return false;
   };
 
@@ -255,9 +311,45 @@ export default function ReviewSection({
   return (
     <div className="py-12" onClick={handleClickOutside}>
       <div className="max-w-6xl mx-auto px-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-          리뷰 모아보기
-        </h2>
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">
+            리뷰 모아보기
+          </h2>
+          
+          {/* 정렬 버튼 */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSortBy("latest")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                sortBy === "latest"
+                  ? "bg-primary text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              최신순
+            </button>
+            <button
+              onClick={() => setSortBy("rating-high")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                sortBy === "rating-high"
+                  ? "bg-primary text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              평점 높은순
+            </button>
+            <button
+              onClick={() => setSortBy("rating-low")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                sortBy === "rating-low"
+                  ? "bg-primary text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              평점 낮은순
+            </button>
+          </div>
+        </div>
 
         {reviews.length === 0 ? (
           <div className="text-center py-12">

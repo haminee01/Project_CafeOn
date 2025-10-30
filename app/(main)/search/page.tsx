@@ -3,29 +3,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Header from "@/components/common/Header";
-import { mockCafes } from "@/data/mockCafes";
 import { Cafe } from "@/types/cafe";
 import SearchBar from "@/components/common/SearchBar";
 import CategoryFilter from "app/(main)/search/components/CategoryFilter";
 import CafeGrid from "@/components/cafes/CafeGrid";
 import Pagination from "@/components/common/Pagination";
 import Footer from "@/components/common/Footer";
-
-
-const categories = [
-  "분위기",
-  "포토스팟",
-  "공부",
-  "데이트",
-  "혼자",
-  "반려동물",
-  "디저트 맛집",
-  "브런치",
-  "야경",
-  "테라스",
-  "북카페",
-  "원두 로스터리",
-];
+import { searchCafes } from "@/lib/api";
 
 // 반응형 아이템 수 설정
 const getItemsPerPage = () => {
@@ -44,16 +28,36 @@ export default function SearchResultsPage() {
   const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [itemsPerPage, setItemsPerPage] = useState(8); // 반응형 아이템 수
+  const [cafes, setCafes] = useState<Cafe[]>([]);
+  const [loading, setLoading] = useState(true); // 초기 로딩 상태를 true로 설정
 
   // URL 파라미터에서 검색어 가져오기
   useEffect(() => {
-    const query = searchParams.get("q");
-    if (query) {
+    const query = searchParams.get("q") || "";
+    if (query !== searchQuery) {
       setSearchQuery(query);
     }
   }, [searchParams]);
+
+  // 검색어 변경 시 API 호출 (초기 로드 포함)
+  useEffect(() => {
+    const fetchCafes = async () => {
+      setLoading(true);
+      try {
+        const results = await searchCafes(searchQuery);
+        setCafes(results);
+      } catch (error: any) {
+        console.error("카페 검색 실패:", error);
+        setCafes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCafes();
+  }, [searchQuery]);
 
   // 화면 크기 변화 감지하여 아이템 수 업데이트
   useEffect(() => {
@@ -73,29 +77,13 @@ export default function SearchResultsPage() {
     };
   }, []);
 
-  // 필터링된 카페 목록
+  // 태그 필터링 적용
   const filteredCafes = useMemo(() => {
-    let filtered = [...mockCafes];
-
-    // 1. 검색어 필터링 (검색어가 있으면)
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(
-        (cafe) =>
-          cafe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          cafe.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    if (!selectedCategory) {
+      return cafes;
     }
-
-    // 2. 카테고리 필터링 (카테고리가 선택되어 있으면)
-    if (selectedCategory) {
-      const categoryIndex = categories.indexOf(selectedCategory);
-      filtered = filtered.filter(
-        (_, index) => index % categories.length === categoryIndex
-      );
-    }
-
-    return filtered;
-  }, [selectedCategory, searchQuery]);
+    return cafes.filter((cafe) => cafe.tags && cafe.tags.includes(selectedCategory));
+  }, [cafes, selectedCategory]);
 
   // 페이지네이션
   const totalPages = Math.ceil(filteredCafes.length / itemsPerPage);
@@ -117,6 +105,24 @@ export default function SearchResultsPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedCafes = filteredCafes.slice(startIndex, endIndex);
+
+  // 검색된 카페들의 태그 중복 제거 및 정렬 (원본 카페 목록 기준)
+  const availableTags = useMemo(() => {
+    // 모든 카페들의 태그 수집 (필터링 전 원본 카페 목록)
+    const allTags = cafes.flatMap((cafe) => cafe.tags || []);
+    
+    // 태그별 개수 계산
+    const tagCounts = new Map<string, number>();
+    allTags.forEach((tag) => {
+      tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+    });
+    
+    // 개수가 많은 순으로 정렬하고 상위 10개만 반환
+    return Array.from(tagCounts.entries())
+      .sort((a, b) => b[1] - a[1]) // 개수가 많은 순
+      .slice(0, 10) // 상위 10개만
+      .map(([tag]) => tag);
+  }, [cafes]);
 
   const handleCategoryChange = (category: string) => {
     // 같은 카테고리를 클릭하면 해제, 다른 카테고리를 클릭하면 선택
@@ -154,34 +160,42 @@ export default function SearchResultsPage() {
       />
 
       <div className="container mx-auto px-4">
-        {/* 카테고리 필터 - 항상 표시 */}
-        <div className="mb-8 flex justify-center">
-          <CategoryFilter
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onCategoryChange={handleCategoryChange}
-          />
-        </div>
+        {/* 카테고리 필터 - 검색 결과의 태그 표시 */}
+        {availableTags.length > 0 && (
+          <div className="mb-8 flex justify-center">
+            <CategoryFilter
+              categories={availableTags}
+              selectedCategory={selectedCategory}
+              onCategoryChange={handleCategoryChange}
+            />
+          </div>
+        )}
         {/* 카페 그리드 */}
-        <div>
-          <CafeGrid
-            cafes={paginatedCafes}
-            columns={
-              itemsPerPage >= 16
-                ? 4
-                : itemsPerPage >= 12
-                ? 4
-                : itemsPerPage >= 8
-                ? 4
-                : itemsPerPage >= 6
-                ? 3
-                : itemsPerPage >= 4
-                ? 2
-                : 2
-            }
-            className="mb-2"
-          />
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="text-lg text-gray-600">검색 중...</div>
+          </div>
+        ) : (
+          <div>
+            <CafeGrid
+              cafes={paginatedCafes}
+              columns={
+                itemsPerPage >= 16
+                  ? 4
+                  : itemsPerPage >= 12
+                  ? 4
+                  : itemsPerPage >= 8
+                  ? 4
+                  : itemsPerPage >= 6
+                  ? 3
+                  : itemsPerPage >= 4
+                  ? 2
+                  : 2
+              }
+              className="mb-2"
+            />
+          </div>
+        )}
 
         {/* 페이지네이션 */}
         {totalPages > 1 && (

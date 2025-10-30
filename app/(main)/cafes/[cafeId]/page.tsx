@@ -4,7 +4,7 @@ import { useState, use, useEffect } from "react";
 import Header from "@/components/common/Header";
 import { mockCafes } from "@/data/mockCafes";
 import { createCafeDetail, getSimilarCafes } from "@/data/cafeUtils";
-import { getCafeDetail } from "@/lib/api";
+import { getCafeDetail, getRandomCafes } from "@/lib/api";
 import CafeInfoSection from "app/(main)/cafes/[cafeId]/components/CafeInfoSection";
 import CafeFeaturesSection from "app/(main)/cafes/[cafeId]/components/CafeFeaturesSection";
 import ReviewSection from "app/(main)/cafes/[cafeId]/components/ReviewSection";
@@ -39,6 +39,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   const [cafe, setCafe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [similarCafes, setSimilarCafes] = useState<any[]>([]);
 
   // 카페 상세 정보 로드
   useEffect(() => {
@@ -96,6 +97,21 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
 
     fetchCafeDetail();
   }, [resolvedParams.cafeId]);
+
+  // 랜덤 카페 조회 (유사 카페 섹션용)
+  useEffect(() => {
+    const fetchRandomCafes = async () => {
+      try {
+        const cafes = await getRandomCafes();
+        setSimilarCafes(Array.isArray(cafes) ? cafes : []);
+      } catch (error: any) {
+        console.error("랜덤 카페 조회 실패:", error);
+        setSimilarCafes([]);
+      }
+    };
+
+    fetchRandomCafes();
+  }, []);
 
   // ESC 키 이벤트 처리
   useEscapeKey(() => {
@@ -188,7 +204,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       />
 
       {/* 유사 카페 추천 섹션 */}
-      <SimilarCafesSection similarCafes={mockCafes.slice(0, 4)} />
+      <SimilarCafesSection similarCafes={similarCafes} />
 
       {/* 모달들 */}
       {showShareModal && (

@@ -80,6 +80,35 @@ export async function getAllCafes() {
   }
 }
 
+// 카페 검색
+export async function searchCafes(query?: string) {
+  try {
+    // 항상 전체 카페를 가져온 후 클라이언트에서 필터링 (Kakao API 검색이 불안정)
+    const allResponse = await apiClient.get("/api/cafes/search");
+    const allCafes = allResponse.data?.cafes || allResponse.data?.data || allResponse.data;
+    
+    if (Array.isArray(allCafes)) {
+      if (query) {
+        // 검색어로 필터링 (대소문자 구분 없음)
+        const lowerQuery = query.toLowerCase();
+        const filtered = allCafes.filter((cafe: any) => {
+          const name = (cafe.name || "").toLowerCase();
+          const address = (cafe.address || "").toLowerCase();
+          return name.includes(lowerQuery) || address.includes(lowerQuery);
+        });
+        return filtered.map(convertCafeResponseToCafe);
+      } else {
+        // 전체 카페 반환
+        return allCafes.map(convertCafeResponseToCafe);
+      }
+    }
+    return [];
+  } catch (error: any) {
+    console.error("카페 검색 실패:", error);
+    throw new Error(error.message || "카페 검색 실패");
+  }
+}
+
 // 카페 상세 정보 조회
 export async function getCafeDetail(cafeId: string) {
   try {
@@ -135,6 +164,7 @@ function convertCafeResponseToCafe(cafe: any): any {
     avg_rating: cafe.avgRating || cafe.avg_rating || 0,
     created_at: cafe.createdAt || cafe.created_at || "",
     description: cafe.description || cafe.reviewsSummary || "",
+    tags: Array.isArray(cafe.tags) ? cafe.tags : [],
   };
 }
 
@@ -163,11 +193,16 @@ export async function getRandomCafes() {
 
 // ==================== Review API ====================
 
-// 카페별 리뷰 목록 조회 (현재는 카페 상세 정보에 포함되어 있음)
-export async function getCafeReviews(cafeId: string) {
+// 카페별 리뷰 목록 조회
+export async function getCafeReviews(
+  cafeId: string,
+  sort: "latest" | "rating-high" | "rating-low" | "likes" = "latest"
+) {
   try {
-    const response = await apiClient.get(`/api/cafes/${cafeId}/reviews`);
-    return response.data || [];
+    const response = await apiClient.get(`/api/cafes/${cafeId}/reviews`, {
+      params: { sort },
+    });
+    return response.data || { reviews: [], count: 0 };
   } catch (error: any) {
     console.error("카페 리뷰 목록 조회 실패:", error);
     throw new Error(error.message || "리뷰 목록 조회 실패");

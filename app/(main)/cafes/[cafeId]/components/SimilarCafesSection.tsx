@@ -54,17 +54,9 @@ export default function SimilarCafesSection({ similarCafes }: SimilarCafesSectio
         </div>
 
         <div className="overflow-hidden">
-          <div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 transition-transform duration-300 ease-in-out"
-            style={{ 
-              transform: `translateX(-${(currentIndex * 100) / itemsPerPage}%)`,
-              width: `${(similarCafes.length * 100) / itemsPerPage}%`
-            }}
-          >
-            {similarCafes.map((cafe) => (
-              <div key={cafe.cafe_id} className="w-full flex-shrink-0">
-                <CafeCard cafe={cafe} />
-              </div>
+          <div className="grid grid-cols-4 gap-4 transition-transform duration-300 ease-in-out">
+            {similarCafes.slice(currentIndex, currentIndex + itemsPerPage).map((cafe) => (
+              <CafeCard key={cafe.cafe_id} cafe={cafe} />
             ))}
           </div>
         </div>

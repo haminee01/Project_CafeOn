@@ -8,4 +8,5 @@ export interface Cafe {
     avg_rating: number;
     created_at: string;
     description: string;
+    tags?: string[];
 }

@@ -35,6 +35,7 @@ export default function HomePage() {
     const fetchRandomCafes = async () => {
       try {
         const cafes = await getRandomCafes();
+        console.log("랜덤 카페 API 응답:", cafes);
         setRandomCafes(Array.isArray(cafes) ? cafes : []);
       } catch (error: any) {
         console.error("랜덤 카페 조회 실패:", error);

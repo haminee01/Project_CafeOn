@@ -192,7 +192,13 @@ export default function ReviewWriteModal({
             <textarea
               value={reviewContent}
               onChange={(e) => setReviewContent(e.target.value)}
-              placeholder="카페에 대한 솔직한 리뷰를 작성해주세요..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder="카페에 대한 솔직한 리뷰를 작성해주세요... (Ctrl/Cmd + Enter로 제출)"
               className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none"
             />
           </div>
