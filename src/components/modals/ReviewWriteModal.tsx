@@ -41,14 +41,7 @@ export default function ReviewWriteModal({
   } | null>(null);
 
   const handleSubmit = async () => {
-    if (!isAuthenticated) {
-      setToast({
-        message: "로그인이 필요한 서비스입니다.",
-        type: "error",
-      });
-      return;
-    }
-
+    // 로그인 체크는 모달 열기 전에 이미 처리되었으므로 여기서는 불필요
     if (!reviewContent.trim()) {
       setToast({
         message: "리뷰 내용을 입력해주세요.",
@@ -141,26 +134,7 @@ export default function ReviewWriteModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-        <div className="flex justify-between items-center mb-6">
-          {/* 사용자 정보 */}
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-gray-500"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <span className="font-bold text-gray-900">
-              {isEditMode ? editReview?.user : user?.nickname || "사용자"}
-            </span>
-          </div>
+        <div className="flex justify-end items-center mb-6">
           <Button
             onClick={onClose}
             color="gray"

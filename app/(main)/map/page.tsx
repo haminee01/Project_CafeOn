@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/common/Header";
 import Map from "@/components/map/Map";
 import { mockCafes } from "@/data/mockCafes";
@@ -23,6 +24,7 @@ interface WishlistItem {
 }
 
 export default function MapPage() {
+  const router = useRouter();
   const [selectedCafe, setSelectedCafe] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [savedCategory, setSavedCategory] = useState<SavedCategoryType>("all");
@@ -409,6 +411,16 @@ export default function MapPage() {
               currentCafes.length > 0 &&
               currentCafes.map((cafe) => {
                 if (!cafe) return null;
+                
+                // 카페 ID 확인 (API 데이터의 경우 cafeId, mock 데이터의 경우 cafe_id)
+                const cafeId = cafe.cafeId || cafe.cafe_id;
+                
+                const handleCardClick = () => {
+                  if (cafeId) {
+                    router.push(`/cafes/${cafeId}`);
+                  }
+                };
+                
                 return (
                   <div
                     key={cafe.cafe_id}
@@ -417,7 +429,7 @@ export default function MapPage() {
                         ? "border-amber-300 bg-amber-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
-                    onClick={() => setSelectedCafe(cafe.cafe_id)}
+                    onClick={handleCardClick}
                   >
                     <div className="flex gap-3">
                       {/* 카페 이미지 플레이스홀더 */}

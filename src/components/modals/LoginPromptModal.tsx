@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface LoginPromptModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ export default function LoginPromptModal({
   onClose,
   message = "로그인 후 기능을 이용할 수 있습니다.",
 }: LoginPromptModalProps) {
+  const pathname = usePathname();
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
@@ -64,14 +66,14 @@ export default function LoginPromptModal({
         {/* 버튼들 */}
         <div className="space-y-3">
           <Link
-            href="/login"
+            href={`/login?redirect=${encodeURIComponent(pathname)}`}
             className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center"
             onClick={onClose}
           >
             로그인하기
           </Link>
           <Link
-            href="/signup"
+            href={`/signup?redirect=${encodeURIComponent(pathname)}`}
             className="w-full border border-primary text-primary py-3 rounded-lg font-medium hover:bg-primary/5 transition-colors flex items-center justify-center"
             onClick={onClose}
           >

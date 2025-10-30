@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 import Header from "@/components/common/Header";
@@ -36,6 +36,8 @@ interface SignupStep {
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get("redirect");
   const { login: authLogin } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
@@ -362,8 +364,8 @@ export default function SignupPage() {
         // AuthContext의 login 함수 호출
         authLogin(token, refreshToken, userData);
 
-        // 홈으로 리다이렉트
-        router.push("/");
+        // redirect 파라미터가 있으면 그 경로로, 없으면 홈으로
+        router.push(redirectPath || "/");
       }
     } catch (error: any) {
       console.error("회원가입/로그인 실패:", error);

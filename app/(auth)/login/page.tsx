@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { login as loginAPI, requestPasswordReset } from "@/lib/api";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get("redirect");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -68,7 +70,8 @@ export default function LoginPage() {
           router.push("/admin");
         } else {
           console.log("일반 사용자로 리다이렉트");
-          router.push("/");
+          // redirect 파라미터가 있으면 그 경로로, 없으면 홈으로
+          router.push(redirectPath || "/");
         }
       }
     } catch (err: any) {

@@ -27,19 +27,53 @@ export default function CafeInfoSection({
 }: CafeInfoSectionProps) {
   const { isAuthenticated } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showHoursDetail, setShowHoursDetail] = useState<boolean>(false);
+  // 상세 시간 토글은 사용하지 않음 (백엔드에서 추가 정보 미제공)
+  const [showHoursDetail] = useState<boolean>(false);
   const [showWishlistModal, setShowWishlistModal] = useState(false);
   const [wishlistCategories, setWishlistCategories] = useState<string[]>([]);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  // 긴 설명 더보기 토글
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const DESCRIPTION_LIMIT = 100; // 글자수 제한
+  
+  // 운영시간 토글
+  const [showFullHours, setShowFullHours] = useState(false);
+  
+  // 운영시간 파싱 함수
+  const parseHours = (hoursStr: string) => {
+    if (!hoursStr) return { lines: [], firstLine: "", currentDayLine: "" };
+    const lines = hoursStr.split('\n').filter(line => line.trim());
+    
+    // 오늘 요일 찾기
+    const today = new Date().getDay(); // 0: 일, 1: 월, 2: 화, ..., 6: 토
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const todayName = dayNames[today];
+    
+    // 오늘 요일에 해당하는 라인 찾기
+    let currentDayLine = "";
+    const regex = new RegExp(`^${todayName}\\s`);
+    for (const line of lines) {
+      if (regex.test(line)) {
+        currentDayLine = line;
+        break;
+      }
+    }
+    
+    return {
+      lines,
+      firstLine: lines[0] || "",
+      currentDayLine: currentDayLine || lines[0] || ""
+    };
+  };
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % cafe.images.length);
+    setCurrentImageIndex((prev) => (prev + 1) % (cafe.images?.length || 1));
   };
 
   const prevImage = () => {
     setCurrentImageIndex(
-      (prev) => (prev - 1 + cafe.images.length) % cafe.images.length
+      (prev) => (prev - 1 + (cafe.images?.length || 1)) % (cafe.images?.length || 1)
     );
   };
 
@@ -176,7 +210,7 @@ export default function CafeInfoSection({
               {cafe.name}
             </h1>
             <p className="text-lg text-gray-600 mb-4">{cafe.slogan}</p>
-            <p className="text-gray-700 leading-relaxed">{cafe.description}</p>
+
           </div>
 
           {/* 위치 정보 */}
@@ -203,96 +237,60 @@ export default function CafeInfoSection({
             </div>
 
             {/* 연락처 */}
-            <div className="flex items-center gap-3">
-              <div className="w-5 h-5 flex-shrink-0">
-                <svg
-                  className="w-full h-full text-primary"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-              </div>
-              <span className="text-gray-900 underline">{cafe.phone}</span>
-            </div>
-
-            {/* 영업시간 */}
-            <div className="flex items-center gap-3">
-              <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-gray-900">{cafe.hoursDetail.status}</span>
-                {cafe.hoursDetail.lastOrder && (
-                  <span className="text-gray-900 ml-2">
-                    {cafe.hoursDetail.lastOrder} 라스트오더
-                  </span>
-                )}
-                <Button
-                  onClick={() => {
-                    setShowHoursDetail((prev) => !prev);
-                  }}
-                  color="gray"
-                  size="sm"
-                  className="flex-shrink-0 p-1 min-w-0 bg-transparent"
-                  type="button"
-                >
-                  <span
-                    className={`inline-block transform transition-transform duration-200 ${
-                      showHoursDetail ? "rotate-180" : "rotate-0"
-                    }`}
+            {cafe.phone && (
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 flex-shrink-0">
+                  <svg
+                    className="w-full h-full text-primary"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
                   >
-                    ▲
-                  </span>
-                </Button>
-              </div>
-            </div>
-
-            {/* 영업시간 상세 정보 토글 */}
-            {showHoursDetail && (
-              <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 animate-in slide-in-from-top-2 duration-200">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">상태:</span>
-                    <span
-                      className={`font-medium ${
-                        cafe.hoursDetail.status === "영업 중"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {cafe.hoursDetail.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">운영시간:</span>
-                    <span className="text-gray-900">
-                      {cafe.hoursDetail.fullHours}
-                    </span>
-                  </div>
-                  {cafe.hoursDetail.lastOrder && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">라스트오더:</span>
-                      <span className="text-gray-900">
-                        {cafe.hoursDetail.lastOrder}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">브레이크타임:</span>
-                    <span className="text-gray-900">
-                      {cafe.hoursDetail.breakTime}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">휴무일:</span>
-                    <span className="text-gray-900">
-                      {cafe.hoursDetail.closedDays}
-                    </span>
-                  </div>
+                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                  </svg>
                 </div>
+                <a href={`tel:${cafe.phone}`} className="text-gray-900 underline">
+                  {cafe.phone}
+                </a>
               </div>
             )}
+
+            {/* 영업시간 (백엔드에서 추가 세부정보 미제공 → 단순 표시) */}
+            {cafe.hoursDetail?.fullHours && (() => {
+              const { lines, currentDayLine } = parseHours(cafe.hoursDetail.fullHours);
+              const hasMultipleLines = lines.length > 1;
+              
+              return (
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+                    <div className="w-3 h-3 bg-primary rounded-full"></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="space-y-1">
+                      <span className="text-gray-600">운영시간:</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-gray-900 font-medium">{currentDayLine}</span>
+                        {hasMultipleLines && (
+                          <>
+                            {showFullHours && lines.map((line, idx) => (
+                              <span key={idx} className={`text-gray-900 ${line === currentDayLine ? 'font-medium underline underline-offset-2' : ''}`}>
+                                {line}
+                              </span>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setShowFullHours(!showFullHours)}
+                              className="text-primary text-sm underline underline-offset-2 text-left"
+                            >
+                              {showFullHours ? "접기" : "더보기"}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* 액션 버튼 */}
