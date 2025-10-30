@@ -1,15 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { mockCafes } from "@/data/mockCafes";
 import Pagination from "@/components/common/Pagination";
 import SearchBar from "@/components/common/SearchBar";
+import { getAllCafes } from "@/lib/api";
 
 export default function AdminCafesPage() {
-  const [cafes] = useState(mockCafes);
+  const [cafes, setCafes] = useState(mockCafes);
   const [filteredCafes, setFilteredCafes] = useState(mockCafes);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  // API에서 전체 카페 데이터 조회
+  useEffect(() => {
+    const fetchCafes = async () => {
+      try {
+        setLoading(true);
+        const cafeData = await getAllCafes();
+        
+        // API 응답 변환 (백엔드 CafeDTO 형식에 맞춤)
+        if (Array.isArray(cafeData) && cafeData.length > 0) {
+          const transformedCafes = cafeData.map((cafe: any) => ({
+            cafe_id: String(cafe.cafeId || ""),
+            name: cafe.name || "",
+            address: cafe.address || "",
+            description: cafe.description || cafe.reviewsSummary || "",
+            avg_rating: cafe.avgRating || 0,
+            latitude: cafe.latitude || 0,
+            longitude: cafe.longitude || 0,
+          }));
+          setCafes(transformedCafes);
+          setFilteredCafes(transformedCafes);
+        }
+      } catch (error) {
+        console.error("카페 데이터 로드 실패:", error);
+        // API 실패 시 mock 데이터 유지
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCafes();
+  }, []);
   
   const itemsPerPage = 12;
   const totalPages = Math.ceil(filteredCafes.length / itemsPerPage);
@@ -64,6 +98,11 @@ export default function AdminCafesPage() {
       </div>
 
       {/* 카페 그리드 - 한 줄에 4개씩 */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600">카페 데이터를 불러오는 중...</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {currentCafes.map((cafe) => (
           <div key={cafe.cafe_id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -89,6 +128,7 @@ export default function AdminCafesPage() {
           </div>
         ))}
       </div>
+      )}
 
       {/* 페이지네이션 */}
       <Pagination

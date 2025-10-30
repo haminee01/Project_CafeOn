@@ -3,14 +3,14 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { seoulDistricts } from "@/data/seoulDistricts";
-import { mockCafes } from "@/data/mockCafes";
 import { Cafe } from "@/types/cafe";
 
 interface MapProps {
   className?: string;
+  cafes?: any[]; // 맵에 표시할 카페 목록
 }
 
-function Map({ className = "" }: MapProps) {
+function Map({ className = "", cafes = [] }: MapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -177,10 +177,31 @@ function Map({ className = "" }: MapProps) {
           }
         }, 250);
 
-        // 4. 카페 마커 추가 및 이벤트 등록
-        const cafes = mockCafes;
-
-        cafes.forEach((cafe) => {
+        // 마커 추가 함수를 별도로 정의
+        const addMarkers = (cafeList: any[]) => {
+          cafeList.forEach((cafe) => {
+          // 카페 ID 확인 (API 데이터의 경우 cafeId, mock 데이터의 경우 cafe_id)
+          const cafeId = cafe.cafeId || cafe.cafe_id || "";
+          
+          // 오늘 요일의 영업시간 추출
+          let todayHours = "정보 없음";
+          if (cafe.open_hours) {
+            const lines = cafe.open_hours.split('\n').filter((line: string) => line.trim());
+            const today = new Date().getDay();
+            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+            const todayName = dayNames[today];
+            const regex = new RegExp(`^${todayName}\\s`);
+            for (const line of lines) {
+              if (regex.test(line)) {
+                todayHours = line;
+                break;
+              }
+            }
+            if (todayHours === "정보 없음" && lines.length > 0) {
+              todayHours = lines[0];
+            }
+          }
+          
           const marker = new (window as any).google.maps.Marker({
             position: { lat: cafe.latitude, lng: cafe.longitude },
             map: map,
@@ -202,7 +223,7 @@ function Map({ className = "" }: MapProps) {
             disableAutoPan: true,
             content: `
                <div 
-                 id="info-window-${cafe.cafe_id}"
+                 id="info-window-${cafeId}"
                  style="
                    min-width: 180px; 
                    padding: 8px; 
@@ -253,16 +274,14 @@ function Map({ className = "" }: MapProps) {
                      </span>
                    </div>
                    
-                   <div style="display: flex; align-items: center; gap: 6px;">
-                     <span style="color: #6E4213; font-size: 14px;">🕒</span>
-                     <span style="color: #374151; font-size: 13px;">${
-                       cafe.open_hours || "정보 없음"
-                     }</span>
-                   </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: #6E4213; font-size: 14px;">🕒</span>
+                    <span style="color: #374151; font-size: 13px;">${todayHours}</span>
+                  </div>
                  </div>
                  
-                 <button 
-                   id="cafe-detail-btn-${cafe.cafe_id}"
+                <button 
+                  id="cafe-detail-btn-${cafeId}"
                    style="
                      width: 100%; 
                      padding: 12px 16px; 
@@ -306,11 +325,11 @@ function Map({ className = "" }: MapProps) {
             // 인포윈도우 내 버튼 클릭 이벤트 등록
             setTimeout(() => {
               const detailButton = document.getElementById(
-                `cafe-detail-btn-${cafe.cafe_id}`
+                `cafe-detail-btn-${cafeId}`
               );
               if (detailButton) {
                 detailButton.addEventListener("click", () => {
-                  router.push(`/cafes/${cafe.cafe_id}`);
+                  router.push(`/cafes/${cafeId}`);
                 });
               }
             }, 100);
@@ -334,11 +353,11 @@ function Map({ className = "" }: MapProps) {
             // 인포윈도우 내 버튼 클릭 이벤트 등록
             setTimeout(() => {
               const detailButton = document.getElementById(
-                `cafe-detail-btn-${cafe.cafe_id}`
+                `cafe-detail-btn-${cafeId}`
               );
               if (detailButton) {
                 detailButton.addEventListener("click", () => {
-                  router.push(`/cafes/${cafe.cafe_id}`);
+                  router.push(`/cafes/${cafeId}`);
                 });
               }
             }, 100);
@@ -348,8 +367,10 @@ function Map({ className = "" }: MapProps) {
           markersRef.current.push(marker);
           infoWindowsRef.current.push(infoWindow);
         });
+        };
 
-        // 마우스 위치 추적 제거 - 복잡한 좌표 변환 대신 간단한 플래그 방식 사용
+        // 지도 생성 시 마커 추가
+        addMarkers(cafes);
 
         // 지도 클릭 시 모든 인포윈도우 닫기 및 맵 페이지로 이동
         map.addListener("click", () => {
@@ -374,6 +395,124 @@ function Map({ className = "" }: MapProps) {
       setIsMounted(false);
     };
   }, [isApiLoaded, randomDistrict]);
+
+  // cafes 변경 시 마커 업데이트
+  useEffect(() => {
+    if (!isMounted || !mapInstance.current) return;
+    
+    // 기존 마커 제거
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+    infoWindowsRef.current.forEach((iw) => iw.close());
+    infoWindowsRef.current = [];
+    
+    // 새 마커 추가
+    const addMarkers = (cafeList: any[]) => {
+      cafeList.forEach((cafe) => {
+        const cafeId = cafe.cafeId || cafe.cafe_id || "";
+        
+        if (!cafe.latitude || !cafe.longitude) return;
+        
+        // 오늘 요일의 영업시간 추출
+        let todayHours = "정보 없음";
+        if (cafe.open_hours) {
+          const lines = cafe.open_hours.split('\n').filter((line: string) => line.trim());
+          const today = new Date().getDay();
+          const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+          const todayName = dayNames[today];
+          const regex = new RegExp(`^${todayName}\\s`);
+          for (const line of lines) {
+            if (regex.test(line)) {
+              todayHours = line;
+              break;
+            }
+          }
+          if (todayHours === "정보 없음" && lines.length > 0) {
+            todayHours = lines[0];
+          }
+        }
+        
+        const marker = new (window as any).google.maps.Marker({
+          position: { lat: cafe.latitude, lng: cafe.longitude },
+          map: mapInstance.current,
+          title: cafe.name,
+          icon: {
+            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+              <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 7.5 12 20 12 20s12-12.5 12-20c0-6.627-5.373-12-12-12z" fill="#6E4213"/>
+                <circle cx="12" cy="12" r="6" fill="white"/>
+              </svg>
+            `)}`,
+            scaledSize: new (window as any).google.maps.Size(24, 32),
+            anchor: new (window as any).google.maps.Point(12, 32),
+          },
+        });
+
+        const infoWindow = new (window as any).google.maps.InfoWindow({
+          disableAutoPan: true,
+          content: `
+            <div id="info-window-${cafeId}" style="min-width: 180px; padding: 8px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); outline: none; border: none;">
+              <div style="margin-bottom: 12px;">
+                <h3 style="color: #6E4213; font-size: 15px; font-weight: 700; margin: 0; line-height: 1.3;">${cafe.name}</h3>
+              </div>
+              <div style="margin-bottom: 16px;">
+                <div style="margin-bottom: 8px; display: flex; align-items: flex-start; gap: 6px;">
+                  <span style="color: #6E4213; font-size: 14px; margin-top: 1px;">📍</span>
+                  <span style="color: #374151; font-size: 13px; line-height: 1.4;">${cafe.address}</span>
+                </div>
+                <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                  <span style="color: #6E4213; font-size: 14px;">⭐</span>
+                  <span style="color: #374151; font-size: 13px; font-weight: 500;">
+                    평점: <span style="color: #C19B6C; font-weight: 600;">${cafe.avg_rating || "정보 없음"}</span>
+                  </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="color: #6E4213; font-size: 14px;">🕒</span>
+                  <span style="color: #374151; font-size: 13px;">${todayHours}</span>
+                </div>
+              </div>
+              <button id="cafe-detail-btn-${cafeId}" style="width: 100%; padding: 12px 16px; background: #6E4213; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(110, 66, 19, 0.2); outline: none;">
+                궁금해요
+              </button>
+            </div>
+          `,
+        });
+        
+        marker.addListener("mouseover", () => {
+          infoWindowsRef.current.forEach((iw) => iw.close());
+          infoWindow.open(mapInstance.current, marker);
+          (window as any).currentInfoWindow = infoWindow;
+          setTimeout(() => {
+            const detailButton = document.getElementById(`cafe-detail-btn-${cafeId}`);
+            if (detailButton) {
+              detailButton.addEventListener("click", () => {
+                router.push(`/cafes/${cafeId}`);
+              });
+            }
+          }, 100);
+        });
+        
+        marker.addListener("click", () => {
+          infoWindowsRef.current.forEach((iw) => iw.close());
+          infoWindow.open(mapInstance.current, marker);
+          (window as any).currentInfoWindow = infoWindow;
+          setTimeout(() => {
+            const detailButton = document.getElementById(`cafe-detail-btn-${cafeId}`);
+            if (detailButton) {
+              detailButton.addEventListener("click", () => {
+                router.push(`/cafes/${cafeId}`);
+              });
+            }
+          }, 100);
+        });
+        
+        markersRef.current.push(marker);
+        infoWindowsRef.current.push(infoWindow);
+      });
+    };
+    
+    addMarkers(cafes);
+  }, [cafes, isMounted, router]);
 
   return (
     <div className={`relative ${className}`}>

@@ -38,7 +38,9 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, className = "" }) => {
         </h3>
 
         <div className="flex items-center gap-2">
-          <p className="text-base text-gray-600 line-clamp-1">description</p>
+          <p className="text-base text-gray-600 line-clamp-1">
+            {cafe.description || ""}
+          </p>
         </div>
       </div>
     </div>

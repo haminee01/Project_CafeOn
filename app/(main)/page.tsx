@@ -35,17 +35,10 @@ export default function HomePage() {
     const fetchRandomCafes = async () => {
       try {
         const cafes = await getRandomCafes();
-        // API가 배열을 반환하면 그대로 사용, 아니면 fallback
-        if (Array.isArray(cafes) && cafes.length > 0) {
-          setRandomCafes(cafes);
-        } else {
-          // 빈 배열 또는 잘못된 데이터면 mock 데이터 사용
-          setRandomCafes(mockCafes.slice(8, 12));
-        }
+        setRandomCafes(Array.isArray(cafes) ? cafes : []);
       } catch (error: any) {
         console.error("랜덤 카페 조회 실패:", error);
-        // API 실패 시 mock 데이터로 fallback
-        setRandomCafes(mockCafes.slice(8, 12));
+        setRandomCafes([]);
       } finally {
         setLoading(false);
       }
@@ -59,7 +52,7 @@ export default function HomePage() {
       <Header />
       <SearchBar placeholders={searchPlaceholders} animatePlaceholder={true} />
 
-      <Map className="mb-10" />
+      <Map className="mb-10" cafes={randomCafes} />
 
       <div>
         <CafeCarousel
@@ -81,7 +74,7 @@ export default function HomePage() {
 
       <div>
         <CafeCarousel
-          cafes={randomCafes.length > 0 ? randomCafes : mockCafes.slice(8, 12)}
+          cafes={randomCafes}
           title="이런 카페는 어때요?"
           description="추천 드리는 카페입니다."
           showAllButton={true}

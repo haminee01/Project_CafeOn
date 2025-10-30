@@ -69,6 +69,17 @@ export async function requestPasswordReset(email: string) {
 
 // ==================== Cafe API ====================
 
+// 전체 카페 목록 조회 (관리자용)
+export async function getAllCafes() {
+  try {
+    const response = await apiClient.get("/api/cafes/search");
+    return response.data;
+  } catch (error: any) {
+    console.error("전체 카페 조회 실패:", error);
+    throw new Error(error.message || "전체 카페 조회 실패");
+  }
+}
+
 // 카페 상세 정보 조회
 export async function getCafeDetail(cafeId: string) {
   try {
@@ -115,7 +126,7 @@ export async function getNearbyCafes(params: {
 // 백엔드 카페 응답을 프론트엔드 Cafe 타입으로 변환
 function convertCafeResponseToCafe(cafe: any): any {
   return {
-    cafe_id: String(cafe.cafeId || cafe.cafe_id || ""),
+    cafe_id: String(cafe.cafeId || cafe.id || cafe.cafe_id || ""),
     name: cafe.name || "",
     address: cafe.address || "",
     latitude: cafe.latitude || 0,
@@ -395,7 +406,7 @@ export async function addAdminPenalty(
   userId: string,
   data: {
     reason: string;
-    reason_code: string;
+    reasonCode?: string;
   }
 ) {
   try {
@@ -416,6 +427,7 @@ export async function suspendAdminUser(
   data: {
     duration: string;
     reason: string;
+    reasonCode?: string;
   }
 ) {
   try {
@@ -427,6 +439,53 @@ export async function suspendAdminUser(
   } catch (error: any) {
     console.error("Admin 회원 정지 API 호출 실패:", error);
     throw new Error(error.message || "회원 정지 실패");
+  }
+}
+
+// 회원 패널티 내역 조회
+export async function getUserPenalties(userId: string) {
+  try {
+    const response = await apiClient.get(`/api/admin/users/${userId}/penalties`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Admin 회원 패널티 조회 API 호출 실패:", error);
+    throw new Error(error.message || "패널티 조회 실패");
+  }
+}
+
+// ==================== Admin Reports API ====================
+
+// 관리자 신고 목록 조회
+export async function getAdminReports(status?: string) {
+  try {
+    const params = status ? { status } : {};
+    const response = await apiClient.get("/api/admin/reports", { params });
+    return response.data;
+  } catch (error: any) {
+    console.error("Admin 신고 목록 API 호출 실패:", error);
+    throw new Error(error.message || "신고 목록 조회 실패");
+  }
+}
+
+// 관리자 신고 상세 조회
+export async function getAdminReportDetail(id: number) {
+  try {
+    const response = await apiClient.get(`/api/admin/reports/${id}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Admin 신고 상세 API 호출 실패:", error);
+    throw new Error(error.message || "신고 상세 조회 실패");
+  }
+}
+
+// 관리자 신고 처리
+export async function updateAdminReport(id: number, data: { status: string }) {
+  try {
+    const response = await apiClient.put(`/api/admin/reports/${id}`, data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Admin 신고 처리 API 호출 실패:", error);
+    throw new Error(error.message || "신고 처리 실패");
   }
 }
 

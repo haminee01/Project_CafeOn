@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/common/Header";
 import Map from "@/components/map/Map";
-import { mockCafes } from "@/data/mockCafes";
 import { getWishlist, getNearbyCafes } from "@/lib/api";
 
 type TabType = "home" | "saved" | "popular";
@@ -31,6 +30,7 @@ export default function MapPage() {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [nearbyCafes, setNearbyCafes] = useState<any[]>([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -45,6 +45,12 @@ export default function MapPage() {
     taste: "TASTE",
     planned: "PLANNED",
   };
+
+  // 로그인 상태 확인
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    setIsLoggedIn(!!token);
+  }, []);
 
   // 사용자 위치 가져오기
   useEffect(() => {
@@ -95,17 +101,17 @@ export default function MapPage() {
         radius: 2000, // 2km 반경
       });
 
-      // API가 배열을 반환하면 그대로 사용, 아니면 fallback
+      // API가 배열을 반환하면 그대로 사용
       if (Array.isArray(cafes) && cafes.length > 0) {
         setNearbyCafes(cafes);
       } else {
-        // 빈 배열 또는 잘못된 데이터면 mock 데이터 사용
-        setNearbyCafes(mockCafes.slice(0, 10));
+        // 빈 배열 반환
+        setNearbyCafes([]);
       }
     } catch (error: any) {
       console.error("근처 카페 조회 실패:", error);
-      // API 실패 시 mock 데이터로 fallback
-      setNearbyCafes(mockCafes.slice(0, 10));
+      // API 실패 시 빈 배열 반환
+      setNearbyCafes([]);
     }
   };
 
@@ -153,60 +159,36 @@ export default function MapPage() {
               (item) => item.category === categoryMap[savedCategory]
             );
 
-      // 위시리스트 카페를 mockCafes와 매칭
-      return (
-        categoryFilter
-          .map((item) => {
-            const cafe = mockCafes.find(
-              (c) => c.cafe_id === item.cafeId.toString()
-            );
-            return cafe;
-          })
-          .filter(Boolean) || []
-      );
+      // 위시리스트 카페를 매칭 (API에서 카페 정보를 가져와야 함)
+      // 현재는 위시리스트에 카페 정보가 포함되어 있지 않으므로 빈 배열 반환
+      return [];
     }
 
-    // 위시리스트가 없으면 mock 데이터
-    switch (savedCategory) {
-      case "all":
-        return mockCafes.slice(0, 8);
-      case "hideout":
-        return mockCafes.slice(0, 3);
-      case "work":
-        return mockCafes.slice(3, 6);
-      case "atmosphere":
-        return mockCafes.slice(6, 9);
-      case "taste":
-        return mockCafes.slice(9, 12);
-      case "planned":
-        return mockCafes.slice(12, 15);
-      default:
-        return mockCafes.slice(0, 8);
-    }
+    // 위시리스트가 없으면 빈 배열
+    return [];
   };
 
   // 탭별 카페 데이터
   const getCafesByTab = () => {
     switch (activeTab) {
       case "home":
-        return nearbyCafes.length > 0 ? nearbyCafes : mockCafes; // API 데이터 또는 mock 데이터
+        return nearbyCafes; // API 데이터
       case "saved":
         return getSavedCafesByCategory(); // 저장된 카페 (카테고리별)
       case "popular":
-        return mockCafes.slice(0, 5); // 인기 카페 (예시)
+        return []; // 인기 카페는 추후 API 연결 필요
       default:
-        return mockCafes;
+        return [];
     }
   };
 
   const currentCafes = getCafesByTab();
-  const isLoggedIn = localStorage.getItem("accessToken");
 
   return (
     <div className="min-h-screen relative">
       <Header />
       {/* 지도 (전체 화면) */}
-      <Map className="h-screen" />
+      <Map className="h-screen" cafes={nearbyCafes} />
 
       {/* 통합 모달 - 탭과 리스트가 함께 */}
       <div className="absolute bg-white top-1/2 left-4 transform -translate-y-1/2 min-w-96 h-[60vh] rounded-lg shadow-lg z-20 flex flex-col">

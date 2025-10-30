@@ -10,12 +10,43 @@ import Toast from "@/components/common/Toast";
 import ReportReviewModal from "@/components/modals/ReportReviewModal";
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
 
+// 날짜 포맷 함수
+const formatDate = (dateString: string): string => {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return "오늘";
+    } else if (diffDays === 1) {
+      return "어제";
+    } else if (diffDays < 7) {
+      return `${diffDays}일 전`;
+    } else if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `${weeks}주 전`;
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return `${months}개월 전`;
+    } else {
+      const years = Math.floor(diffDays / 365);
+      return `${years}년 전`;
+    }
+  } catch {
+    return dateString;
+  }
+};
+
 interface ReviewSectionProps {
   cafeId: string;
   onReportReview: () => void;
   onWriteReview: () => void;
   onEditReview?: (review: CafeReview) => void;
   refreshTrigger?: number; // 리뷰 새로고침 트리거
+  initialReviews?: any[]; // 카페 상세 API에서 가져온 리뷰 목록
 }
 
 // 백엔드 API 응답 타입
@@ -36,6 +67,7 @@ export default function ReviewSection({
   onWriteReview,
   onEditReview,
   refreshTrigger,
+  initialReviews = [],
 }: ReviewSectionProps) {
   const { isAuthenticated, user } = useAuth();
   const [reviews, setReviews] = useState<CafeReview[]>([]);
@@ -58,11 +90,23 @@ export default function ReviewSection({
     try {
       setLoading(true);
 
-      // 현재 백엔드에 카페별 리뷰 조회 API가 없으므로 빈 배열로 설정
-      // 백엔드에서 GET /api/cafes/{cafeId}/reviews 엔드포인트가 추가되면 구현 가능
-      setReviews([]);
-
-      console.log("리뷰 목록 조회 API가 아직 구현되지 않았습니다.");
+      // initialReviews가 있으면 사용
+      if (initialReviews && initialReviews.length > 0) {
+        // API 응답 형식의 리뷰를 프론트엔드 CafeReview 형식으로 변환
+        const transformedReviews: CafeReview[] = initialReviews.map((r: any) => ({
+          id: r.reviewId,
+          user: r.reviewerNickname || "익명",
+          rating: r.rating,
+          content: r.content,
+          date: formatDate(r.createdAt), // 날짜 포맷팅 적용
+          likes: 0, // API에 없으므로 기본값
+          images: r.images?.map((img: any) => img.publicUrl || img.url) || [],
+          reviewerId: r.reviewerId,
+        }));
+        setReviews(transformedReviews);
+      } else {
+        setReviews([]);
+      }
     } catch (error: any) {
       console.error("리뷰 새로고침 실패:", error);
       setReviews([]);
@@ -74,7 +118,7 @@ export default function ReviewSection({
   // 리뷰 목록 로드
   useEffect(() => {
     refreshReviews();
-  }, [cafeId]);
+  }, [cafeId, initialReviews]);
 
   // 리뷰 작성 완료 후 새로고침 (주석 처리 - 백엔드 에러로 인해 임시 비활성화)
   // useEffect(() => {

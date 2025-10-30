@@ -121,7 +121,7 @@ export default function AdminMembersPage() {
         if (!useMockData) {
           await addAdminPenalty(selectedMember.id, {
             reason: penaltyReason,
-            reason_code: "DISCOMFORT"
+            reasonCode: "DISCOMFORT"
           });
         }
         

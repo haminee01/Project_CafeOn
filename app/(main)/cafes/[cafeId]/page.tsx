@@ -66,6 +66,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
         latitude: data.latitude ?? 0,
         longitude: data.longitude ?? 0,
         openHours: data.hours ?? "",
+        reviews: Array.isArray(data.reviews) ? data.reviews : [], // API에서 리뷰 목록 추가
       } as any;
     };
 
@@ -183,6 +184,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
         onWriteReview={handleWriteReview}
         onEditReview={handleEditReview}
         refreshTrigger={refreshReviews}
+        initialReviews={cafe?.reviews}
       />
 
       {/* 유사 카페 추천 섹션 */}
