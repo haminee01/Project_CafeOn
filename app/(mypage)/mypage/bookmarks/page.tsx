@@ -5,6 +5,7 @@ import Pagination from "@/components/common/Pagination";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHeart as faHeartSolid } from "@fortawesome/free-solid-svg-icons";
 import { getWishlist, deleteWishlist } from "@/lib/api";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 // 북마크 카테고리 목록 정의 (한글)
 const bookmarkCategories = [
@@ -26,35 +27,51 @@ const categoryMapping: { [key: string]: string } = {
 
 // 위시리스트 항목 타입 정의
 interface WishlistItem {
+  wishlistId?: number;
   id: number;
   cafeId: number;
   name: string;
   category: string;
 }
 
-// 북마크 해제 알림 컴포넌트 (2초 후 자동 닫힘)
-const BookmarkRemoveToast = ({
-  message,
-  onClose,
-}: {
-  message: string;
-  onClose: () => void;
-}) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
+// 카테고리 영문 -> 한글 매핑
+const categoryReverseMapping: { [key: string]: string } = {
+  HIDEOUT: "나만의 아지트",
+  WORK: "작업하기 좋은",
+  ATMOSPHERE: "분위기",
+  TASTE: "커피/디저트 맛집",
+  PLANNED: "방문 예정/찜",
+};
 
-  return (
-    <div
-      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#999999] text-white p-4 rounded-lg shadow-2xl z-50 text-center transition-opacity duration-300"
-      style={{ minWidth: "100px" }}
-    >
-      <p>{message}</p>
-    </div>
-  );
+// 카테고리별 색상 및 아이콘
+const categoryStyles: {
+  [key: string]: { color: string; bgColor: string; gradient: string };
+} = {
+  HIDEOUT: {
+    color: "#6E4213",
+    bgColor: "#F4EDE5",
+    gradient: "from-[#F4EDE5] via-[#E8DDD4] to-[#D4C5B8]",
+  },
+  WORK: {
+    color: "#8B6F47",
+    bgColor: "#F9F5F0",
+    gradient: "from-[#F9F5F0] via-[#F4EDE5] to-[#E8DDD4]",
+  },
+  ATMOSPHERE: {
+    color: "#A6907A",
+    bgColor: "#F9F5F0",
+    gradient: "from-[#F9F5F0] via-[#F4EDE5] to-[#D4C5B8]",
+  },
+  TASTE: {
+    color: "#6E4213",
+    bgColor: "#F4EDE5",
+    gradient: "from-[#F4EDE5] via-[#E8DDD4] to-[#D4C5B8]",
+  },
+  PLANNED: {
+    color: "#8B6F47",
+    bgColor: "#F9F5F0",
+    gradient: "from-[#F9F5F0] via-[#F4EDE5] to-[#E8DDD4]",
+  },
 };
 
 /*단일 북마크 항목 컴포넌트 (3x3 격자 카드 스타일)*/
@@ -69,6 +86,12 @@ const BookmarkItem = ({
     <FontAwesomeIcon icon={faHeartSolid} className="w-4 h-4" />
   );
 
+  // 카테고리 스타일 가져오기
+  const categoryKey = item.category?.toUpperCase() || "HIDEOUT";
+  const style = categoryStyles[categoryKey] || categoryStyles.HIDEOUT;
+  const categoryName =
+    categoryReverseMapping[categoryKey] || categoryReverseMapping.HIDEOUT;
+
   // 북마크 해제 핸들러 수정
   const handleRemoveBookmark = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -81,35 +104,47 @@ const BookmarkItem = ({
   return (
     <a
       href={`/cafes/${item.cafeId}`}
-      className="block w-full bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 relative group cursor-pointer"
+      className="block w-full bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 relative group cursor-pointer overflow-hidden"
     >
-      {/* 이미지 영역 */}
-      <div className="relative pt-[100%] overflow-hidden">
-        <img
-          src={`https://placehold.co/300x300/A0522D/ffffff?text=Cafe+${item.cafeId}`}
-          alt={item.name}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e: any) => {
-            e.target.onerror = null;
-            e.target.src =
-              "https://placehold.co/300x300/d1d5db/374151?text=Cafe";
-          }}
-        />
+      {/* 이미지 영역 - 그라데이션 배경 */}
+      <div
+        className={`relative pt-[100%] overflow-hidden bg-gradient-to-br ${style.gradient}`}
+      >
+        {/* 카페 이름 오버레이 */}
+        <div className="absolute inset-0 flex items-center justify-center p-6">
+          <h3 className="text-2xl font-bold text-white drop-shadow-lg text-center leading-tight">
+            {item.name}
+          </h3>
+        </div>
+
         {/* 북마크 해제 버튼 (우측 상단) */}
         <button
-          className="absolute top-3 right-3 p-2 text-red-500 bg-white bg-opacity-90 rounded-full hover:bg-red-100 transition-colors z-10 shadow-sm"
+          className="absolute top-3 right-3 p-2.5 text-red-500 bg-white bg-opacity-95 rounded-full hover:bg-red-100 transition-colors z-10 shadow-lg hover:scale-110 transform duration-200"
           onClick={handleRemoveBookmark}
           aria-label={`${item.name} 북마크 해제`}
         >
           <HeartIcon />
         </button>
+
+        {/* 카테고리 뱃지 (좌측 상단) */}
+        <div
+          className="absolute top-3 left-3 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg z-10"
+          style={{ backgroundColor: style.bgColor, color: style.color }}
+        >
+          {categoryName}
+        </div>
       </div>
 
       {/* 정보 영역 */}
-      <div className="p-3 text-center">
-        <h3 className="text-base font-semibold text-gray-800 truncate mb-1">
-          {item.name}
-        </h3>
+      <div className="p-4 bg-white">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-800 truncate flex-1">
+            {item.name}
+          </h3>
+        </div>
+        <p className="text-sm mt-1 font-medium" style={{ color: style.color }}>
+          {categoryName}
+        </p>
       </div>
     </a>
   );
@@ -123,7 +158,7 @@ export default function MyBookmarksPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalBookmarks, setTotalBookmarks] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null); // 토스트 메시지 상태
+  const { showToast } = useToastContext();
 
   const ITEMS_PER_PAGE = 9;
 
@@ -169,23 +204,21 @@ export default function MyBookmarksPage() {
 
       await deleteWishlist(cafeId, categoryEn);
 
-      // 1. 토스트 메시지 설정
-      const message = `[${name}] 북마크가 해제되었습니다.`;
-      setToastMessage(message);
+      // 토스트 메시지 표시
+      showToast(`[${name}] 북마크가 해제되었습니다.`, "delete");
 
-      // 2. 위시리스트 다시 로드
+      // 위시리스트 다시 로드
       await loadWishlist();
 
-      // 3. 현재 페이지가 비어있으면 이전 페이지로 이동
+      // 현재 페이지가 비어있으면 이전 페이지로 이동
       if (bookmarks.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       }
     } catch (error: any) {
       console.error("북마크 해제 실패:", error);
 
-      // 에러 메시지 추출 및 표시
-      const errorMessage = error.message || "북마크 해제에 실패했습니다.";
-      setToastMessage(errorMessage);
+      // 에러 토스트 표시
+      showToast(error.message || "북마크 해제에 실패했습니다.", "error");
 
       // 에러 발생 시에도 목록 새로고침 시도
       try {
@@ -271,14 +304,6 @@ export default function MyBookmarksPage() {
             지도를 탐색하고 마음에 드는 카페를 북마크 해보세요!
           </p>
         </div>
-      )}
-
-      {/* 2초 후 자동 사라지는 토스트 알림 */}
-      {toastMessage && (
-        <BookmarkRemoveToast
-          message={toastMessage}
-          onClose={() => setToastMessage(null)}
-        />
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import { useToast } from "./Toast";
 interface ToastContextType {
   showToast: (
     message: string,
-    type?: "success" | "error" | "info",
+    type?: "success" | "error" | "info" | "delete",
     duration?: number
   ) => void;
 }

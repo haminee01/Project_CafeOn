@@ -57,32 +57,6 @@ const LocationIcon = () => (
   />
 );
 
-// 삭제 완료 알림 컴포넌트 (2초 후 자동 닫힘)
-const DeleteSuccessToast = ({
-  message,
-  onClose,
-}: {
-  message: string;
-  onClose: () => void;
-}) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#999999] text-white p-4 rounded-lg shadow-2xl z-50 text-center transition-opacity duration-300"
-      style={{ minWidth: "100px" }}
-    >
-      <p>{message}</p>
-    </div>
-  );
-};
-
 /*단일 리뷰 항목 컴포넌트*/
 const ReviewItem = ({
   review,
@@ -184,7 +158,6 @@ const ReviewItem = ({
 export default function MyReviewsPage() {
   const [reviews, setReviews] = useState<MyReview[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [editingReview, setEditingReview] = useState<MyReview | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { showToast } = useToastContext();
@@ -224,9 +197,8 @@ export default function MyReviewsPage() {
   // 리뷰 삭제 핸들러
   const handleReviewDeleted = async (reviewId: number) => {
     try {
-      await deleteReview(reviewId);
-      const message = "리뷰가 삭제되었습니다.";
-      setDeleteMessage(message);
+      await deleteReview(String(reviewId));
+      showToast("리뷰가 삭제되었습니다.", "delete");
 
       // 리뷰 목록 다시 조회
       await fetchReviews(currentPage);
@@ -258,9 +230,11 @@ export default function MyReviewsPage() {
     if (!editingReview) return;
 
     try {
-      // 리뷰 목록 다시 조회
+      // 리뷰 목록 다시 조회하여 즉시 반영
       await fetchReviews(currentPage);
       handleCloseEditModal();
+      // 성공 토스트
+      showToast("리뷰가 수정되었습니다.", "success");
     } catch (error) {
       console.error("리뷰 목록 조회 실패:", error);
     }
@@ -313,17 +287,11 @@ export default function MyReviewsPage() {
         </div>
       )}
 
-      {deleteMessage && (
-        <DeleteSuccessToast
-          message={deleteMessage}
-          onClose={() => setDeleteMessage(null)}
-        />
-      )}
-
       {isEditModalOpen && editingReview && (
         <ReviewWriteModal
           onClose={handleCloseEditModal}
           cafe={{ name: editingReview.cafeName }}
+          cafeId={String(editingReview.cafeId)}
           editReview={{
             id: editingReview.reviewId,
             user: editingReview.reviewerNickname,
@@ -332,10 +300,8 @@ export default function MyReviewsPage() {
             likes: 0,
             images: editingReview.images.map((img) => img.imageUrl),
             rating: editingReview.rating,
-            reviewId: editingReview.reviewId,
-            existingImageIds: editingReview.images.map((img) => img.imageId),
           }}
-          onEditComplete={handleEditComplete}
+          onReviewSubmitted={handleEditComplete}
         />
       )}
     </div>

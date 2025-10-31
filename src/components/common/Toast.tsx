@@ -5,7 +5,7 @@ import { useRef } from "react";
 
 interface ToastProps {
   message: string;
-  type?: "success" | "error" | "info";
+  type?: "success" | "error" | "info" | "delete";
   duration?: number;
   onClose: () => void;
 }
@@ -13,7 +13,7 @@ interface ToastProps {
 interface ToastItem {
   id: string;
   message: string;
-  type: "success" | "error" | "info";
+  type: "success" | "error" | "info" | "delete";
   duration: number;
 }
 
@@ -23,7 +23,7 @@ export function useToast() {
 
   const showToast = (
     message: string,
-    type: "success" | "error" | "info" = "success",
+    type: "success" | "error" | "info" | "delete" = "success",
     duration: number = 3000
   ) => {
     const id = Math.random().toString(36).substring(7);
@@ -56,7 +56,7 @@ export function useToast() {
   }, []);
 
   const ToastContainer = () => (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 space-y-2">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}
@@ -93,10 +93,12 @@ export default function Toast({
     switch (type) {
       case "success":
         return "bg-green-500 text-white";
-      case "error":
+      case "delete":
         return "bg-red-500 text-white";
+      case "error":
+        return "bg-gray-500 text-white";
       case "info":
-        return "bg-blue-500 text-white";
+        return "bg-gray-500 text-white";
       default:
         return "bg-green-500 text-white";
     }
@@ -118,7 +120,7 @@ export default function Toast({
             />
           </svg>
         )}
-        {type === "error" && (
+        {(type === "delete" || type === "error") && (
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
