@@ -179,9 +179,23 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   const { user } = useAuth();
   const currentUserNickname = user?.username || null;
 
+  // 날짜 메시지인지 확인하는 함수
+  const isDateMessage = (content: string): boolean => {
+    // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
+    const datePattern = /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
+    return datePattern.test(content.trim());
+  };
+
   // 채팅 히스토리를 ChatMessage 형태로 변환
-  const historyMessages: ChatMessage[] = chatHistory.map(
-    (historyMsg, index) => {
+  const historyMessages: ChatMessage[] = chatHistory
+    .filter((historyMsg) => {
+      // 날짜 메시지는 필터링하여 제외
+      if (isDateMessage(historyMsg.message)) {
+        return false;
+      }
+      return true;
+    })
+    .map((historyMsg, index) => {
       // 백엔드에서 mine: true로 보내는 메시지는 확실히 내 메시지
       const isMyMessage = Boolean(
         historyMsg.mine === true ||
@@ -207,21 +221,30 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
       // });
 
       return convertedMessage;
-    }
-  );
+    });
 
   // 히스토리와 실시간 메시지를 합치되 중복 제거
   const allMessages = React.useMemo(() => {
     const messageMap = new Map<string, ChatMessage>();
 
-    // 히스토리 메시지 먼저 추가
+    // 날짜 메시지인지 확인하는 함수
+    const isDateMessage = (content: string): boolean => {
+      // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
+      const datePattern =
+        /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
+      return datePattern.test(content.trim());
+    };
+
+    // 히스토리 메시지 먼저 추가 (날짜 메시지 제외)
     historyMessages.forEach((msg) => {
-      messageMap.set(msg.id, msg);
+      if (!isDateMessage(msg.content)) {
+        messageMap.set(msg.id, msg);
+      }
     });
 
-    // 실시간 메시지 추가 (중복되지 않는 것만)
+    // 실시간 메시지 추가 (중복되지 않는 것만, 날짜 메시지 제외)
     messages.forEach((msg) => {
-      if (!messageMap.has(msg.id)) {
+      if (!messageMap.has(msg.id) && !isDateMessage(msg.content)) {
         messageMap.set(msg.id, msg);
       }
     });

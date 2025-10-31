@@ -369,7 +369,10 @@ const ChatRoomView: React.FC<{
               />
             </div>
 
-            <ChatMessageInput onSendMessage={handleSendMessage} />
+            <ChatMessageInput
+              onSendMessage={handleSendMessage}
+              roomId={currentChat.roomId || undefined}
+            />
           </div>
         </>
       )}

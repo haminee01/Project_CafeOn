@@ -698,6 +698,85 @@ export async function getChatMessagesWithUnreadCount(roomId: string) {
   }
 }
 
+// 채팅방 이미지 전송
+export interface SendChatImageResponse {
+  message: string;
+  chatId: number;
+  roomId: number;
+  senderId: string;
+  content: string;
+  createdAt: string;
+  timeLabel: string;
+  senderNickname: string;
+  messageType: string;
+  othersUnreadUsers: any[];
+  images: Array<{
+    imageId: number;
+    originalFileName: string;
+    imageUrl: string;
+  }>;
+}
+
+export async function sendChatImage(
+  roomId: string | number,
+  files: File[],
+  caption?: string
+): Promise<SendChatImageResponse> {
+  try {
+    const token = localStorage.getItem("accessToken");
+
+    if (!token) {
+      throw new Error("로그인이 필요합니다.");
+    }
+
+    if (!files || files.length === 0) {
+      throw new Error("전송할 파일을 선택해주세요.");
+    }
+
+    // FormData 생성
+    const formData = new FormData();
+
+    // 파일 추가 (key: 'files')
+    for (let i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+
+    // 캡션 추가 (key: 'caption', 선택사항)
+    if (caption) {
+      formData.append("caption", caption);
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/rooms/${roomId}/messages/image`,
+      {
+        method: "POST",
+        headers: {
+          // FormData를 사용할 경우 Content-Type 헤더를 수동으로 설정하지 않아야 함
+          // 브라우저가 boundary 정보까지 포함하여 자동으로 생성
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `이미지 전송 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("채팅 이미지 전송 API 호출 실패:", error);
+    throw error;
+  }
+}
+
 // ==================== Review API ====================
 
 // 리뷰 이미지 타입

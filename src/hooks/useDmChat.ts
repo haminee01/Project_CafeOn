@@ -213,6 +213,20 @@ export const useDmChat = ({
                 }
               }
 
+              // 날짜 메시지인지 확인하는 함수
+              const isDateMessage = (content: string): boolean => {
+                // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
+                const datePattern =
+                  /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
+                return datePattern.test(content.trim());
+              };
+
+              // 날짜 메시지는 필터링하여 제외
+              if (isDateMessage(data.message || "")) {
+                console.log("날짜 메시지 필터링:", data.message);
+                return;
+              }
+
               // ChatMessage 형태로 변환
               const newMessage: ChatMessage = {
                 id: data.chatId.toString(),
@@ -361,11 +375,24 @@ export const useDmChat = ({
             console.log("1:1 채팅 히스토리 응답:", response);
 
             if (response.data.content.length > 0) {
-              setChatHistory((prev) => [...prev, ...response.data.content]);
+              // 날짜 메시지인지 확인하는 함수
+              const isDateMessage = (content: string): boolean => {
+                // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
+                const datePattern =
+                  /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
+                return datePattern.test(content.trim());
+              };
+
+              // 날짜 메시지를 필터링하여 제외
+              const filteredContent = response.data.content.filter(
+                (msg: ChatHistoryMessage) => !isDateMessage(msg.message)
+              );
+
+              setChatHistory((prev) => [...prev, ...filteredContent]);
               setHasMoreHistory(response.data.hasNext);
 
-              // 히스토리 메시지를 ChatMessage 형태로 변환
-              const historyMessages: ChatMessage[] = response.data.content.map(
+              // 히스토리 메시지를 ChatMessage 형태로 변환 (날짜 메시지 제외)
+              const historyMessages: ChatMessage[] = filteredContent.map(
                 (msg: ChatHistoryMessage) => ({
                   id: msg.chatId.toString(),
                   senderName: msg.senderNickname,

@@ -252,7 +252,10 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
               roomId={roomId || undefined}
             />
 
-            <ChatMessageInput onSendMessage={handleSendMessage} />
+            <ChatMessageInput
+              onSendMessage={handleSendMessage}
+              roomId={roomId || undefined}
+            />
 
             {/* 사이드바 */}
             {isSidebarOpen && (

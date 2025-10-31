@@ -16,6 +16,7 @@ import {
   ChatHistoryResponse,
 } from "@/api/chat";
 import { markChatAsRead } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import { ChatMessage, Participant } from "@/types/chat";
 import {
   createStompClient,
@@ -77,6 +78,8 @@ export const useCafeChat = ({
   cafeId,
   cafeName,
 }: UseCafeChatProps): UseCafeChatReturn => {
+  // 현재 로그인 사용자
+  const { user } = useAuth();
   const [roomId, setRoomId] = useState<string | null>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -143,6 +146,24 @@ export const useCafeChat = ({
     }
   }, []);
 
+  // 사용자 닉네임 로드가 늦었을 때 기존 메시지 보정
+  useEffect(() => {
+    const myNickname = user?.username;
+    if (!myNickname) return;
+
+    setMessages((prev) => {
+      let changed = false;
+      const next = prev.map((m) => {
+        if (!m.isMyMessage && m.senderName === myNickname) {
+          changed = true;
+          return { ...m, isMyMessage: true };
+        }
+        return m;
+      });
+      return changed ? next : prev;
+    });
+  }, [user?.username]);
+
   // STOMP 구독
   const subscribeToRoom = useCallback((roomId: string) => {
     if (!stompClientRef.current?.connected || !roomId) return;
@@ -161,12 +182,46 @@ export const useCafeChat = ({
             const data: StompChatMessage = JSON.parse(message.body);
             console.log("받은 메시지:", data);
 
+            // 날짜 메시지인지 확인하는 함수
+            const isDateMessage = (content: string): boolean => {
+              // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
+              const datePattern =
+                /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
+              return datePattern.test(content.trim());
+            };
+
+            // 날짜 메시지는 필터링하여 제외
+            if (isDateMessage(data.message || "")) {
+              console.log("날짜 메시지 필터링:", data.message);
+              return;
+            }
+
+            // 내 닉네임 추출 (토큰 payload의 sub 또는 userId)
+            const getMyNicknameFromToken = (): string | null => {
+              try {
+                const token = localStorage.getItem("accessToken");
+                if (!token) return null;
+                const payload = JSON.parse(atob(token.split(".")[1]));
+                return (
+                  payload?.sub || payload?.userId || payload?.username || null
+                );
+              } catch {
+                return null;
+              }
+            };
+
+            const myNickname = user?.username || getMyNicknameFromToken();
+            const isMine = Boolean(
+              data.mine || (myNickname && data.senderNickname === myNickname)
+            );
+
             // ChatMessage 형태로 변환
             const newMessage: ChatMessage = {
               id: data.chatId.toString(),
               senderName: data.senderNickname,
               content: data.message,
-              isMyMessage: data.mine,
+              // 수신 직후 사용자 정보가 늦게 로드될 수 있으므로 임시 플래그라도 설정
+              isMyMessage: isMine,
               senderId: data.senderNickname,
               messageType: data.messageType,
             };
@@ -365,8 +420,21 @@ export const useCafeChat = ({
         const items = response.data?.content || [];
         const hasNext = response.data?.hasNext || false;
 
-        // 새로운 히스토리를 기존 히스토리 뒤에 추가
-        setChatHistory((prev) => [...prev, ...items]);
+        // 날짜 메시지인지 확인하는 함수
+        const isDateMessage = (content: string): boolean => {
+          // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
+          const datePattern =
+            /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
+          return datePattern.test(content.trim());
+        };
+
+        // 날짜 메시지를 필터링하여 제외
+        const filteredItems = items.filter(
+          (msg: ChatHistoryMessage) => !isDateMessage(msg.message)
+        );
+
+        // 새로운 히스토리를 기존 히스토리 뒤에 추가 (날짜 메시지 제외)
+        setChatHistory((prev) => [...prev, ...filteredItems]);
         setHasMoreHistory(hasNext);
       } catch (err) {
         console.error("채팅 히스토리 조회 실패:", err);
@@ -683,20 +751,42 @@ export const useCafeChat = ({
         return;
       }
 
+      // STOMP 연결 보장: 연결이 없으면 연결 시도 후 최대 5초 대기
+      const waitForConnected = async (timeoutMs = 5000) => {
+        const start = Date.now();
+        while (!stompClientRef.current?.connected) {
+          await new Promise((r) => setTimeout(r, 100));
+          if (Date.now() - start > timeoutMs) break;
+        }
+        return Boolean(stompClientRef.current?.connected);
+      };
+
       if (!stompClientRef.current?.connected) {
-        console.log("메시지 전송 실패: STOMP 연결이 없음", {
-          roomId,
-          content,
+        console.log("STOMP 미연결 - 연결 시도 후 대기", {
           isConnected: stompClientRef.current?.connected,
         });
-        return;
+        try {
+          await connectStomp();
+        } catch (e) {
+          console.error("STOMP 연결 시도 실패:", e);
+        }
+        const ok = await waitForConnected(5000);
+        if (!ok) {
+          console.log("메시지 전송 실패: STOMP 연결이 없음 (타임아웃)");
+          return;
+        }
       }
 
       try {
         console.log("STOMP 메시지 발행:", { roomId, content });
 
         // STOMP로 메시지 발행
-        stompClientRef.current.publish({
+        const client = stompClientRef.current;
+        if (!client) {
+          console.log("메시지 전송 실패: STOMP 클라이언트가 없음");
+          return;
+        }
+        client.publish({
           destination: `/pub/rooms/${roomId}`,
           body: JSON.stringify({
             message: content,

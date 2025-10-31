@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useMemo,
 } from "react";
+import ChatMessageInput from "@/components/chat/ChatMessageInput";
 
 interface ChatMessage {
   id: string;
@@ -370,49 +371,7 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   );
 };
 
-// 3.3 ChatMessageInput
-interface ChatMessageInputProps {
-  onSendMessage: (message: string) => void;
-  className?: string;
-}
-
-const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
-  onSendMessage,
-  className,
-}) => {
-  const [inputMessage, setInputMessage] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedMessage = inputMessage.trim();
-    if (trimmedMessage) {
-      onSendMessage(trimmedMessage);
-      setInputMessage("");
-    }
-  };
-
-  return (
-    <div className={`p-4 border-t border-gray-200 bg-white ${className}`}>
-      <form onSubmit={handleSubmit} className="flex space-x-2">
-        <input
-          type="text"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          placeholder="메시지를 입력하세요..."
-          className="flex-grow p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6E4213] transition"
-          aria-label="채팅 메시지 입력"
-        />
-        <button
-          type="submit"
-          disabled={!inputMessage.trim()}
-          className="px-4 py-3 bg-[#6E4213] text-white rounded-xl font-semibold shadow-md hover:bg-[#5a360f] transition disabled:bg-gray-400"
-        >
-          전송
-        </button>
-      </form>
-    </div>
-  );
-};
+// 3.3 ChatMessageInput은 공통 컴포넌트를 사용
 
 // 3.4 PrivateChatModal (변경 없음)
 interface PrivateChatModalProps {
@@ -773,6 +732,7 @@ const ChatDetailIntegratedPage: React.FC<ChatDetailIntegratedProps> = ({
         <ChatMessageInput
           onSendMessage={handleSendMessage}
           className="flex-shrink-0"
+          roomId={activeChatId}
         />
         {/* 사이드바 영역 */}
         {/* 사이드바 오버레이 */}
