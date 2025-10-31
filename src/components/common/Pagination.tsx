@@ -14,7 +14,16 @@ const Pagination: React.FC<PaginationProps> = ({
   className = "",
 }) => {
   const getVisiblePages = () => {
-    const delta = 2; // 현재 페이지 앞뒤로 보여줄 페이지 수
+    // 수정된 로직
+    if (totalPages <= 5) {
+      const allPages = [];
+      for (let i = 1; i <= totalPages; i++) {
+        allPages.push(i);
+      }
+      return allPages;
+    }
+
+    const delta = 2;
     const range = [];
     const rangeWithDots = [];
 
@@ -49,16 +58,18 @@ const Pagination: React.FC<PaginationProps> = ({
     return null;
   }
 
+  const activeBgColor = "bg-[#6E4213]";
+
   return (
-    <div className={`flex items-center justify-center gap-2 ${className}`}>
+    <div className={`flex items-center justify-center gap-1 ${className}`}>
       {/* 이전 페이지 버튼 */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 ${
+        className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 text-gray-700 ${
           currentPage === 1
             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-            : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300"
+            : "bg-gray-50 hover:bg-gray-100"
         }`}
         aria-label="이전 페이지"
       >
@@ -95,10 +106,10 @@ const Pagination: React.FC<PaginationProps> = ({
             <button
               key={pageNumber}
               onClick={() => onPageChange(pageNumber)}
-              className={`flex items-center justify-center w-10 h-10 rounded-lg font-medium transition-all duration-200 ${
+              className={`flex items-center justify-center w-10 h-10 rounded-lg font-medium transition-all duration-200 border border-gray-200 ${
                 isCurrentPage
-                  ? "bg-primary text-white shadow-lg"
-                  : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300"
+                  ? `${activeBgColor} text-white shadow-md border-transparent`
+                  : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
               aria-label={`${pageNumber}페이지로 이동`}
               aria-current={isCurrentPage ? "page" : undefined}
@@ -113,10 +124,10 @@ const Pagination: React.FC<PaginationProps> = ({
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 ${
+        className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 text-gray-700 ${
           currentPage === totalPages
             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-            : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300"
+            : "bg-gray-50 hover:bg-gray-100"
         }`}
         aria-label="다음 페이지"
       >

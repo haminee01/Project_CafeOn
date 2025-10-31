@@ -16,7 +16,10 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, className = "" }) => {
   };
 
   return (
-    <div className={`cursor-pointer flex flex-col ${className}`} onClick={handleCardClick}>
+    <div
+      className={`cursor-pointer flex flex-col ${className}`}
+      onClick={handleCardClick}
+    >
       <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden rounded-lg">
         <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
           <div className="text-4xl">☕</div>
@@ -39,9 +42,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, className = "" }) => {
 
         {/* 주소 표시 */}
         {cafe.address && (
-          <p className="text-xs text-gray-500 line-clamp-1">
-            {cafe.address}
-          </p>
+          <p className="text-xs text-gray-500 line-clamp-1">{cafe.address}</p>
         )}
       </div>
     </div>

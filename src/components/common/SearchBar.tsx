@@ -1,49 +1,24 @@
 import { FaSearch } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface SearchBarProps {
   placeholder?: string;
-  placeholders?: string[];
   value?: string;
   onChange?: (value: string) => void;
   onSearch?: (value: string) => void;
   disabled?: boolean;
-  animatePlaceholder?: boolean;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = "검색어를 입력하세요",
-  placeholders,
   value = "",
   onChange,
   onSearch,
   disabled = false,
-  animatePlaceholder = false,
 }) => {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState(value);
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholder);
-
-  // value prop 변경 시 searchValue 동기화
-  useEffect(() => {
-    setSearchValue(value);
-  }, [value]);
-
-  // placeholder 애니메이션 효과
-  useEffect(() => {
-    if (!animatePlaceholder || !placeholders || placeholders.length === 0) {
-      return;
-    }
-
-    let currentIndex = 0;
-    const interval = setInterval(() => {
-      currentIndex = (currentIndex + 1) % placeholders.length;
-      setCurrentPlaceholder(placeholders[currentIndex]);
-    }, 2000); // 2초마다 변경
-
-    return () => clearInterval(interval);
-  }, [animatePlaceholder, placeholders]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -54,18 +29,16 @@ const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   const handleSearch = () => {
-    if (onSearch) {
-      // onSearch가 제공되면 페이지 이동 없이 검색만 실행
-      onSearch(searchValue);
+    // 검색어가 있든 없든 search 페이지로 이동
+    if (searchValue.trim()) {
+      // 검색어가 있으면 URL 파라미터로 전달
+      router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
     } else {
-      // onSearch가 없으면 기존 동작 (search 페이지로 이동)
-      if (searchValue.trim()) {
-        // 검색어가 있으면 URL 파라미터로 전달
-        router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
-      } else {
-        // 검색어가 없으면 파라미터 없이 search 페이지로 이동
-        router.push("/search");
-      }
+      // 검색어가 없으면 파라미터 없이 search 페이지로 이동
+      router.push("/search");
+    }
+    if (onSearch) {
+      onSearch(searchValue);
     }
   };
 
@@ -84,11 +57,11 @@ const SearchBar: React.FC<SearchBarProps> = ({
           value={searchValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
-          placeholder={currentPlaceholder}
+          placeholder={placeholder}
           disabled={disabled}
           className="w-full border border-primary rounded-full px-3 py-2 placeholder-gray-400 focus:outline-none
         focus:ring-0
-        focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+        focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           onClick={handleSearch}

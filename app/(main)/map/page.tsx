@@ -174,7 +174,7 @@ export default function MapPage() {
       case "home":
         return nearbyCafes; // API 데이터
       case "saved":
-        return getSavedCafesByCategory(); // 저장된 카페 (카테고리별)
+        return mockCafes.slice(0, 3); // 저장된 카페 (예시)
       case "popular":
         return []; // 인기 카페는 추후 API 연결 필요
       default:
@@ -264,7 +264,6 @@ export default function MapPage() {
             </div>
           </div>
         )}
-
         {/* 메인 콘텐츠 영역 */}
         <div className="flex flex-1 px-4 pb-4 min-h-0">
           {/* 탭 버튼들 */}
@@ -419,6 +418,7 @@ export default function MapPage() {
                         <span className="text-gray-400 text-xs">이미지</span>
                       </div>
 
+<<<<<<< HEAD
                       {/* 카페 정보 */}
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900 mb-1">
@@ -471,6 +471,20 @@ export default function MapPage() {
                           </button>
                         </div>
                       </div>
+=======
+                  {/* 카페 정보 */}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      {cafe.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      영업 중 리뷰 999+
+                    </p>
+                    <div className="flex gap-2">
+                      <button className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                        베이커리
+                      </button>
+>>>>>>> feature/hamin/merge-all
                     </div>
                   </div>
                 );

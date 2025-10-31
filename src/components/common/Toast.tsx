@@ -1,12 +1,75 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRef } from "react";
 
 interface ToastProps {
   message: string;
   type?: "success" | "error" | "info";
   duration?: number;
   onClose: () => void;
+}
+
+interface ToastItem {
+  id: string;
+  message: string;
+  type: "success" | "error" | "info";
+  duration: number;
+}
+
+export function useToast() {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" | "info" = "success",
+    duration: number = 3000
+  ) => {
+    const id = Math.random().toString(36).substring(7);
+    const newToast: ToastItem = { id, message, type, duration };
+
+    setToasts((prev) => [...prev, newToast]);
+
+    const timeout = setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+      timeoutRefs.current.delete(id);
+    }, duration);
+
+    timeoutRefs.current.set(id, timeout);
+  };
+
+  const removeToast = (id: string) => {
+    const timeout = timeoutRefs.current.get(id);
+    if (timeout) {
+      clearTimeout(timeout);
+      timeoutRefs.current.delete(id);
+    }
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
+      timeoutRefs.current.clear();
+    };
+  }, []);
+
+  const ToastContainer = () => (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          duration={toast.duration}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
+    </div>
+  );
+
+  return { showToast, ToastContainer };
 }
 
 export default function Toast({
@@ -41,7 +104,7 @@ export default function Toast({
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+      className={`px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
       } ${getTypeStyles()}`}
     >

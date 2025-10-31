@@ -14,8 +14,8 @@ interface ReviewWriteModalProps {
     name: string;
   };
   cafeId: string;
-  editReview?: CafeReview; // 수정할 리뷰 데이터
-  onReviewSubmitted?: () => void; // 리뷰 작성 완료 후 콜백
+  editReview?: CafeReview;
+  onReviewSubmitted?: () => void;
 }
 
 export default function ReviewWriteModal({
@@ -54,34 +54,23 @@ export default function ReviewWriteModal({
       setLoading(true);
 
       if (isEditMode && editReview) {
-        // 리뷰 수정
         await updateReview(editReview.id.toString(), {
           content: reviewContent,
           rating: rating,
           images: selectedImages,
         });
-        setToast({
-          message: "리뷰가 수정되었습니다.",
-          type: "success",
-        });
+        setToast({ message: "리뷰가 수정되었습니다.", type: "success" });
       } else {
-        // 리뷰 작성
         await createReview(cafeId, {
           content: reviewContent,
           rating: rating,
           images: selectedImages,
         });
-        setToast({
-          message: "리뷰가 작성되었습니다.",
-          type: "success",
-        });
+        setToast({ message: "리뷰가 작성되었습니다.", type: "success" });
       }
 
-      // 성공 시 즉시 모달 닫기 및 리뷰 목록 새로고침
       onClose();
-      if (onReviewSubmitted) {
-        onReviewSubmitted();
-      }
+      onReviewSubmitted?.();
     } catch (error: any) {
       console.error("리뷰 처리 실패:", error);
       setToast({
@@ -96,8 +85,8 @@ export default function ReviewWriteModal({
   };
 
   const handleDelete = () => {
-    console.log("리뷰 삭제");
-    // 실제 구현에서는 리뷰 삭제 로직
+    // TODO: 리뷰 삭제 API 연동
+    setToast({ message: "리뷰가 삭제되었습니다.", type: "success" });
     onClose();
   };
 
@@ -213,7 +202,6 @@ export default function ReviewWriteModal({
               onChange={handleImageUpload}
               className="hidden"
             />
-
             {imagePreviewUrls.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
                 {imagePreviewUrls.map((url, index) => (

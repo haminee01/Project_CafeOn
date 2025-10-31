@@ -10,7 +10,6 @@ import CafeFeaturesSection from "app/(main)/cafes/[cafeId]/components/CafeFeatur
 import ReviewSection from "app/(main)/cafes/[cafeId]/components/ReviewSection";
 import SimilarCafesSection from "app/(main)/cafes/[cafeId]/components/SimilarCafesSection";
 import ShareModal from "@/components/modals/ShareModal";
-import ChatRoomModal from "@/components/modals/ChatRoomModal";
 import ReportModal from "@/components/modals/ReportModal";
 import ReviewWriteModal from "@/components/modals/ReviewWriteModal";
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
@@ -18,6 +17,7 @@ import LoginPromptModal from "@/components/modals/LoginPromptModal";
 import Footer from "@/components/common/Footer";
 import { useEscapeKey } from "../../../../src/hooks/useEscapeKey";
 import { useAuth } from "@/contexts/AuthContext";
+import CafeChatModal from "../../../../src/components/chat/CafeChatModal";
 
 interface CafeDetailPageProps {
   params: Promise<{
@@ -28,8 +28,9 @@ interface CafeDetailPageProps {
 export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   const resolvedParams = use(params);
   const { isAuthenticated } = useAuth();
+  // 채팅 모달 상태
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showChatModal, setShowChatModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showReviewWriteModal, setShowReviewWriteModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -75,7 +76,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       try {
         setLoading(true);
         setError(null);
-        
+
         // API에서 카페 상세 정보 조회
         const cafeData = await getCafeDetail(resolvedParams.cafeId);
         const mapped = mapApiToCafeDetail(cafeData);
@@ -83,10 +84,13 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       } catch (err: any) {
         console.error("카페 상세 정보 조회 실패:", err);
         setError(err.message || "카페 정보를 불러오는데 실패했습니다.");
-        
+
         // API 실패 시 mock 데이터로 fallback
-        const cafeData = mockCafes.find((c) => c.cafe_id === resolvedParams.cafeId);
-        const defaultCafe = mockCafes.find((c) => c.cafe_id === "33") || mockCafes[0];
+        const cafeData = mockCafes.find(
+          (c) => c.cafe_id === resolvedParams.cafeId
+        );
+        const defaultCafe =
+          mockCafes.find((c) => c.cafe_id === "33") || mockCafes[0];
         const selectedCafe = cafeData || defaultCafe;
         const fallbackCafe = createCafeDetail(selectedCafe);
         setCafe(fallbackCafe);
@@ -113,10 +117,14 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
     fetchRandomCafes();
   }, []);
 
+  // 2. 현재 카페 정보 메타
+  const cafeId = resolvedParams.cafeId;
+  const cafeName = cafe?.name || `카페 ${cafeId}`; // 실제 카페 이름 사용
+
   // ESC 키 이벤트 처리
   useEscapeKey(() => {
-    if (showShareModal) setShowShareModal(false);
-    else if (showChatModal) setShowChatModal(false);
+    if (isChatModalOpen) setIsChatModalOpen(false);
+    else if (showShareModal) setShowShareModal(false);
     else if (showReportModal) setShowReportModal(false);
     else if (showReviewWriteModal) {
       setShowReviewWriteModal(false);
@@ -125,8 +133,20 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   });
 
   // 모달 핸들러 함수들
+  const handleOpenChat = () => {
+    console.log("=== 카페 디테일 페이지에서 채팅 모달 열기 ===", {
+      cafeId,
+      cafeName,
+      currentUrl: window.location.href,
+    });
+    setIsChatModalOpen(true);
+  };
+
+  const handleCloseChat = () => {
+    setIsChatModalOpen(false);
+  };
+
   const handleShare = () => setShowShareModal(true);
-  const handleChatRoom = () => setShowChatModal(true);
   const handleReportReview = () => setShowReportModal(true);
   // onSave는 더 이상 사용하지 않음 (위시리스트 기능으로 대체)
   const handleWriteReview = () => {
@@ -156,7 +176,9 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       <div className="min-h-screen bg-white">
         <Header />
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-600">카페 정보를 불러오는 중...</div>
+          <div className="text-lg text-gray-600">
+            카페 정보를 불러오는 중...
+          </div>
         </div>
         <Footer />
       </div>
@@ -180,13 +202,14 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   return (
     <div className="min-h-screen bg-white">
       <Header />
+
       {/* 카페 메인 정보 섹션 */}
       <CafeInfoSection
         cafe={cafe}
         cafeId={resolvedParams.cafeId}
-        onChatRoom={handleChatRoom}
+        onChatRoom={handleOpenChat}
         onShare={handleShare}
-        onSave={() => {}} // 더 이상 사용하지 않음
+        onSave={() => {}}
         onWriteReview={handleWriteReview}
       />
 
@@ -206,7 +229,16 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       {/* 유사 카페 추천 섹션 */}
       <SimilarCafesSection similarCafes={similarCafes} />
 
-      {/* 모달들 */}
+      {/* 4. 모달 조건부 렌더링 (원래 로직) */}
+      {isChatModalOpen && (
+        <CafeChatModal
+          cafeId={cafeId}
+          cafeName={cafeName}
+          onClose={handleCloseChat}
+        />
+      )}
+
+      {/* 기존 모달들 */}
       {showShareModal && (
         <ShareModal
           onClose={() => setShowShareModal(false)}
@@ -214,11 +246,13 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
           cafeId={resolvedParams.cafeId}
         />
       )}
-      {showChatModal && (
-        <ChatRoomModal onClose={() => setShowChatModal(false)} cafe={cafe} />
-      )}
       {showReportModal && (
-        <ReportModal onClose={() => setShowReportModal(false)} />
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          targetType="comment"
+          targetId={0}
+        />
       )}
       {showReviewWriteModal && (
         <ReviewWriteModal

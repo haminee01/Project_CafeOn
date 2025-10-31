@@ -1,13 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { IoNotificationsOutline } from "react-icons/io5";
 import NotificationDropdown from "./NotificationDropdown";
 import { useAuth } from "@/contexts/AuthContext";
 
-const Header = () => {
+interface HeaderProps {
+  className?: string;
+}
+
+const Header = ({ className = "" }: HeaderProps) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+
+  // 중복 헤더 감지 및 숨기기
+  useEffect(() => {
+    if (headerRef.current) {
+      const headers = document.querySelectorAll("header");
+      if (headers.length > 1) {
+        // 첫 번째 헤더 이후의 모든 헤더 숨기기
+        for (let i = 1; i < headers.length; i++) {
+          (headers[i] as HTMLElement).style.display = "none";
+        }
+      }
+    }
+  }, []);
 
   const toggleNotification = () => {
     setIsNotificationOpen(!isNotificationOpen);
@@ -20,7 +38,7 @@ const Header = () => {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
 
   return (
-    <header>
+    <header ref={headerRef} className={`header-component ${className}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
@@ -37,19 +55,20 @@ const Header = () => {
                 onClose={closeNotification}
               />
             </div>
+
             <Link href="/qna" className="text-gray-800 font-medium text-lg">
               QnA
             </Link>
             <Link
               href="/community"
-              className="text-gray-800 font-medium text-lg"
+              className="text-gray-800 font-normal text-base"
             >
               ToCafe
             </Link>
           </div>
 
           <div className="flex-shrink-0">
-            <Link href="/" className="block">
+            <Link href="/">
               <h1 className="text-4xl font-bold text-primary cursor-pointer">
                 CafeOn.
               </h1>

@@ -16,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  isLoading: boolean; // 로딩 상태 추가
+  isLoading: boolean;
   login: (token: string, refreshToken: string, userData?: User) => void;
   logout: () => void;
   updateUser: (userData: User) => void;
@@ -28,21 +28,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // 초기 로딩 상태
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   // 초기 로드 시 로컬 스토리지에서 인증 정보 복원
   useEffect(() => {
     const storedToken = localStorage.getItem("accessToken");
-    const storedUser = localStorage.getItem("user");
+    const storedUser =
+      localStorage.getItem("user") || localStorage.getItem("userInfo");
 
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      const userData = JSON.parse(storedUser);
+      // userInfo 형식을 AuthContext User 형식으로 변환
+      const authUser = userData.userId
+        ? userData
+        : {
+            userId: userData.id,
+            nickname: userData.username || userData.nickname,
+            email: userData.email,
+            name: userData.name,
+            phone: userData.phone,
+            role: userData.role,
+          };
+      setUser(authUser);
       setIsAuthenticated(true);
     }
-
-    // 로딩 완료
     setIsLoading(false);
   }, []);
 

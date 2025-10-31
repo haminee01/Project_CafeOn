@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Pagination from "@/components/common/Pagination";
 import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
-import { getAdminReports, getAdminReportDetail, updateAdminReport, deleteReview } from "@/lib/api";
+import {
+  getAdminReports,
+  getAdminReportDetail,
+  updateAdminReport,
+  deleteReview,
+} from "@/lib/api";
 
 // 날짜 포맷 함수
 const formatDate = (dateString: string): string => {
@@ -13,10 +18,10 @@ const formatDate = (dateString: string): string => {
   try {
     const date = new Date(dateString);
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${year}.${month}.${day} ${hours}:${minutes}`;
   } catch {
     return dateString;
@@ -70,7 +75,7 @@ export default function AdminReportsPage() {
         const status = activeTab === "unprocessed" ? "PENDING" : "RESOLVED";
         const response = await getAdminReports(status);
         const reportsData = response?.data || [];
-        
+
         // API 응답을 프론트엔드 형식으로 변환
         const transformedReports = reportsData.map((r: any) => {
           // targetType 매핑 (POST, COMMENT, REVIEW)
@@ -82,7 +87,7 @@ export default function AdminReportsPage() {
           } else if (r.targetType === "REVIEW") {
             type = "review";
           }
-          
+
           return {
             id: r.reportId || r.id,
             type,
@@ -96,7 +101,7 @@ export default function AdminReportsPage() {
             cafeId: type === "review" ? r.targetId : undefined, // 리뷰인 경우 카페 ID
           };
         });
-        
+
         setReports(transformedReports);
       } catch (error) {
         console.error("신고 목록 조회 실패:", error);
@@ -186,6 +191,7 @@ export default function AdminReportsPage() {
       originalImages: [
         "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
       ],
+
       adminComment:
         "동일한 사용자가 같은 카페에 중복으로 작성한 리뷰를 확인했습니다. 중복 리뷰를 삭제하고 경고 조치를 취했습니다.",
       processedDate: "2024.01.05",
@@ -211,13 +217,14 @@ export default function AdminReportsPage() {
       // 상세 정보 조회
       const detail = await getAdminReportDetail(report.id);
       const detailData = detail?.data;
-      
+
       if (detailData) {
         const enrichedReport: Report = {
           ...report,
           targetId: detailData.targetId, // 상세에서 targetId 가져오기
           originalTitle: detailData.target?.title,
-          originalContent: detailData.target?.body || detailData.target?.content,
+          originalContent:
+            detailData.target?.body || detailData.target?.content,
           originalImages: detailData.target?.imageUrls || [],
           adminComment: detailData.adminNote,
           processedBy: detailData.handledBy,
@@ -259,14 +266,17 @@ export default function AdminReportsPage() {
 
   const processReport = async () => {
     if (!selectedReport) return;
-    
+
     try {
       // 삭제 옵션이 체크되어 있으면 실제 콘텐츠 삭제
       if (deleteContent) {
         if (selectedReport.type === "review" && selectedReport.targetId) {
           // 리뷰 삭제
           await deleteReview(selectedReport.targetId.toString());
-        } else if (selectedReport.type === "comment" && selectedReport.targetId) {
+        } else if (
+          selectedReport.type === "comment" &&
+          selectedReport.targetId
+        ) {
           // TODO: 댓글 삭제 API 추가 필요
           console.log("댓글 삭제 기능은 아직 구현되지 않았습니다.");
         } else if (selectedReport.type === "post" && selectedReport.targetId) {
@@ -274,16 +284,16 @@ export default function AdminReportsPage() {
           console.log("게시글 삭제 기능은 아직 구현되지 않았습니다.");
         }
       }
-      
+
       // 신고 처리 API 호출
       const status = deleteContent ? "RESOLVED" : "REJECTED";
       await updateAdminReport(selectedReport.id, { status });
-      
+
       // 성공 시 목록에서 제거
-      setReports(prevReports => 
-        prevReports.filter(r => r.id !== selectedReport.id)
+      setReports((prevReports) =>
+        prevReports.filter((r) => r.id !== selectedReport.id)
       );
-      
+
       setShowProcessModal(false);
       setShowDeleteConfirmModal(false);
       setShowDetailModal(false);
@@ -349,56 +359,60 @@ export default function AdminReportsPage() {
           <p className="text-gray-600">신고 내역을 불러오는 중...</p>
         </div>
       ) : (
-      <div className="space-y-4">
-        {filteredReports.map((report) => (
-          <div
-            key={report.id}
-            className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleDetailClick(report)}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      report.type === "post"
-                        ? "bg-blue-100 text-blue-800"
+        <div className="space-y-4">
+          {filteredReports.map((report) => (
+            <div
+              key={report.id}
+              className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleDetailClick(report)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        report.type === "post"
+                          ? "bg-blue-100 text-blue-800"
+                          : report.type === "comment"
+                          ? "bg-purple-100 text-purple-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {report.type === "post"
+                        ? "게시글신고"
                         : report.type === "comment"
-                        ? "bg-purple-100 text-purple-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
-                  >
-                    {report.type === "post" ? "게시글신고" : report.type === "comment" ? "댓글신고" : "리뷰신고"}
-                  </span>
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      report.status === "unprocessed"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {report.status === "unprocessed" ? "미처리" : "처리완료"}
-                  </span>
+                        ? "댓글신고"
+                        : "리뷰신고"}
+                    </span>
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        report.status === "unprocessed"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {report.status === "unprocessed" ? "미처리" : "처리완료"}
+                    </span>
+                  </div>
+                  <p className="text-gray-900 font-medium">{report.content}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    신고자: {report.reporter} | 신고일: {report.date}
+                  </p>
                 </div>
-                <p className="text-gray-900 font-medium">{report.content}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  신고자: {report.reporter} | 신고일: {report.date}
-                </p>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
 
       {/* 페이지네이션 */}
       {!loading && (
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-        className="mt-8"
-      />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          className="mt-8"
+        />
       )}
 
       {/* 신고 상세보기 모달 */}
@@ -406,20 +420,9 @@ export default function AdminReportsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  신고 내역 상세보기
-                </h3>
-                <span className={`mt-1 inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                  selectedReport.type === "post"
-                    ? "bg-blue-100 text-blue-800"
-                    : selectedReport.type === "comment"
-                    ? "bg-purple-100 text-purple-800"
-                    : "bg-green-100 text-green-800"
-                }`}>
-                  {selectedReport.type === "post" ? "게시글신고" : selectedReport.type === "comment" ? "댓글신고" : "리뷰신고"}
-                </span>
-              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                신고 내역 상세보기
+              </h3>
               <button
                 onClick={handleCloseModal}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -519,8 +522,8 @@ export default function AdminReportsPage() {
               {/* 원본 내용 */}
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3">
-                  {selectedReport.type === "post" 
-                    ? "원본 게시글" 
+                  {selectedReport.type === "post"
+                    ? "원본 게시글"
                     : selectedReport.type === "comment"
                     ? "원본 댓글"
                     : "원본 리뷰"}
@@ -583,40 +586,35 @@ export default function AdminReportsPage() {
             </div>
 
             {/* 액션 버튼 */}
-            <div className="flex justify-between items-center mt-6">
-              {/* 원본 보기 버튼 */}
-              {selectedReport.type === "review" && selectedReport.targetId && (
-                <Button 
-                  color="secondary" 
-                  size="md" 
-                  onClick={() => {
-                    // 리뷰의 경우 targetId가 reviewId이므로, 
-                    // 백엔드에서 신고 상세 API에 cafeId를 추가로 반환해야 함
-                    // 현재는 리뷰 ID만 있으므로 경고 표시
-                    alert("리뷰 보기 기능은 아직 준비되지 않았습니다. 백엔드 API 수정이 필요합니다.");
-                  }}
-                >
-                  원본 리뷰 보기
+            <div className="flex justify-end gap-3 mt-6">
+              <Button color="gray" size="md" onClick={handleCloseModal}>
+                닫기
+              </Button>
+              {selectedReport.status === "unprocessed" && (
+                <Button color="primary" size="md" onClick={handleProcessClick}>
+                  처리하기
                 </Button>
               )}
               {selectedReport.type === "comment" && selectedReport.targetId && (
-                <Button 
-                  color="secondary" 
-                  size="md" 
+                <Button
+                  color="secondary"
+                  size="md"
                   onClick={() => {
                     // 댓글의 경우 targetId가 commentId이므로,
                     // 백엔드에서 신고 상세 API에 postId를 추가로 반환해야 함
                     // 현재는 댓글 ID만 있으므로 경고 표시
-                    alert("댓글 보기 기능은 아직 준비되지 않았습니다. 백엔드 API 수정이 필요합니다.");
+                    alert(
+                      "댓글 보기 기능은 아직 준비되지 않았습니다. 백엔드 API 수정이 필요합니다."
+                    );
                   }}
                 >
                   원본 댓글 보기
                 </Button>
               )}
               {selectedReport.type === "post" && selectedReport.targetId && (
-                <Button 
-                  color="secondary" 
-                  size="md" 
+                <Button
+                  color="secondary"
+                  size="md"
                   onClick={() => {
                     router.push(`/community/posts/${selectedReport.targetId}`);
                   }}
@@ -624,14 +622,18 @@ export default function AdminReportsPage() {
                   원본 게시글 보기
                 </Button>
               )}
-              
+
               {/* 오른쪽 버튼들 */}
               <div className="flex gap-3">
                 <Button color="gray" size="md" onClick={handleCloseModal}>
                   닫기
                 </Button>
                 {selectedReport.status === "unprocessed" && (
-                  <Button color="primary" size="md" onClick={handleProcessClick}>
+                  <Button
+                    color="primary"
+                    size="md"
+                    onClick={handleProcessClick}
+                  >
                     처리하기
                   </Button>
                 )}
@@ -651,11 +653,7 @@ export default function AdminReportsPage() {
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
                 <span className="font-medium">신고 유형:</span>{" "}
-                {selectedReport.type === "post" 
-                  ? "게시글신고" 
-                  : selectedReport.type === "comment"
-                  ? "댓글신고"
-                  : "리뷰신고"}
+                {selectedReport.type === "post" ? "게시글신고" : "리뷰신고"}
               </p>
               <p className="text-sm text-gray-600">
                 <span className="font-medium">신고 사유:</span>{" "}
@@ -692,19 +690,12 @@ export default function AdminReportsPage() {
                   htmlFor="deleteContent"
                   className="ml-2 text-sm text-gray-700"
                 >
-                  {selectedReport.type === "post" 
-                    ? "게시글" 
-                    : selectedReport.type === "comment"
-                    ? "댓글"
-                    : "리뷰"} 삭제
+                  {selectedReport.type === "post" ? "게시글" : "리뷰"} 삭제
                 </label>
               </div>
               <p className="text-xs text-gray-500 mt-1 ml-6">
-                {selectedReport.type === "post" 
-                  ? "게시글" 
-                  : selectedReport.type === "comment"
-                  ? "댓글"
-                  : "리뷰"}을 삭제하면 복구할 수 없습니다.
+                {selectedReport.type === "post" ? "게시글" : "리뷰"}을 삭제하면
+                복구할 수 없습니다.
               </p>
             </div>
             <div className="flex gap-3 justify-end">
@@ -729,30 +720,24 @@ export default function AdminReportsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              {selectedReport.type === "post" 
-                ? "게시글" 
+              {selectedReport.type === "post"
+                ? "게시글"
                 : selectedReport.type === "comment"
                 ? "댓글"
-                : "리뷰"} 삭제 확인
+                : "리뷰"}{" "}
+              삭제 확인
             </h3>
             <div className="mb-6">
               <p className="text-gray-600 mb-4">
                 <span className="font-medium text-red-600">
-                  {selectedReport.type === "post" 
-                    ? "게시글" 
-                    : selectedReport.type === "comment"
-                    ? "댓글"
-                    : "리뷰"}
+                  {selectedReport.type === "post" ? "게시글" : "리뷰"}
                 </span>
                 을 삭제하시겠습니까?
               </p>
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-800">
-                  ⚠️ 삭제된 {selectedReport.type === "post" 
-                    ? "게시글" 
-                    : selectedReport.type === "comment"
-                    ? "댓글"
-                    : "리뷰"}은 복구할 수 없습니다.
+                  ⚠️ 삭제된 {selectedReport.type === "post" ? "게시글" : "리뷰"}
+                  은 복구할 수 없습니다.
                 </p>
               </div>
             </div>

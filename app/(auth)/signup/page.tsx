@@ -353,7 +353,7 @@ export default function SignupPage() {
       });
 
       // 로그인 성공 시 토큰 저장 및 홈으로 리다이렉트
-      if (loginResponse.data && loginResponse.data.token) {
+      if (loginResponse?.data && loginResponse.data.token) {
         const { token, refreshToken } = loginResponse.data;
         const userData = {
           userId: signupResponse.data?.userId || "",

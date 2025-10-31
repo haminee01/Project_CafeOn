@@ -26,14 +26,62 @@ export default function AdminMembersPage() {
   const [useMockData, setUseMockData] = useState(false);
 
   const mockMembers = [
-    { id: "1", name: "김철수", email: "kim@example.com", status: "active", penaltyCount: 0 },
-    { id: "2", name: "이영희", email: "lee@example.com", status: "active", penaltyCount: 2 },
-    { id: "3", name: "박민수", email: "park@example.com", status: "suspended", penaltyCount: 5 },
-    { id: "4", name: "최유리", email: "choi@example.com", status: "active", penaltyCount: 0 },
-    { id: "5", name: "정대현", email: "jung@example.com", status: "active", penaltyCount: 1 },
-    { id: "6", name: "한지민", email: "han@example.com", status: "suspended", penaltyCount: 8 },
-    { id: "7", name: "강동원", email: "kang@example.com", status: "active", penaltyCount: 0 },
-    { id: "8", name: "송혜교", email: "song@example.com", status: "active", penaltyCount: 3 }
+    {
+      id: "1",
+      name: "김철수",
+      email: "kim@example.com",
+      status: "active",
+      penaltyCount: 0,
+    },
+    {
+      id: "2",
+      name: "이영희",
+      email: "lee@example.com",
+      status: "active",
+      penaltyCount: 2,
+    },
+    {
+      id: "3",
+      name: "박민수",
+      email: "park@example.com",
+      status: "suspended",
+      penaltyCount: 5,
+    },
+    {
+      id: "4",
+      name: "최유리",
+      email: "choi@example.com",
+      status: "active",
+      penaltyCount: 0,
+    },
+    {
+      id: "5",
+      name: "정대현",
+      email: "jung@example.com",
+      status: "active",
+      penaltyCount: 1,
+    },
+    {
+      id: "6",
+      name: "한지민",
+      email: "han@example.com",
+      status: "suspended",
+      penaltyCount: 8,
+    },
+    {
+      id: "7",
+      name: "강동원",
+      email: "kang@example.com",
+      status: "active",
+      penaltyCount: 0,
+    },
+    {
+      id: "8",
+      name: "송혜교",
+      email: "song@example.com",
+      status: "active",
+      penaltyCount: 3,
+    },
   ];
 
   // 회원 목록 조회
@@ -57,7 +105,7 @@ export default function AdminMembersPage() {
         page: currentPage - 1,
         size: 10,
         search: searchTerm,
-        status
+        status,
       });
 
       // API 응답 구조에 따라 조정
@@ -76,7 +124,8 @@ export default function AdminMembersPage() {
   // 모달 상태
   const [showPenaltyModal, setShowPenaltyModal] = useState(false);
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
-  const [showSuspensionConfirmModal, setShowSuspensionConfirmModal] = useState(false);
+  const [showSuspensionConfirmModal, setShowSuspensionConfirmModal] =
+    useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [penaltyReason, setPenaltyReason] = useState("");
   const [suspensionReason, setSuspensionReason] = useState("");
@@ -88,9 +137,10 @@ export default function AdminMembersPage() {
     }
   });
 
-  const filteredMembers = members.filter(member => {
+  const filteredMembers = members.filter((member) => {
     const matchesTab = activeTab === "all" || member.status === activeTab;
-    const matchesSearch = searchTerm.trim() === "" || 
+    const matchesSearch =
+      searchTerm.trim() === "" ||
       member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesTab && matchesSearch;
@@ -121,13 +171,13 @@ export default function AdminMembersPage() {
         if (!useMockData) {
           await addAdminPenalty(selectedMember.id, {
             reason: penaltyReason,
-            reasonCode: "DISCOMFORT"
+            reasonCode: "DISCOMFORT",
           });
         }
-        
-        setMembers(prevMembers => 
-          prevMembers.map(member => 
-            member.id === selectedMember.id 
+
+        setMembers((prevMembers) =>
+          prevMembers.map((member) =>
+            member.id === selectedMember.id
               ? { ...member, penaltyCount: member.penaltyCount + 1 }
               : member
           )
@@ -151,7 +201,7 @@ export default function AdminMembersPage() {
   const handleSuspensionClick = (member: any) => {
     setSelectedMember(member);
     setSuspensionReason("");
-    
+
     // 정지 해제인 경우 확인 모달 먼저 표시
     if (member.status === "suspended") {
       setShowSuspensionConfirmModal(true);
@@ -166,14 +216,17 @@ export default function AdminMembersPage() {
         if (!useMockData) {
           await suspendAdminUser(selectedMember.id, {
             duration: "7d",
-            reason: suspensionReason
+            reason: suspensionReason,
           });
         }
-        
-        setMembers(prevMembers => 
-          prevMembers.map(member => 
-            member.id === selectedMember.id 
-              ? { ...member, status: member.status === "active" ? "suspended" : "active" }
+
+        setMembers((prevMembers) =>
+          prevMembers.map((member) =>
+            member.id === selectedMember.id
+              ? {
+                  ...member,
+                  status: member.status === "active" ? "suspended" : "active",
+                }
               : member
           )
         );
@@ -200,13 +253,13 @@ export default function AdminMembersPage() {
           // 정지 해제는 suspend API로 status를 변경
           await suspendAdminUser(selectedMember.id, {
             duration: "0d",
-            reason: "정지 해제"
+            reason: "정지 해제",
           });
         }
-        
-        setMembers(prevMembers => 
-          prevMembers.map(member => 
-            member.id === selectedMember.id 
+
+        setMembers((prevMembers) =>
+          prevMembers.map((member) =>
+            member.id === selectedMember.id
               ? { ...member, status: "active" }
               : member
           )
@@ -216,7 +269,7 @@ export default function AdminMembersPage() {
       }
     }
     setShowSuspensionConfirmModal(false);
-    setSelectedMember(null);
+    setShowSuspensionModal(true);
   };
 
   const handleSuspensionConfirmCancel = () => {
@@ -266,24 +319,23 @@ export default function AdminMembersPage() {
       </div>
 
       {/* 검색바 */}
-      
-        <div className="w-full max-w-4/5">
-          <SearchBar
-            placeholder="이름, 이메일로 검색..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
-        </div>
-        <div className="text-sm text-gray-500">
-          총 {filteredMembers.length}명 회원
-        </div>
 
+      <div className="w-full max-w-4/5">
+        <SearchBar
+          placeholder="이름, 이메일로 검색..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+      </div>
+      <div className="text-sm text-gray-500">
+        총 {filteredMembers.length}명 회원
+      </div>
 
       {/* 회원 목록 */}
       <div className="space-y-4">
         {filteredMembers.map((member) => (
-          <div 
-            key={member.id} 
+          <div
+            key={member.id}
             className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => router.push(`/admin/members/${member.id}`)}
           >
@@ -292,20 +344,20 @@ export default function AdminMembersPage() {
                 <p className="text-gray-900 font-medium">{member.name}</p>
                 <p className="text-sm text-gray-500">{member.email}</p>
                 <p className="text-sm text-gray-500">
-                  페널티: {member.penaltyCount}회 | 
-                  상태: {member.status === "active" ? "정상" : "정지"}
+                  페널티: {member.penaltyCount}회 | 상태:{" "}
+                  {member.status === "active" ? "정상" : "정지"}
                 </p>
               </div>
               <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                <Button 
-                  color="warning" 
+                <Button
+                  color="warning"
                   size="sm"
                   onClick={() => handlePenaltyClick(member)}
                 >
                   페널티
                 </Button>
-                <Button 
-                  color={member.status === "active" ? "warning" : "gray"} 
+                <Button
+                  color={member.status === "active" ? "warning" : "gray"}
                   size="sm"
                   onClick={() => handleSuspensionClick(member)}
                 >
@@ -340,15 +392,11 @@ export default function AdminMembersPage() {
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none mb-6"
             />
             <div className="flex gap-3 justify-end">
-              <Button 
-                color="gray" 
-                size="md"
-                onClick={handlePenaltyCancel}
-              >
+              <Button color="gray" size="md" onClick={handlePenaltyCancel}>
                 취소
               </Button>
-              <Button 
-                color="primary" 
+              <Button
+                color="primary"
                 size="md"
                 onClick={handlePenaltyConfirm}
                 disabled={!penaltyReason.trim()}
@@ -368,18 +416,19 @@ export default function AdminMembersPage() {
               정지 해제 확인
             </h3>
             <p className="text-gray-600 mb-6">
-              <span className="font-medium">"{selectedMember?.name}"</span> 회원의 정지를 해제하시겠습니까?
+              <span className="font-medium">"{selectedMember?.name}"</span>{" "}
+              회원의 정지를 해제하시겠습니까?
             </p>
             <div className="flex gap-3 justify-end">
-              <Button 
-                color="gray" 
+              <Button
+                color="gray"
                 size="md"
                 onClick={handleSuspensionConfirmCancel}
               >
                 취소
               </Button>
-              <Button 
-                color="primary" 
+              <Button
+                color="primary"
                 size="md"
                 onClick={handleSuspensionConfirmClick}
               >
@@ -405,15 +454,11 @@ export default function AdminMembersPage() {
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none mb-6"
             />
             <div className="flex gap-3 justify-end">
-              <Button 
-                color="gray" 
-                size="md"
-                onClick={handleSuspensionCancel}
-              >
+              <Button color="gray" size="md" onClick={handleSuspensionCancel}>
                 취소
               </Button>
-              <Button 
-                color="warning" 
+              <Button
+                color="warning"
                 size="md"
                 onClick={handleSuspensionConfirm}
                 disabled={!suspensionReason.trim()}

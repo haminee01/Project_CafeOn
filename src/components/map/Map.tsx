@@ -135,12 +135,12 @@ function Map({ className = "", cafes = [] }: MapProps) {
       try {
         // API 생성자 준비 최종 확인
         if (!(window as any).google?.maps?.Map) {
-          console.warn("Google Maps API not fully loaded yet, retrying...");
-          // API가 완전히 로드되지 않았으면 재시도
+          console.warn("Google Maps API not fully loaded yet, will retry...");
+          // API가 아직 로드되지 않았으면 잠시 후 재시도
           setTimeout(() => {
             setIsApiLoaded(false);
-            setTimeout(() => setIsApiLoaded(true), 10);
-          }, 100);
+            setTimeout(() => setIsApiLoaded(true), 100);
+          }, 500);
           return;
         }
 
@@ -180,48 +180,50 @@ function Map({ className = "", cafes = [] }: MapProps) {
         // 마커 추가 함수를 별도로 정의
         const addMarkers = (cafeList: any[]) => {
           cafeList.forEach((cafe) => {
-          // 카페 ID 확인 (API 데이터의 경우 cafeId, mock 데이터의 경우 cafe_id)
-          const cafeId = cafe.cafeId || cafe.cafe_id || "";
-          
-          // 오늘 요일의 영업시간 추출
-          let todayHours = "정보 없음";
-          if (cafe.open_hours) {
-            const lines = cafe.open_hours.split('\n').filter((line: string) => line.trim());
-            const today = new Date().getDay();
-            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-            const todayName = dayNames[today];
-            const regex = new RegExp(`^${todayName}\\s`);
-            for (const line of lines) {
-              if (regex.test(line)) {
-                todayHours = line;
-                break;
+            // 카페 ID 확인 (API 데이터의 경우 cafeId, mock 데이터의 경우 cafe_id)
+            const cafeId = cafe.cafeId || cafe.cafe_id || "";
+
+            // 오늘 요일의 영업시간 추출
+            let todayHours = "정보 없음";
+            if (cafe.open_hours) {
+              const lines = cafe.open_hours
+                .split("\n")
+                .filter((line: string) => line.trim());
+              const today = new Date().getDay();
+              const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+              const todayName = dayNames[today];
+              const regex = new RegExp(`^${todayName}\\s`);
+              for (const line of lines) {
+                if (regex.test(line)) {
+                  todayHours = line;
+                  break;
+                }
+              }
+              if (todayHours === "정보 없음" && lines.length > 0) {
+                todayHours = lines[0];
               }
             }
-            if (todayHours === "정보 없음" && lines.length > 0) {
-              todayHours = lines[0];
-            }
-          }
-          
-          const marker = new (window as any).google.maps.Marker({
-            position: { lat: cafe.latitude, lng: cafe.longitude },
-            map: map,
-            title: cafe.name,
-            icon: {
-              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+
+            const marker = new (window as any).google.maps.Marker({
+              position: { lat: cafe.latitude, lng: cafe.longitude },
+              map: map,
+              title: cafe.name,
+              icon: {
+                url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
                  <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                    <path d="M12 0C5.373 0 0 5.373 0 12c0 7.5 12 20 12 20s12-12.5 12-20c0-6.627-5.373-12-12-12z" fill="#6E4213"/>
                    <circle cx="12" cy="12" r="6" fill="white"/>
                  </svg>
                `)}`,
-              scaledSize: new (window as any).google.maps.Size(24, 32),
-              anchor: new (window as any).google.maps.Point(12, 32),
-            },
-          });
+                scaledSize: new (window as any).google.maps.Size(24, 32),
+                anchor: new (window as any).google.maps.Point(12, 32),
+              },
+            });
 
-          // 인포윈도우 생성
-          const infoWindow = new (window as any).google.maps.InfoWindow({
-            disableAutoPan: true,
-            content: `
+            // 인포윈도우 생성
+            const infoWindow = new (window as any).google.maps.InfoWindow({
+              disableAutoPan: true,
+              content: `
                <div 
                  id="info-window-${cafeId}"
                  style="
@@ -234,17 +236,13 @@ function Map({ className = "", cafes = [] }: MapProps) {
                    border: none;
                  "
                  onmouseenter="
-                   // 인포윈도우에 마우스가 들어오면 닫기 타이머 취소
                    if (window.infoWindowCloseTimer) {
                      clearTimeout(window.infoWindowCloseTimer);
                      window.infoWindowCloseTimer = null;
                    }
-                   // 마우스가 인포윈도우 위에 있다는 플래그 설정
                    window.mouseOverInfoWindow = true;
                  "
                  onmouseleave="
-                   // 인포윈도우에서 마우스가 나가도 자동으로 닫히지 않도록 설정
-                   // 사용자가 의도적으로 닫을 때만 닫히도록 함
                  "
                >
                  <div style="margin-bottom: 12px;">
@@ -311,67 +309,63 @@ function Map({ className = "", cafes = [] }: MapProps) {
                  </button>
                </div>
              `,
+            });
+            // 마커 호버 시 인포윈도우 표시
+            marker.addListener("mouseover", () => {
+              // 다른 인포윈도우 모두 닫기
+              infoWindowsRef.current.forEach((iw) => iw.close());
+
+              infoWindow.open(map, marker);
+
+              // 인포윈도우 내 버튼 클릭 이벤트 등록
+              setTimeout(() => {
+                const detailButton = document.getElementById(
+                  `cafe-detail-btn-${cafeId}`
+                );
+                if (detailButton) {
+                  detailButton.addEventListener("click", () => {
+                    router.push(`/cafes/${cafeId}`);
+                  });
+                }
+              }, 100);
+            });
+
+            // 마커에서 마우스 떼면 인포윈도우 닫기
+            marker.addListener("mouseout", () => {
+              // 약간의 지연을 두어 인포윈도우로 마우스가 이동할 시간을 줌
+              setTimeout(() => {
+                infoWindow.close();
+              }, 100);
+            });
+
+            // 마커 클릭 시에도 인포윈도우 표시 (기존 기능 유지)
+            marker.addListener("click", () => {
+              // 다른 인포윈도우 모두 닫기
+              infoWindowsRef.current.forEach((iw) => iw.close());
+
+              infoWindow.open(map, marker);
+
+              // 인포윈도우 내 버튼 클릭 이벤트 등록
+              setTimeout(() => {
+                const detailButton = document.getElementById(
+                  `cafe-detail-btn-${cafeId}`
+                );
+                if (detailButton) {
+                  detailButton.addEventListener("click", () => {
+                    router.push(`/cafes/${cafeId}`);
+                  });
+                }
+              }, 100);
+            });
+
+            // 마커와 인포윈도우를 배열에 저장 (클린업용)
+            markersRef.current.push(marker);
+            infoWindowsRef.current.push(infoWindow);
           });
-          // 마커 호버 시 인포윈도우 표시
-          marker.addListener("mouseover", () => {
-            // 다른 인포윈도우 모두 닫기
-            infoWindowsRef.current.forEach((iw) => iw.close());
-
-            infoWindow.open(map, marker);
-            
-            // 전역 변수에 현재 인포윈도우 저장
-            (window as any).currentInfoWindow = infoWindow;
-
-            // 인포윈도우 내 버튼 클릭 이벤트 등록
-            setTimeout(() => {
-              const detailButton = document.getElementById(
-                `cafe-detail-btn-${cafeId}`
-              );
-              if (detailButton) {
-                detailButton.addEventListener("click", () => {
-                  router.push(`/cafes/${cafeId}`);
-                });
-              }
-            }, 100);
-          });
-
-          // 마커에서 마우스 떼면 인포윈도우 닫기 비활성화 (사용자 편의성 향상)
-          // marker.addListener("mouseout", () => {
-          //   // 인포윈도우가 자동으로 닫히지 않도록 주석 처리
-          // });
-
-          // 마커 클릭 시에도 인포윈도우 표시 (기존 기능 유지)
-          marker.addListener("click", () => {
-            // 다른 인포윈도우 모두 닫기
-            infoWindowsRef.current.forEach((iw) => iw.close());
-
-            infoWindow.open(map, marker);
-            
-            // 전역 변수에 현재 인포윈도우 저장
-            (window as any).currentInfoWindow = infoWindow;
-
-            // 인포윈도우 내 버튼 클릭 이벤트 등록
-            setTimeout(() => {
-              const detailButton = document.getElementById(
-                `cafe-detail-btn-${cafeId}`
-              );
-              if (detailButton) {
-                detailButton.addEventListener("click", () => {
-                  router.push(`/cafes/${cafeId}`);
-                });
-              }
-            }, 100);
-          });
-
-          // 마커와 인포윈도우를 배열에 저장 (클린업용)
-          markersRef.current.push(marker);
-          infoWindowsRef.current.push(infoWindow);
-        });
         };
 
         // 지도 생성 시 마커 추가
         addMarkers(cafes);
-
         // 지도 클릭 시 모든 인포윈도우 닫기 및 맵 페이지로 이동
         map.addListener("click", () => {
           infoWindowsRef.current.forEach((iw) => iw.close());
@@ -399,26 +393,28 @@ function Map({ className = "", cafes = [] }: MapProps) {
   // cafes 변경 시 마커 업데이트
   useEffect(() => {
     if (!isMounted || !mapInstance.current) return;
-    
+
     // 기존 마커 제거
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
     infoWindowsRef.current.forEach((iw) => iw.close());
     infoWindowsRef.current = [];
-    
+
     // 새 마커 추가
     const addMarkers = (cafeList: any[]) => {
       cafeList.forEach((cafe) => {
         const cafeId = cafe.cafeId || cafe.cafe_id || "";
-        
+
         if (!cafe.latitude || !cafe.longitude) return;
-        
+
         // 오늘 요일의 영업시간 추출
         let todayHours = "정보 없음";
         if (cafe.open_hours) {
-          const lines = cafe.open_hours.split('\n').filter((line: string) => line.trim());
+          const lines = cafe.open_hours
+            .split("\n")
+            .filter((line: string) => line.trim());
           const today = new Date().getDay();
-          const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+          const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
           const todayName = dayNames[today];
           const regex = new RegExp(`^${todayName}\\s`);
           for (const line of lines) {
@@ -431,7 +427,7 @@ function Map({ className = "", cafes = [] }: MapProps) {
             todayHours = lines[0];
           }
         }
-        
+
         const marker = new (window as any).google.maps.Marker({
           position: { lat: cafe.latitude, lng: cafe.longitude },
           map: mapInstance.current,
@@ -453,17 +449,23 @@ function Map({ className = "", cafes = [] }: MapProps) {
           content: `
             <div id="info-window-${cafeId}" style="min-width: 180px; padding: 8px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); outline: none; border: none;">
               <div style="margin-bottom: 12px;">
-                <h3 style="color: #6E4213; font-size: 15px; font-weight: 700; margin: 0; line-height: 1.3;">${cafe.name}</h3>
+                <h3 style="color: #6E4213; font-size: 15px; font-weight: 700; margin: 0; line-height: 1.3;">${
+                  cafe.name
+                }</h3>
               </div>
               <div style="margin-bottom: 16px;">
                 <div style="margin-bottom: 8px; display: flex; align-items: flex-start; gap: 6px;">
                   <span style="color: #6E4213; font-size: 14px; margin-top: 1px;">📍</span>
-                  <span style="color: #374151; font-size: 13px; line-height: 1.4;">${cafe.address}</span>
+                  <span style="color: #374151; font-size: 13px; line-height: 1.4;">${
+                    cafe.address
+                  }</span>
                 </div>
                 <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                   <span style="color: #6E4213; font-size: 14px;">⭐</span>
                   <span style="color: #374151; font-size: 13px; font-weight: 500;">
-                    평점: <span style="color: #C19B6C; font-weight: 600;">${cafe.avg_rating || "정보 없음"}</span>
+                    평점: <span style="color: #C19B6C; font-weight: 600;">${
+                      cafe.avg_rating || "정보 없음"
+                    }</span>
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -477,13 +479,15 @@ function Map({ className = "", cafes = [] }: MapProps) {
             </div>
           `,
         });
-        
+
         marker.addListener("mouseover", () => {
           infoWindowsRef.current.forEach((iw) => iw.close());
           infoWindow.open(mapInstance.current, marker);
           (window as any).currentInfoWindow = infoWindow;
           setTimeout(() => {
-            const detailButton = document.getElementById(`cafe-detail-btn-${cafeId}`);
+            const detailButton = document.getElementById(
+              `cafe-detail-btn-${cafeId}`
+            );
             if (detailButton) {
               detailButton.addEventListener("click", () => {
                 router.push(`/cafes/${cafeId}`);
@@ -491,13 +495,15 @@ function Map({ className = "", cafes = [] }: MapProps) {
             }
           }, 100);
         });
-        
+
         marker.addListener("click", () => {
           infoWindowsRef.current.forEach((iw) => iw.close());
           infoWindow.open(mapInstance.current, marker);
           (window as any).currentInfoWindow = infoWindow;
           setTimeout(() => {
-            const detailButton = document.getElementById(`cafe-detail-btn-${cafeId}`);
+            const detailButton = document.getElementById(
+              `cafe-detail-btn-${cafeId}`
+            );
             if (detailButton) {
               detailButton.addEventListener("click", () => {
                 router.push(`/cafes/${cafeId}`);
@@ -505,12 +511,12 @@ function Map({ className = "", cafes = [] }: MapProps) {
             }
           }, 100);
         });
-        
+
         markersRef.current.push(marker);
         infoWindowsRef.current.push(infoWindow);
       });
     };
-    
+
     addMarkers(cafes);
   }, [cafes, isMounted, router]);
 

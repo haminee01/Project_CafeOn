@@ -1,4 +1,6 @@
 import apiClient from "./axios";
+// fetch 기반 API에서 사용하는 베이스 URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // ==================== Auth API ====================
 
@@ -85,8 +87,9 @@ export async function searchCafes(query?: string) {
   try {
     // 항상 전체 카페를 가져온 후 클라이언트에서 필터링 (Kakao API 검색이 불안정)
     const allResponse = await apiClient.get("/api/cafes/search");
-    const allCafes = allResponse.data?.cafes || allResponse.data?.data || allResponse.data;
-    
+    const allCafes =
+      allResponse.data?.cafes || allResponse.data?.data || allResponse.data;
+
     if (Array.isArray(allCafes)) {
       if (query) {
         // 검색어로 필터링 (대소문자 구분 없음)
@@ -137,7 +140,8 @@ export async function getNearbyCafes(params: {
 
     // 백엔드 응답 형식에 따라 처리
     // nearby API는 { cafes: [...] } 형태일 수도 있음
-    const cafesData = response.data?.cafes || response.data?.data || response.data;
+    const cafesData =
+      response.data?.cafes || response.data?.data || response.data;
 
     // 배열인지 확인하고 변환
     if (Array.isArray(cafesData)) {
@@ -480,7 +484,9 @@ export async function suspendAdminUser(
 // 회원 패널티 내역 조회
 export async function getUserPenalties(userId: string) {
   try {
-    const response = await apiClient.get(`/api/admin/users/${userId}/penalties`);
+    const response = await apiClient.get(
+      `/api/admin/users/${userId}/penalties`
+    );
     return response.data;
   } catch (error: any) {
     console.error("Admin 회원 패널티 조회 API 호출 실패:", error);
@@ -521,6 +527,50 @@ export async function updateAdminReport(id: number, data: { status: string }) {
   } catch (error: any) {
     console.error("Admin 신고 처리 API 호출 실패:", error);
     throw new Error(error.message || "신고 처리 실패");
+  }
+}
+
+// ==================== User API ====================
+
+// 비밀번호 변경
+export async function changePassword(passwordData: {
+  oldPassword: string;
+  newPassword: string;
+}) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/auth/password`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify(passwordData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+
+      // 상태 코드별 에러 메시지
+      if (response.status === 400) {
+        throw new Error("현재 비밀번호가 일치하지 않습니다.");
+      } else if (response.status === 401) {
+        throw new Error("인증이 필요합니다. 다시 로그인해주세요.");
+      } else if (response.status === 403) {
+        throw new Error("접근 권한이 없습니다.");
+      } else if (response.status === 500) {
+        // 500 에러 시에도 현재 비밀번호 불일치로 처리
+        throw new Error("현재 비밀번호가 일치하지 않습니다.");
+      }
+
+      throw new Error(errorData.message || "비밀번호 변경에 실패했습니다.");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("비밀번호 변경 API 호출 실패:", error);
+    throw error;
   }
 }
 
@@ -590,3 +640,423 @@ export async function createAdminInquiryAnswer(
     throw new Error(error.message || "답변 작성 실패");
   }
 }
+
+// ==================== Wishlist API ====================
+
+// 위시리스트 타입 정의
+export interface WishlistResponse {
+  data: {
+    content: Array<{
+      id: number;
+      cafeId: number;
+      name: string;
+      category: string;
+    }>;
+    totalPages: number;
+    totalElements: number;
+    number: number;
+    size: number;
+  };
+}
+
+// (중복 정의 제거됨 - getWishlist/toggleWishlist는 상단 apiClient 버전 사용)
+
+// 위시리스트 제거 (DELETE)
+export async function deleteWishlist(cafeId: number, category: string) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const queryParams = new URLSearchParams({ category });
+
+    console.log("위시리스트 삭제 API 호출:", {
+      url: `${API_BASE_URL}/api/my/wishlist/${cafeId}?${queryParams.toString()}`,
+      method: "DELETE",
+      category,
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/my/wishlist/${cafeId}?${queryParams.toString()}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+
+      let errorData: any = {};
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        // JSON 파싱 실패 시 빈 객체 유지
+      }
+
+      const errorMessage =
+        errorData.message ||
+        (response.status === 500
+          ? "서버 내부 오류가 발생했습니다."
+          : `위시리스트 제거 실패 (${response.status})`);
+
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("위시리스트 제거 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 특정 카페의 위시리스트 카테고리 조회
+// (중복 정의 제거됨 - getWishlistCategories는 상단 apiClient 버전 사용)
+
+// ==================== Chat API ====================
+
+// 내 채팅방 목록 조회
+export async function getMyChatRooms() {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/my/chat/rooms`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `채팅방 목록 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("내 채팅방 목록 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 채팅 읽음 처리
+export async function markChatAsRead(roomId: string, lastReadChatId: string) {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(
+      `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          lastReadChatId: lastReadChatId,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `채팅 읽음 처리 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("채팅 읽음 처리 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 사용자의 읽지 않은 채팅 목록 조회
+export async function getNotificationsUnread() {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(`${API_BASE_URL}/api/notifications/unread`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `읽지 않은 알림 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("읽지 않은 알림 조회 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 채팅방 메시지 목록 조회 (othersUnreadUsers 포함)
+export async function getChatMessagesWithUnreadCount(roomId: string) {
+  try {
+    if (!roomId || roomId === "undefined" || roomId === "null") {
+      throw new Error("유효하지 않은 roomId입니다.");
+    }
+
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(
+      `${API_BASE_URL}/api/chat/rooms/${roomId}/messages`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `채팅 메시지 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("채팅 메시지 조회 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 채팅방 이미지 전송
+export interface SendChatImageResponse {
+  message: string;
+  chatId: number;
+  roomId: number;
+  senderId: string;
+  content: string;
+  createdAt: string;
+  timeLabel: string;
+  senderNickname: string;
+  messageType: string;
+  othersUnreadUsers: any[];
+  images: Array<{
+    imageId: number;
+    originalFileName: string;
+    imageUrl: string;
+  }>;
+}
+
+export async function sendChatImage(
+  roomId: string | number,
+  files: File[],
+  caption?: string
+): Promise<SendChatImageResponse> {
+  try {
+    const token = localStorage.getItem("accessToken");
+
+    if (!token) {
+      throw new Error("로그인이 필요합니다.");
+    }
+
+    if (!files || files.length === 0) {
+      throw new Error("전송할 파일을 선택해주세요.");
+    }
+
+    // FormData 생성
+    const formData = new FormData();
+
+    // 파일 추가 (key: 'files')
+    for (let i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+
+    // 캡션 추가 (key: 'caption', 선택사항)
+    if (caption) {
+      formData.append("caption", caption);
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/rooms/${roomId}/messages/image`,
+      {
+        method: "POST",
+        headers: {
+          // FormData를 사용할 경우 Content-Type 헤더를 수동으로 설정하지 않아야 함
+          // 브라우저가 boundary 정보까지 포함하여 자동으로 생성
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `이미지 전송 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("채팅 이미지 전송 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// ==================== Review API ====================
+
+// 리뷰 이미지 타입
+export interface ReviewImage {
+  imageId: number;
+  originalFileName: string;
+  imageUrl: string;
+}
+
+// 내가 작성한 리뷰 타입
+export interface MyReview {
+  reviewId: number;
+  rating: number;
+  content: string;
+  createdAt: string;
+  reported: boolean;
+  cafeId: number;
+  cafeName: string;
+  reviewerId: string;
+  reviewerNickname: string;
+  reviewerProfileImageUrl: string | null;
+  images: ReviewImage[];
+}
+
+// 내가 작성한 리뷰 목록 조회 응답 타입
+export interface MyReviewsResponse {
+  message: string;
+  data: {
+    content: MyReview[];
+    pageable: {
+      pageNumber: number;
+      pageSize: number;
+      sort: {
+        empty: boolean;
+        unsorted: boolean;
+        sorted: boolean;
+      };
+      offset: number;
+      unpaged: boolean;
+      paged: boolean;
+    };
+    totalElements: number;
+    last: boolean;
+    totalPages: number;
+    size: number;
+    number: number;
+    sort: {
+      empty: boolean;
+      unsorted: boolean;
+      sorted: boolean;
+    };
+    first: boolean;
+    numberOfElements: number;
+    empty: boolean;
+  };
+}
+
+// 리뷰 수정 요청 타입
+export interface UpdateReviewRequest {
+  content: string;
+  rating: number;
+  images?: number[]; // 이미지 ID 배열 (기존 이미지 유지 시)
+}
+
+// 리뷰 수정 응답 타입
+export interface UpdateReviewResponse {
+  message: string;
+  data: {
+    reviewId: number;
+    rating: number;
+    content: string;
+    createdAt: string;
+    reported: boolean;
+    cafeId: number;
+    cafeName: string;
+    reviewerId: string;
+    reviewerNickname: string;
+    reviewerProfileImageUrl: string | null;
+    images: ReviewImage[];
+  };
+}
+
+// 내가 작성한 리뷰 목록 조회
+export async function getMyReviews(params?: {
+  page?: number;
+  size?: number;
+}): Promise<MyReviewsResponse> {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.page !== undefined)
+      queryParams.append("page", params.page.toString());
+    if (params?.size !== undefined)
+      queryParams.append("size", params.size.toString());
+
+    const url = `${API_BASE_URL}/api/my/reviews${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    const token = localStorage.getItem("accessToken");
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("로그인이 필요합니다.");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `리뷰 목록 조회 실패 (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("내가 작성한 리뷰 조회 API 호출 실패:", error);
+    throw error;
+  }
+}
+
+// 리뷰 수정
+// (중복 정의 제거됨 - updateReview는 상단 apiClient 버전 사용)
+
+// 리뷰 삭제
+// (중복 정의 제거됨 - deleteReview는 상단 apiClient 버전 사용)
