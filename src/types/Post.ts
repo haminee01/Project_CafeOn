@@ -1,4 +1,130 @@
-// 게시글 타입 정의
+// 커뮤니티 게시글 타입 정의
+
+// 게시글 타입 (카테고리)
+export type PostType = "GENERAL" | "QUESTION" | "INFO";
+
+// 댓글 타입 (Comment.ts에서 가져옴)
+export interface Comment {
+  id: number;
+  author: string;
+  content: string;
+  likes: number;
+  created_at: string;
+  parent_comment_id?: number;
+  replies?: Comment[];
+  likedByMe?: boolean;
+  parent_id?: number | null;
+  children?: Comment[];
+}
+
+// 게시글 목록 항목 타입
+export interface PostListItem {
+  id: number;
+  type: PostType;
+  title: string;
+  author: string;
+  authorProfileImageUrl?: string | null;
+  created_at: string;
+  views: number;
+  likes: number;
+  comments: number;
+  likedByMe?: boolean;
+}
+
+// 게시글 상세 타입
+export interface PostDetail {
+  id: number;
+  type: PostType;
+  title: string;
+  content: string;
+  author: string;
+  authorProfileImageUrl?: string | null;
+  created_at: string;
+  updated_at?: string;
+  views: number;
+  likes: number;
+  comments: number;
+  Images?: string[];
+  likedByMe: boolean;
+}
+
+// 게시글 목록 응답 타입
+export interface PostListResponse {
+  posts: PostListItem[];
+  pages: number;
+}
+
+// 게시글 생성 응답 타입
+export interface PostCreateResponse {
+  id: number;
+  message: string;
+}
+
+// 게시글 수정 요청 타입
+export interface PostUpdateRequest {
+  title: string;
+  content: string;
+  type: PostType;
+  image?: File[];
+}
+
+// 게시글 수정 응답 타입
+export interface PostUpdateResponse {
+  message: string;
+}
+
+// 게시글 삭제 응답 타입
+export interface PostDeleteResponse {
+  message: string;
+}
+
+// 게시글 좋아요 응답 타입
+export interface PostLikeResponse {
+  message: string;
+  liked: boolean;
+}
+
+// 댓글 생성 요청 타입
+export interface CommentCreateRequest {
+  content: string;
+  parentId?: number;
+}
+
+// 댓글 생성 응답 타입
+export interface CommentCreateResponse {
+  id: number;
+  message: string;
+}
+
+// 댓글 수정 응답 타입
+export interface CommentUpdateResponse {
+  message: string;
+}
+
+// 댓글 삭제 응답 타입
+export interface CommentDeleteResponse {
+  message: string;
+}
+
+// 댓글 좋아요 응답 타입
+export interface CommentLikeResponse {
+  message: string;
+  liked: boolean;
+}
+
+// 신고 요청 타입
+export interface ReportRequest {
+  content: string;
+  type?: string;
+}
+
+// 신고 응답 타입
+export interface ReportResponse {
+  message: string;
+}
+
+// --- 하위 호환성을 위한 기존 타입들 ---
+
 export interface MyPost {
   id: number;
   type: string;
@@ -11,20 +137,18 @@ export interface MyPost {
   likedByMe: boolean;
 }
 
-// 댓글 타입 정의
 export interface MyComment {
-  id: number;
+  commentId: number;
+  parentId: number | null;
+  postId: number;
+  authorName: string;
   content: string;
-  postTitle: string;
   createdAt: string;
-  likes: number;
-  children?: MyComment[];
-  author?: string;
-  likedByMe?: boolean;
-  parent_id?: number;
+  children: MyComment[];
+  likeCount: number;
+  likedByMe: boolean;
 }
 
-// 좋아요한 글 타입 정의
 export interface MyLikedPost {
   id: number;
   title: string;
@@ -35,16 +159,18 @@ export interface MyLikedPost {
   commentCount: number;
 }
 
-// 좋아요한 댓글 타입 정의
 export interface MyLikedComment {
-  id: number;
+  commentId: number;
+  parentId: number | null;
+  postId: number;
+  authorName: string;
   content: string;
-  postTitle: string;
   createdAt: string;
-  likes: number;
+  children: MyLikedComment[];
+  likeCount: number;
+  likedByMe: boolean;
 }
 
-// Spring Boot Page 객체 구조
 export interface PageResponse<T> {
   content: T[];
   totalElements: number;
@@ -74,7 +200,6 @@ export interface PageResponse<T> {
   };
 }
 
-// 백엔드 ApiResponse 구조
 export interface MyPostsResponse {
   data: PageResponse<MyPost>;
   message: string;
@@ -99,7 +224,6 @@ export interface MyLikedCommentsResponse {
   success?: boolean;
 }
 
-// API 호출 파라미터 타입
 export interface MyPostsParams {
   page?: number;
   size?: number;
@@ -118,126 +242,4 @@ export interface MyLikedPostsParams {
 export interface MyLikedCommentsParams {
   page?: number;
   size?: number;
-}
-
-// 게시글 타입
-export type PostType = "GENERAL" | "QUESTION" | "INFO";
-
-// 커뮤니티 관련 타입들
-export interface PostListItem {
-  id: number;
-  type: PostType;
-  title: string;
-  author: string;
-  created_at: string;
-  views: number;
-  likes: number;
-  comments: number;
-}
-
-export interface PostListResponse {
-  posts: PostListItem[];
-  pages: number;
-}
-
-export interface PostDetail {
-  id: number;
-  type: PostType;
-  title: string;
-  author: string;
-  created_at: string;
-  views: number;
-  likes: number;
-  comments: number;
-  content: string;
-  Images: string[];
-  likedByMe: boolean;
-}
-
-export interface PostCreateResponse {
-  id: number;
-  message: string;
-}
-
-export interface PostUpdateRequest {
-  title: string;
-  content: string;
-  type: PostType;
-  image?: File[];
-}
-
-export interface PostUpdateResponse {
-  message: string;
-}
-
-export interface PostDeleteResponse {
-  message: string;
-}
-
-export interface PostLikeResponse {
-  message: string;
-  data: {
-    liked: boolean;
-    likes: number;
-  };
-}
-
-export interface Comment {
-  id: number;
-  author: string;
-  content: string;
-  likes: number;
-  created_at: string;
-  replies: Comment[];
-  likedByMe: boolean;
-  parent_id: number | null;
-  children: Comment[];
-}
-
-export interface CommentCreateRequest {
-  content: string;
-  parentId?: number;
-}
-
-export interface CommentCreateResponse {
-  message: string;
-  data: {
-    commentId: number;
-    content: string;
-    authorName: string;
-    createdAt: string;
-    likeCount: number;
-    likedByMe: boolean;
-    parentId: number | null;
-    children: any[];
-  };
-}
-
-export interface CommentUpdateResponse {
-  message: string;
-}
-
-export interface CommentDeleteResponse {
-  message: string;
-}
-
-export interface CommentLikeResponse {
-  message: string;
-  data: {
-    commentId: number;
-    liked: boolean;
-    likes: number;
-  };
-}
-
-export interface ReportRequest {
-  targetType: "POST" | "COMMENT";
-  targetId: number;
-  reason: string;
-  description?: string;
-}
-
-export interface ReportResponse {
-  message: string;
-  reportId: number;
 }
