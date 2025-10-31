@@ -133,10 +133,12 @@ export const getPosts = async (
     type: backendPost.type as PostListItem["type"],
     title: backendPost.title,
     author: backendPost.authorNickname, // authorNickname -> author로 매핑
+    authorProfileImageUrl: backendPost.authorProfileImageUrl,
     created_at: backendPost.createdAt, // createdAt -> created_at으로 매핑
     views: backendPost.viewCount, // viewCount -> views로 매핑
     likes: backendPost.likeCount, // likeCount -> likes로 매핑
     comments: backendPost.commentCount, // commentCount -> comments로 매핑
+    likedByMe: backendPost.likedByMe,
   }));
 
   const transformedData: PostListResponse = {
@@ -170,7 +172,9 @@ export const getPostDetail = async (
     type: backendData.type as PostDetailType["type"],
     title: backendData.title,
     author: backendData.authorNickname, // authorNickname -> author로 매핑
+    authorProfileImageUrl: backendData.authorProfileImageUrl,
     created_at: backendData.createdAt, // createdAt -> created_at으로 매핑
+    updated_at: backendData.updatedAt,
     views: backendData.viewCount, // viewCount -> views로 매핑
     likes: backendData.likeCount, // likeCount -> likes로 매핑
     comments: 0, // 댓글 수는 별도 API로 조회
@@ -189,7 +193,8 @@ interface BackendComment {
   commentId: number;
   parentId: number | null;
   postId: number;
-  authorName: string;
+  authorName?: string;
+  authorNickname?: string;
   content: string;
   createdAt: string;
   children: BackendComment[];
@@ -230,14 +235,15 @@ export const getComments = async (
     const transformedComments: Comment[] = commentsData.map(
       (backendComment) => ({
         id: backendComment.commentId,
-        author: backendComment.authorName,
+        author:
+          backendComment.authorName || backendComment.authorNickname || "익명",
         content: backendComment.content,
         likes: backendComment.likeCount,
         created_at: backendComment.createdAt,
         replies:
           backendComment.children?.map((child) => ({
             id: child.commentId,
-            author: child.authorName,
+            author: child.authorName || child.authorNickname || "익명",
             content: child.content,
             likes: child.likeCount,
             created_at: child.createdAt,
@@ -251,7 +257,7 @@ export const getComments = async (
         children:
           backendComment.children?.map((child) => ({
             id: child.commentId,
-            author: child.authorName,
+            author: child.authorName || child.authorNickname || "익명",
             content: child.content,
             likes: child.likeCount,
             created_at: child.createdAt,

@@ -1,6 +1,7 @@
 // src/components/community/PostItem.tsx
 import Link from "next/link";
 import { PostListItem, PostType } from "@/types/Post";
+import ProfileIcon from "@/components/chat/ProfileIcon";
 
 interface PostItemProps {
   post: PostListItem;
@@ -40,23 +41,50 @@ export default function PostItem({ post }: PostItemProps) {
           </span>
         </div>
 
-        <div className="flex justify-between text-sm text-gray-500">
-          <div className="space-x-4">
-            <span>작성자: {post.author || "익명"}</span>
+        <div className="flex justify-between items-center text-sm text-gray-500">
+          <div className="flex items-center gap-3">
+            {/* 작성자 아바타 */}
+            <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+              {post.authorProfileImageUrl ? (
+                <img
+                  src={post.authorProfileImageUrl}
+                  alt="프로필 이미지"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ProfileIcon size="sm" />
+              )}
+            </div>
+            <span className="text-gray-700">{post.author || "익명"}</span>
+            {/* 내가 좋아요한 게시글 표시 */}
+            {post.likedByMe && (
+              <span className="inline-flex items-center text-red-500">
+                <svg
+                  className="w-4 h-4 mr-1"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+                좋아요함
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-4">
             <span>조회: {post.views?.toLocaleString() || 0}</span>
             <span>좋아요: {post.likes?.toLocaleString() || 0}</span>
+            <span>
+              {post.created_at
+                ? new Date(post.created_at).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "날짜 없음"}
+            </span>
           </div>
-          <span>
-            {post.created_at
-              ? new Date(post.created_at).toLocaleDateString("ko-KR", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "날짜 없음"}
-          </span>
         </div>
       </div>
     </Link>

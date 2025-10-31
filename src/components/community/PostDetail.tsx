@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import ReportModal from "@/components/modals/ReportModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useToastContext } from "@/components/common/ToastProvider";
+import ProfileIcon from "@/components/chat/ProfileIcon";
 
 interface PostDetailProps {
   post: PostDetailType;
@@ -50,21 +51,11 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
       const response = await togglePostLike(post.id);
       console.log("좋아요 응답:", response);
 
-      // 안전하게 상태 업데이트 (응답 구조에 맞게 수정)
-      if (response && response.data) {
-        const { liked, likes } = response.data;
-        if (typeof liked === "boolean") {
-          setIsLiked(liked);
-          // API에서 제공하는 정확한 좋아요 수 사용
-          if (typeof likes === "number") {
-            setCurrentLikes(likes);
-          } else {
-            // API에서 likes를 제공하지 않는 경우에만 토글
-            setCurrentLikes((prev) =>
-              liked ? prev + 1 : Math.max(0, prev - 1)
-            );
-          }
-        }
+      // 응답 타입: { message, liked }
+      if (typeof response?.liked === "boolean") {
+        const liked = response.liked;
+        setIsLiked(liked);
+        setCurrentLikes((prev) => (liked ? prev + 1 : Math.max(0, prev - 1)));
       }
     } catch (error) {
       console.error("좋아요 처리 실패:", error);
@@ -105,8 +96,20 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
         </div>
 
         <div className="flex justify-between items-center text-sm text-gray-500 mt-3">
-          <div className="space-x-4">
-            <span>작성자: {post.author || "익명"}</span>
+          <div className="flex items-center gap-3">
+            {/* 작성자 아바타 */}
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+              {post.authorProfileImageUrl ? (
+                <img
+                  src={post.authorProfileImageUrl}
+                  alt="프로필 이미지"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ProfileIcon size="md" />
+              )}
+            </div>
+            <span className="text-gray-700">{post.author || "익명"}</span>
             <span>
               작성일:{" "}
               {post.created_at
@@ -119,6 +122,18 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
                   })
                 : "날짜 없음"}
             </span>
+            {post.updated_at && (
+              <span>
+                수정일:{" "}
+                {new Date(post.updated_at).toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            )}
           </div>
           <div className="space-x-4">
             <span>조회수: {post.views?.toLocaleString() || 0}</span>

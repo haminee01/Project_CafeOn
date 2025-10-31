@@ -23,6 +23,7 @@ export interface PostListItem {
   type: PostType;
   title: string;
   author: string;
+  authorProfileImageUrl?: string | null;
   created_at: string;
   views: number;
   likes: number;
@@ -37,7 +38,9 @@ export interface PostDetail {
   title: string;
   content: string;
   author: string;
+  authorProfileImageUrl?: string | null;
   created_at: string;
+  updated_at?: string;
   views: number;
   likes: number;
   comments: number;
