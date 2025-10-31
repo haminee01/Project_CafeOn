@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { IoNotificationsOutline } from "react-icons/io5";
 import NotificationDropdown from "./NotificationDropdown";
 import { useAuth } from "@/contexts/AuthContext";
+import { getUnreadNotifications } from "@/api/chat";
 
 interface HeaderProps {
   className?: string;
@@ -12,6 +13,7 @@ interface HeaderProps {
 
 const Header = ({ className = "" }: HeaderProps) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const headerRef = useRef<HTMLElement>(null);
 
   // 중복 헤더 감지 및 숨기기
@@ -31,11 +33,49 @@ const Header = ({ className = "" }: HeaderProps) => {
     setIsNotificationOpen(!isNotificationOpen);
   };
 
-  const closeNotification = () => {
+  const closeNotification = async () => {
     setIsNotificationOpen(false);
+    // 드롭다운이 닫힐 때 알림 개수 다시 확인
+    if (isAuthenticated) {
+      try {
+        const notifications = await getUnreadNotifications();
+        const unreadNotifications = notifications.filter((n) => !n.read);
+        setUnreadCount(unreadNotifications.length);
+      } catch (error) {
+        console.error("알림 개수 조회 실패:", error);
+      }
+    }
   };
 
   const { isAuthenticated, user, logout, isLoading } = useAuth();
+
+  // 알림 개수 조회 및 실시간 업데이트
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const fetchNotificationCount = async () => {
+      try {
+        const notifications = await getUnreadNotifications();
+        const unreadNotifications = notifications.filter((n) => !n.read);
+        setUnreadCount(unreadNotifications.length);
+      } catch (error) {
+        console.error("알림 개수 조회 실패:", error);
+      }
+    };
+
+    // 초기 로드
+    fetchNotificationCount();
+
+    // 주기적으로 알림 개수 확인 (10초마다) - 더 빠른 업데이트
+    const intervalId = setInterval(fetchNotificationCount, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isAuthenticated]);
 
   return (
     <header ref={headerRef} className={`header-component ${className}`}>
@@ -45,14 +85,19 @@ const Header = ({ className = "" }: HeaderProps) => {
             <div className="relative">
               <button
                 onClick={toggleNotification}
-                className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+                className="text-gray-800 font-normal text-base hover:text-primary transition-colors relative"
               >
                 <IoNotificationsOutline className="w-6 h-6 text-gray-600" />
+                {/* 읽지 않은 알림이 있으면 빨간 점 표시 */}
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
               </button>
 
               <NotificationDropdown
                 isOpen={isNotificationOpen}
                 onClose={closeNotification}
+                onNotificationCountChange={setUnreadCount}
               />
             </div>
 

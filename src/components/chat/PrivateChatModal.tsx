@@ -164,8 +164,8 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
           </div>
         )}
 
-        {/* 에러 상태 */}
-        {error && !isLoading && (
+        {/* 에러 상태 - 채팅방이 생성되지 않은 경우에만 표시 */}
+        {error && !isLoading && !isJoined && !roomId && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center p-6">
               <div className="text-red-500 text-6xl mb-4">⚠️</div>
@@ -184,8 +184,8 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
           </div>
         )}
 
-        {/* 정상 채팅 화면 */}
-        {!isLoading && !error && (
+        {/* 정상 채팅 화면 - 채팅방이 생성되었거나 에러 없이 로딩이 완료된 경우 */}
+        {!isLoading && (!error || isJoined || roomId) && (
           <>
             {/* Header */}
             <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-10 shadow-sm bg-white sticky top-0 bg-[#6E4213]">

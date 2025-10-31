@@ -76,13 +76,11 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   // 읽음 상태 조회 함수
   const fetchReadStatus = useCallback(async () => {
     if (!roomId) {
-      console.log("roomId가 없어서 읽음 상태 조회를 건너뜁니다.");
       return;
     }
 
     try {
       const response = await getChatMessagesWithUnreadCount(roomId);
-      console.log("메시지 목록 조회 결과:", response);
 
       // 응답 데이터 구조에 따라 읽음 상태 설정
       if (response.data && response.data.content) {
@@ -104,21 +102,9 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
           // 두 가지 ID 형태 모두 매핑
           statusMap[chatId] = unreadCount;
           statusMap[historyMessageId] = unreadCount;
-
-          console.log("API 메시지 처리:", {
-            chatId: message.chatId,
-            messageId: chatId,
-            historyMessageId,
-            content: message.message,
-            othersUnreadUsers: message.othersUnreadUsers,
-            unreadCount,
-          });
         });
 
-        console.log("읽음 상태 맵 (정확한 값):", statusMap);
         setReadStatus(statusMap);
-      } else {
-        console.log("API 응답 데이터가 없습니다:", response);
       }
     } catch (error) {
       console.error("메시지 목록 조회 실패:", error);
@@ -143,7 +129,6 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
     const handleChatMessageAdded = (event: CustomEvent) => {
       const { roomId: eventRoomId } = event.detail;
       if (eventRoomId === roomId) {
-        console.log("새 메시지 추가 이벤트 감지, 읽음 상태 업데이트");
         // 약간의 지연을 두고 읽음 상태 조회 (서버에서 처리 시간 고려)
         setTimeout(() => {
           fetchReadStatus();
@@ -154,7 +139,6 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
     const handleChatMarkedAsRead = (event: CustomEvent) => {
       const { roomId: eventRoomId } = event.detail;
       if (eventRoomId === roomId) {
-        console.log("읽음 처리 이벤트 감지, 읽음 상태 업데이트");
         // 약간의 지연을 두고 읽음 상태 조회 (서버에서 처리 시간 고려)
         setTimeout(() => {
           fetchReadStatus();

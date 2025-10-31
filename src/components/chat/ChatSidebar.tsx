@@ -18,6 +18,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const { user } = useAuth();
   const currentUserNickname = user?.username || null;
   const effectiveCurrentUserId = currentUserId || (user as any)?.id || null;
+
   // 로컬 스토리지에 저장된 사용자명도 후보로 사용 (브랜치/새로고침 간 불일치 대비)
   let storedUsername: string | null = null;
   try {
@@ -28,9 +29,45 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       storedUsername = parsed?.username || null;
     }
   } catch {}
-  const candidateMyNames = [currentUserNickname, storedUsername].filter(
-    Boolean
-  ) as string[];
+
+  // 토큰에서도 닉네임 추출
+  let tokenNickname: string | null = null;
+  try {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("accessToken")
+        : null;
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      tokenNickname = payload?.nickname || payload?.username || null;
+    }
+  } catch {}
+
+  const candidateMyNames = [
+    currentUserNickname,
+    storedUsername,
+    tokenNickname,
+  ].filter(Boolean) as string[];
+
+  // 현재 사용자 ID 후보 (토큰에서도 추출)
+  let currentUserIdFromToken: string | null = null;
+  try {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("accessToken")
+        : null;
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      currentUserIdFromToken =
+        payload?.sub || payload?.userId || payload?.id || null;
+    }
+  } catch {}
+
+  const candidateMyIds = [
+    effectiveCurrentUserId,
+    currentUserIdFromToken,
+    (user as any)?.id,
+  ].filter(Boolean) as string[];
   return (
     <>
       {/* 사이드바 (참여자 목록) 오버레이 */}
@@ -81,15 +118,23 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 .sort((a, b) => {
                   // 현재 사용자를 맨 위로 정렬 (ID 우선, 이름 후보 보조)
                   const aIsMe =
-                    (!!effectiveCurrentUserId &&
-                      a.id === effectiveCurrentUserId) ||
+                    (candidateMyIds.length > 0 &&
+                      candidateMyIds.some(
+                        (id) => String(id) === String(a.id)
+                      )) ||
                     (candidateMyNames.length > 0 &&
-                      candidateMyNames.includes(a.name));
+                      candidateMyNames.some(
+                        (name) => (name || "").trim() === (a.name || "").trim()
+                      ));
                   const bIsMe =
-                    (!!effectiveCurrentUserId &&
-                      b.id === effectiveCurrentUserId) ||
+                    (candidateMyIds.length > 0 &&
+                      candidateMyIds.some(
+                        (id) => String(id) === String(b.id)
+                      )) ||
                     (candidateMyNames.length > 0 &&
-                      candidateMyNames.includes(b.name));
+                      candidateMyNames.some(
+                        (name) => (name || "").trim() === (b.name || "").trim()
+                      ));
                   if (aIsMe) return -1;
                   if (bIsMe) return 1;
                   return 0;
@@ -97,10 +142,27 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 .map((participant) => {
                   // 현재 사용자 여부 판단 (ID 우선, 이름 후보 보조)
                   const isCurrentUser =
-                    (!!effectiveCurrentUserId &&
-                      participant.id === effectiveCurrentUserId) ||
+                    (candidateMyIds.length > 0 &&
+                      candidateMyIds.some(
+                        (id) => String(id) === String(participant.id)
+                      )) ||
                     (candidateMyNames.length > 0 &&
-                      candidateMyNames.includes(participant.name));
+                      candidateMyNames.some(
+                        (name) =>
+                          (name || "").trim() ===
+                          (participant.name || "").trim()
+                      ));
+
+                  // 디버깅 로그
+                  if (isCurrentUser) {
+                    console.log("ChatSidebar: 현재 사용자 확인", {
+                      participantName: participant.name,
+                      participantId: participant.id,
+                      candidateMyIds,
+                      candidateMyNames,
+                      isCurrentUser,
+                    });
+                  }
 
                   return (
                     <div

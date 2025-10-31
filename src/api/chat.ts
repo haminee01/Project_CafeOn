@@ -973,41 +973,73 @@ export const createDmChat = async (
     });
 
     if (!response.ok) {
-      console.error(
-        "1:1 채팅방 생성 API 에러:",
-        response.status,
-        response.statusText
-      );
-
       // 에러 응답 본문 파싱
       let errorMessage = `HTTP error! status: ${response.status}`;
+      let isDuplicateEntry = false;
       try {
         const errorText = await response.text();
-        console.error("1:1 채팅방 생성 실패 응답:", errorText);
 
         // JSON 파싱 시도
         try {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.message || errorMessage;
-          console.error("1:1 채팅방 생성 실패 상세:", errorData);
+
+          // Duplicate entry 에러 감지 (이미 참여 중인 경우)
+          if (
+            response.status === 400 &&
+            (errorMessage.includes("Duplicate entry") ||
+              errorMessage.includes("uk_crm_room_user"))
+          ) {
+            isDuplicateEntry = true;
+          }
         } catch {
           // JSON이 아닌 경우 텍스트 그대로 사용
           if (errorText) {
             errorMessage = errorText;
+            // Duplicate entry 에러 감지 (이미 참여 중인 경우)
+            if (
+              response.status === 400 &&
+              (errorText.includes("Duplicate entry") ||
+                errorText.includes("uk_crm_room_user"))
+            ) {
+              isDuplicateEntry = true;
+            }
           }
         }
 
         // 백엔드 세션 플러시 에러 감지
         if (
-          errorText.includes("null identifier") ||
-          errorText.includes("session is flushed") ||
-          errorText.includes("ChatRoomEntity")
+          !isDuplicateEntry &&
+          (errorMessage.includes("null identifier") ||
+            errorMessage.includes("session is flushed") ||
+            errorMessage.includes("ChatRoomEntity"))
         ) {
           errorMessage =
             "채팅방 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
         }
       } catch (parseError) {
-        console.error("1:1 채팅방 생성 실패 응답 파싱 오류:", parseError);
+        // 파싱 에러는 무시
+      }
+
+      // Duplicate entry 에러인 경우 특별한 에러 타입으로 throw
+      if (isDuplicateEntry) {
+        // 에러 메시지에서 roomId 추출 시도
+        // 에러 메시지 형식: "Duplicate entry '2-8fabfe1d-...' for key..."
+        let extractedRoomId: string | null = null;
+        try {
+          const match = errorMessage.match(/Duplicate entry ['"](\d+)-/);
+          if (match && match[1]) {
+            extractedRoomId = match[1];
+          }
+        } catch {}
+
+        const duplicateError: any = new Error(
+          "ALREADY_PARTICIPATING: 이미 채팅방에 참여 중입니다."
+        );
+        duplicateError.isDuplicateEntry = true;
+        duplicateError.status = 400;
+        duplicateError.roomId = extractedRoomId;
+        throw duplicateError;
       }
 
       throw new Error(errorMessage);

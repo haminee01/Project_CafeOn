@@ -57,9 +57,11 @@ const NotificationDropdown = ({
         try {
           const data = await getUnreadNotifications();
           setNotifications(data);
+          // 읽지 않은 알림 개수만 계산
+          const unreadCount = data.filter((n) => !n.read).length;
           // 알림 개수 변경 콜백 호출
           if (onNotificationCountChange) {
-            onNotificationCountChange(data.length);
+            onNotificationCountChange(unreadCount);
           }
         } catch (error) {
           console.error("알림 로드 실패:", error);
@@ -73,8 +75,13 @@ const NotificationDropdown = ({
   }, [isOpen, onNotificationCountChange]);
 
   // 알림 클릭 핸들러
-  const handleNotificationClick = (deeplink: string) => {
-    router.push(deeplink);
+  const handleNotificationClick = (notification: NotificationResponse) => {
+    // 읽지 않은 알림 개수 업데이트 (읽음 처리된 것처럼 보이도록)
+    if (!notification.read && onNotificationCountChange) {
+      const currentUnreadCount = notifications.filter((n) => !n.read).length;
+      onNotificationCountChange(Math.max(0, currentUnreadCount - 1));
+    }
+    router.push(notification.deeplink);
     onClose();
   };
 
@@ -106,7 +113,7 @@ const NotificationDropdown = ({
       className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
     >
       <div className="p-4 border-b border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">새로운 알림</h3>
+        <h3 className="text-lg font-semibold text-[#6E4213]">새로운 알림</h3>
       </div>
       <div className="max-h-96 overflow-y-auto">
         {loading ? (
@@ -121,28 +128,28 @@ const NotificationDropdown = ({
           notifications.map((notification) => (
             <div
               key={notification.notificationId}
-              className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                !notification.read ? "bg-blue-50" : ""
+              className={`p-4 border-b border-[#E8DDD4] hover:bg-[#F9F5F0] cursor-pointer transition-colors ${
+                !notification.read ? "bg-[#F9F5F0]" : "bg-[#F4EDE5]"
               }`}
-              onClick={() => handleNotificationClick(notification.deeplink)}
+              onClick={() => handleNotificationClick(notification)}
             >
               <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                  <IoNotificationsOutline className="w-4 h-4 text-gray-600" />
+                <div className="w-8 h-8 bg-[#E8DDD4] rounded flex items-center justify-center flex-shrink-0">
+                  <IoNotificationsOutline className="w-4 h-4 text-[#8B6F47]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-gray-900 leading-relaxed">
+                  <p className="text-sm text-[#6E4213] leading-relaxed">
                     {notification.title}
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">
+                  <p className="text-xs text-[#8B6F47] mt-1">
                     {notification.preview}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-[#A6907A] mt-1">
                     {formatTime(notification.createdAt)}
                   </p>
                 </div>
                 {!notification.read && (
-                  <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
+                  <div className="w-2 h-2 bg-[#6E4213] rounded-full flex-shrink-0 mt-2"></div>
                 )}
               </div>
             </div>
