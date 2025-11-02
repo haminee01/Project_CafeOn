@@ -40,7 +40,8 @@ export default function AdminMembersPage() {
         return;
       }
 
-      const status = activeTab === "all" ? undefined : activeTab.toUpperCase();
+      // 백엔드가 기대하는 status 값: "normal", "suspended", 또는 undefined (all)
+      const status = activeTab === "all" ? undefined : activeTab === "active" ? "normal" : activeTab;
       const response = await getAdminMembers({
         page: currentPage - 1,
         size: 10,
@@ -220,7 +221,7 @@ export default function AdminMembersPage() {
       {/* 탭 */}
       <div className="flex border-b border-gray-200">
         <button
-          onClick={() => setActiveTab("all")}
+          onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "all"
               ? "border-b-2 border-primary text-primary"
@@ -230,7 +231,7 @@ export default function AdminMembersPage() {
           전체 회원
         </button>
         <button
-          onClick={() => setActiveTab("active")}
+          onClick={() => { setActiveTab("active"); setCurrentPage(1); }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "active"
               ? "border-b-2 border-primary text-primary"
@@ -240,7 +241,7 @@ export default function AdminMembersPage() {
           정상 회원
         </button>
         <button
-          onClick={() => setActiveTab("suspended")}
+          onClick={() => { setActiveTab("suspended"); setCurrentPage(1); }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "suspended"
               ? "border-b-2 border-primary text-primary"
