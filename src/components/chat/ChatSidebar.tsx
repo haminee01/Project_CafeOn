@@ -1,7 +1,7 @@
 import React from "react";
 import ProfileIcon from "./ProfileIcon";
 import { ChatSidebarProps } from "@/types/chat";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   participants,

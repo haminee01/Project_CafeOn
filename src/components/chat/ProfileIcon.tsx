@@ -4,12 +4,14 @@ interface ProfileIconProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   variant?: "default" | "amber";
+  imageUrl?: string | null;
 }
 
 const ProfileIcon: React.FC<ProfileIconProps> = ({
   className = "",
   size = "md",
   variant = "default",
+  imageUrl,
 }) => {
   const sizeClasses = {
     sm: "w-6 h-6",
@@ -33,6 +35,20 @@ const ProfileIcon: React.FC<ProfileIconProps> = ({
     amber: "text-amber-900",
   };
 
+  // 프로필 이미지가 있으면 이미지를 표시
+  if (imageUrl) {
+    return (
+      <div className={`${sizeClasses[size]} rounded-full overflow-hidden ${className}`}>
+        <img
+          src={imageUrl}
+          alt="Profile"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  // 이미지가 없으면 기본 아이콘 표시
   return (
     <div
       className={`${sizeClasses[size]} rounded-full flex items-center justify-center ${className}`}

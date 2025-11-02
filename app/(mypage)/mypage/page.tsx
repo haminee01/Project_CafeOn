@@ -10,6 +10,7 @@ import {
   changePassword,
 } from "@/lib/api";
 import { FaUser } from "react-icons/fa";
+import { useAuth } from "@/contexts/AuthContext";
 
 const WithdrawalModal = ({
   onConfirm,
@@ -43,6 +44,7 @@ const PasswordAlert = () => (
 );
 
 export default function MypageMainPage() {
+  const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState({
     nickname: "",
     name: "",
@@ -97,6 +99,14 @@ export default function MypageMainPage() {
 
     try {
       await updateUserProfile(profile.nickname);
+      // 전역 사용자 상태 업데이트
+      if (user) {
+        updateUser({
+          ...user,
+          nickname: profile.nickname,
+          username: profile.nickname,
+        });
+      }
       alert("회원정보가 수정되었습니다.");
     } catch (error) {
       alert(
@@ -128,6 +138,13 @@ export default function MypageMainPage() {
           ...profile,
           profileImageUrl: newImageUrl,
         });
+        // 전역 사용자 상태 업데이트
+        if (user) {
+          updateUser({
+            ...user,
+            profileImageUrl: newImageUrl,
+          });
+        }
         alert("프로필 이미지가 변경되었습니다.");
       } catch (error) {
         alert(

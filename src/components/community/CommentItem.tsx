@@ -11,7 +11,7 @@ import {
   getComments,
 } from "@/api/community";
 import ReportModal from "@/components/modals/ReportModal";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToastContext } from "@/components/common/ToastProvider";
 import ProfileIcon from "@/components/chat/ProfileIcon";
 
@@ -20,7 +20,7 @@ interface TemporaryAlertProps {
 }
 
 const TemporaryAlert = ({ message }: TemporaryAlertProps) => (
-  <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#999999] text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300">
+  <div className="fixed top-4 right-4 bg-[#999999] text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300">
     {message}
   </div>
 );
@@ -230,9 +230,10 @@ export default function CommentItem({
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-              <ProfileIcon size="sm" />
-            </div>
+            <ProfileIcon 
+              size="sm" 
+              imageUrl={isMyComment && user?.profileImageUrl ? user.profileImageUrl : undefined}
+            />
             <span
               className={`font-semibold ${
                 isMyComment ? "text-[#6E4213]" : "text-gray-800"

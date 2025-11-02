@@ -9,7 +9,7 @@ import {
   QuestionStatus,
   QuestionVisibility,
 } from "@/hooks/useMyQuestions";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;

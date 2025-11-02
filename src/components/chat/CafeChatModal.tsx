@@ -9,7 +9,7 @@ import PrivateChatModal from "./PrivateChatModal";
 import ProfileMiniPopup from "../common/ProfileMiniPopup";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { usePrivateChatFlow } from "../../hooks/usePrivateChatFlow";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface CafeChatModalProps {
   cafeId: string;

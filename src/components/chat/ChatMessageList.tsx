@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import ChatMessageItem from "./ChatMessageItem";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
 import { ChatHistoryMessage } from "@/api/chat";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { getChatMessagesWithUnreadCount } from "@/lib/api";
 
 interface ChatMessageListProps {

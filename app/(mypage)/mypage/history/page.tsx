@@ -6,7 +6,7 @@ import { useMyPosts } from "@/hooks/useMyPosts";
 import { useMyComments } from "@/hooks/useMyComments";
 import { useMyLikedPosts } from "@/hooks/useMyLikedPosts";
 import { useMyLikedComments } from "@/hooks/useMyLikedComments";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 // 탭 데이터 정의
 const historyTabs = [

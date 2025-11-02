@@ -16,6 +16,7 @@ export interface CafeReview {
   images?: string[];
   rating?: number; // 별점 추가
   reviewerId?: string; // 리뷰 작성자 ID 추가
+  profileImageUrl?: string; // 리뷰 작성자 프로필 이미지 URL
 }
 
 export interface CafeDetail {

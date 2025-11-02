@@ -16,7 +16,7 @@ import {
   ChatHistoryResponse,
 } from "@/api/chat";
 import { markChatAsRead } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { ChatMessage, Participant } from "@/types/chat";
 import {
   createStompClient,

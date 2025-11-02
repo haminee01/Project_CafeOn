@@ -183,27 +183,6 @@ function Map({ className = "", cafes = [] }: MapProps) {
             // 카페 ID 확인 (API 데이터의 경우 cafeId, mock 데이터의 경우 cafe_id)
             const cafeId = cafe.cafeId || cafe.cafe_id || "";
 
-            // 오늘 요일의 영업시간 추출
-            let todayHours = "정보 없음";
-            if (cafe.open_hours) {
-              const lines = cafe.open_hours
-                .split("\n")
-                .filter((line: string) => line.trim());
-              const today = new Date().getDay();
-              const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
-              const todayName = dayNames[today];
-              const regex = new RegExp(`^${todayName}\\s`);
-              for (const line of lines) {
-                if (regex.test(line)) {
-                  todayHours = line;
-                  break;
-                }
-              }
-              if (todayHours === "정보 없음" && lines.length > 0) {
-                todayHours = lines[0];
-              }
-            }
-
             const marker = new (window as any).google.maps.Marker({
               position: { lat: cafe.latitude, lng: cafe.longitude },
               map: map,
@@ -256,33 +235,32 @@ function Map({ className = "", cafes = [] }: MapProps) {
                  </div>
                  
                  <div style="margin-bottom: 16px;">
-                   <div style="margin-bottom: 8px; display: flex; align-items: flex-start; gap: 6px;">
+                   <div style="display: flex; align-items: flex-start; gap: 6px;">
                      <span style="color: #6E4213; font-size: 14px; margin-top: 1px;">📍</span>
                      <span style="color: #374151; font-size: 13px; line-height: 1.4;">${
                        cafe.address
                      }</span>
                    </div>
-                   
-                   <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                     <span style="color: #6E4213; font-size: 14px;">⭐</span>
-                     <span style="color: #374151; font-size: 13px; font-weight: 500;">
-                       평점: <span style="color: #C19B6C; font-weight: 600;">${
-                         (() => {
-                           const rating = cafe.avg_rating != null ? cafe.avg_rating : ((cafe as any).avgRating != null ? (cafe as any).avgRating : null);
-                           if (rating != null && rating !== undefined) {
-                             const numRating = typeof rating === 'number' ? rating : parseFloat(String(rating));
-                             return !isNaN(numRating) ? numRating.toFixed(1) : "정보 없음";
-                           }
-                           return "정보 없음";
-                         })()
-                       }</span>
-                     </span>
-                   </div>
-                   
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="color: #6E4213; font-size: 14px;">🕒</span>
-                    <span style="color: #374151; font-size: 13px;">${todayHours}</span>
-                  </div>
+                   ${
+                     cafe.tags && cafe.tags.length > 0
+                       ? `<div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
+                           ${cafe.tags
+                             .slice(0, 3)
+                             .map(
+                               (tag: string) =>
+                                 `<span style="
+                                   background-color: #F4EDE5;
+                                   color: #6E4213;
+                                   padding: 2px 8px;
+                                   border-radius: 12px;
+                                   font-size: 11px;
+                                   font-weight: 500;
+                                 ">${tag}</span>`
+                             )
+                             .join("")}
+                         </div>`
+                       : ""
+                   }
                  </div>
                  
                 <button 
@@ -444,27 +422,6 @@ function Map({ className = "", cafes = [] }: MapProps) {
 
         if (!cafe.latitude || !cafe.longitude) return;
 
-        // 오늘 요일의 영업시간 추출
-        let todayHours = "정보 없음";
-        if (cafe.open_hours) {
-          const lines = cafe.open_hours
-            .split("\n")
-            .filter((line: string) => line.trim());
-          const today = new Date().getDay();
-          const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
-          const todayName = dayNames[today];
-          const regex = new RegExp(`^${todayName}\\s`);
-          for (const line of lines) {
-            if (regex.test(line)) {
-              todayHours = line;
-              break;
-            }
-          }
-          if (todayHours === "정보 없음" && lines.length > 0) {
-            todayHours = lines[0];
-          }
-        }
-
         const marker = new (window as any).google.maps.Marker({
           position: { lat: cafe.latitude, lng: cafe.longitude },
           map: mapInstance.current,
@@ -491,31 +448,32 @@ function Map({ className = "", cafes = [] }: MapProps) {
                 }</h3>
               </div>
               <div style="margin-bottom: 16px;">
-                <div style="margin-bottom: 8px; display: flex; align-items: flex-start; gap: 6px;">
+                <div style="display: flex; align-items: flex-start; gap: 6px;">
                   <span style="color: #6E4213; font-size: 14px; margin-top: 1px;">📍</span>
                   <span style="color: #374151; font-size: 13px; line-height: 1.4;">${
                     cafe.address
                   }</span>
                 </div>
-                <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #6E4213; font-size: 14px;">⭐</span>
-                  <span style="color: #374151; font-size: 13px; font-weight: 500;">
-                    평점: <span style="color: #C19B6C; font-weight: 600;">${
-                      (() => {
-                        const rating = cafe.avg_rating != null ? cafe.avg_rating : ((cafe as any).avgRating != null ? (cafe as any).avgRating : null);
-                        if (rating != null && rating !== undefined) {
-                          const numRating = typeof rating === 'number' ? rating : parseFloat(String(rating));
-                          return !isNaN(numRating) ? numRating.toFixed(1) : "정보 없음";
-                        }
-                        return "정보 없음";
-                      })()
-                    }</span>
-                  </span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="color: #6E4213; font-size: 14px;">🕒</span>
-                  <span style="color: #374151; font-size: 13px;">${todayHours}</span>
-                </div>
+                ${
+                  cafe.tags && cafe.tags.length > 0
+                    ? `<div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
+                        ${cafe.tags
+                          .slice(0, 3)
+                          .map(
+                            (tag: string) =>
+                              `<span style="
+                                background-color: #F4EDE5;
+                                color: #6E4213;
+                                padding: 2px 8px;
+                                border-radius: 12px;
+                                font-size: 11px;
+                                font-weight: 500;
+                              ">${tag}</span>`
+                          )
+                          .join("")}
+                      </div>`
+                    : ""
+                }
               </div>
               <button id="cafe-detail-btn-${cafeId}" style="width: 100%; padding: 12px 16px; background: #6E4213; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(110, 66, 19, 0.2); outline: none;">
                 궁금해요

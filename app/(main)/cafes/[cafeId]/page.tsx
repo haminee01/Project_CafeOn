@@ -121,7 +121,11 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
     const fetchSimilarCafes = async () => {
       try {
         const cafes = await getRandomCafes();
-        setSimilarCafes(Array.isArray(cafes) ? cafes : []);
+        // 이미지가 있는 카페만 필터링
+        const cafesWithImages = (Array.isArray(cafes) ? cafes : []).filter(cafe => 
+          cafe.photoUrl || (cafe.images && cafe.images.length > 0)
+        );
+        setSimilarCafes(cafesWithImages);
       } catch (error: any) {
         console.error("유사 카페 조회 실패:", error);
         setSimilarCafes([]);

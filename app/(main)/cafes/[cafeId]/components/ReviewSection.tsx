@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Toast from "@/components/common/Toast";
 import ReportReviewModal from "@/components/modals/ReportReviewModal";
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
+import ProfileIcon from "@/components/chat/ProfileIcon";
 
 // 날짜 포맷 함수
 const formatDate = (dateString: string): string => {
@@ -84,6 +85,8 @@ export default function ReviewSection({
   } | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [sortBy, setSortBy] = useState<"latest" | "rating-high" | "rating-low" | "likes">("latest");
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const INITIAL_REVIEWS_LIMIT = 5;
 
   // initialReviews 또는 sortBy 변경 시 리뷰 목록 새로고침 및 정렬
   useEffect(() => {
@@ -115,6 +118,7 @@ export default function ReviewSection({
           likes: 0,
           images: reviewImages,
           reviewerId: r.reviewerId,
+          profileImageUrl: r.reviewerProfileImageUrl,
         };
       });
 
@@ -180,6 +184,7 @@ export default function ReviewSection({
                 likes: 0,
                 images: reviewImages,
                 reviewerId: r.reviewerId,
+                profileImageUrl: r.reviewerProfileImageUrl,
               };
             });
             
@@ -217,6 +222,73 @@ export default function ReviewSection({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger, sortBy]); // sortBy도 의존성에 추가하여 정렬 기준 변경 시 재정렬
+
+  // 전역 사용자 프로필 이미지가 변경되면 리뷰 목록 업데이트
+  useEffect(() => {
+    console.log("[ReviewSection useEffect] 트리거됨:", {
+      hasUser: !!user,
+      isAuthenticated,
+      hasProfileImageUrl: !!user?.profileImageUrl,
+      profileImageUrl: user?.profileImageUrl,
+    });
+    
+    if (user && isAuthenticated && user.profileImageUrl) {
+      // user.userId가 없으면 JWT에서 추출
+      let currentUserId = user.userId;
+      if (!currentUserId) {
+        try {
+          const token = localStorage.getItem("accessToken");
+          if (token) {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            currentUserId = payload.sub || "";
+          }
+        } catch (e) {
+          console.error("JWT 파싱 실패:", e);
+        }
+      }
+
+      console.log("[ReviewSection useEffect] currentUserId:", currentUserId);
+
+      if (currentUserId) {
+        setReviews((prevReviews) => {
+          console.log("[ReviewSection setReviews] prevReviews:", prevReviews.map(r => ({
+            id: r.id,
+            reviewerId: r.reviewerId,
+            user: r.user,
+          })));
+          
+          const updatedReviews = prevReviews.map((review) => {
+            const isMatch = review.reviewerId === currentUserId;
+            if (isMatch) {
+              console.log("[ReviewSection] 매칭되는 리뷰 발견:", {
+                reviewId: review.id,
+                reviewerId: review.reviewerId,
+                reviewerNickname: review.user,
+                newProfileImageUrl: user.profileImageUrl,
+              });
+            }
+            return isMatch
+              ? { ...review, profileImageUrl: user.profileImageUrl }
+              : review;
+          });
+          
+          // 디버깅 로그
+          const matchedCount = updatedReviews.filter(
+            (r) => r.reviewerId === currentUserId
+          ).length;
+          console.log("[ReviewSection] 프로필 이미지 업데이트:", {
+            currentUserId,
+            profileImageUrl: user.profileImageUrl,
+            reviewsCount: prevReviews.length,
+            matchedReviewsCount: matchedCount,
+          });
+          
+          return updatedReviews;
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.profileImageUrl, user?.userId, isAuthenticated]);
 
   const toggleMenu = (reviewId: number, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -425,25 +497,13 @@ export default function ReviewSection({
           </div>
         ) : (
           <div className="space-y-6">
-            {reviews.map((review) => (
+            {(showAllReviews ? reviews : reviews.slice(0, INITIAL_REVIEWS_LIMIT)).map((review) => (
               <div
                 key={review.id}
                 className="border border-secondary rounded-lg p-6 bg-white"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
-                    <svg
-                      className="w-6 h-6 text-gray-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
+                  <ProfileIcon size="md" imageUrl={review.profileImageUrl} />
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -589,23 +649,28 @@ export default function ReviewSection({
             <Button onClick={handleWriteReview} color="primary" size="md">
               리뷰 작성하기
             </Button>
-            <Button
-              color="gray"
-              size="md"
-              className="!bg-transparent !text-primary focus:!ring-0 !border-0 !shadow-none hover:!underline"
-            >
-              리뷰 더보기
-            </Button>
+            {reviews.length > INITIAL_REVIEWS_LIMIT && (
+              <Button
+                onClick={() => setShowAllReviews(!showAllReviews)}
+                color="gray"
+                size="md"
+                className="!bg-transparent !text-primary focus:!ring-0 !border-0 !shadow-none hover:!underline"
+              >
+                {showAllReviews ? "리뷰 접기" : "리뷰 더보기"}
+              </Button>
+            )}
           </div>
         )}
 
         {/* 토스트 */}
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
+          <div className="fixed top-4 right-4 z-[60]">
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => setToast(null)}
+            />
+          </div>
         )}
 
         {/* 신고 모달 */}

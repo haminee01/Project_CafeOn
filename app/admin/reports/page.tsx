@@ -11,6 +11,7 @@ import {
   updateAdminReport,
   deleteReview,
 } from "@/lib/api";
+import { deletePostMutator, deleteCommentMutator } from "@/api/community";
 
 // 날짜 포맷 함수
 const formatDate = (dateString: string): string => {
@@ -44,6 +45,7 @@ interface Report {
   processedDate?: string;
   processedBy?: string;
   targetId?: number; // 원본 콘텐츠 ID (리뷰 ID, 게시글 ID 등)
+  parentId?: number; // 상위 ID (댓글→게시글, 리뷰→카페)
   cafeId?: number; // 카페 ID (리뷰인 경우)
 }
 
@@ -137,6 +139,7 @@ export default function AdminReportsPage() {
         const enrichedReport: Report = {
           ...report,
           targetId: detailData.targetId, // 상세에서 targetId 가져오기
+          parentId: detailData.parentId, // 상위 ID 가져오기 (댓글의 경우 postId, 리뷰의 경우 cafeId)
           originalTitle: detailData.target?.title,
           originalContent:
             detailData.target?.body || detailData.target?.content,
@@ -190,13 +193,14 @@ export default function AdminReportsPage() {
           await deleteReview(selectedReport.targetId.toString());
         } else if (
           selectedReport.type === "comment" &&
-          selectedReport.targetId
+          selectedReport.targetId &&
+          selectedReport.parentId
         ) {
-          // TODO: 댓글 삭제 API 추가 필요
-          console.log("댓글 삭제 기능은 아직 구현되지 않았습니다.");
+          // 댓글 삭제 - postId가 필요하므로 신고 상세에서 가져온 parentId 사용
+          await deleteCommentMutator(selectedReport.parentId, selectedReport.targetId);
         } else if (selectedReport.type === "post" && selectedReport.targetId) {
-          // TODO: 게시글 삭제 API 추가 필요
-          console.log("게시글 삭제 기능은 아직 구현되지 않았습니다.");
+          // 게시글 삭제
+          await deletePostMutator(selectedReport.targetId);
         }
       }
 

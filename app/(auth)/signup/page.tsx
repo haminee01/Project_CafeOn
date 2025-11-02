@@ -6,7 +6,7 @@ import Button from "@/components/common/Button";
 import { socialProviders, generateSocialAuthUrl } from "@/data/socialAuth";
 import Header from "@/components/common/Header";
 import { useAuth } from "@/contexts/AuthContext";
-import { signup, login } from "@/lib/api";
+import { signup, login, updateProfileImage } from "@/lib/api";
 
 interface ChatMessage {
   id: string;
@@ -355,14 +355,43 @@ export default function SignupPage() {
       // 로그인 성공 시 토큰 저장 및 홈으로 리다이렉트
       if (loginResponse?.data && loginResponse.data.token) {
         const { token, refreshToken } = loginResponse.data;
-        const userData = {
-          userId: signupResponse.data?.userId || "",
-          email: formData.email,
-          nickname: formData.nickname,
-        };
-
-        // AuthContext의 login 함수 호출
-        authLogin(token, refreshToken, userData);
+        
+        // 프로필 이미지가 있으면 업로드
+        if (profileImage) {
+          try {
+            console.log("[Signup] 프로필 이미지 업로드 시도:", profileImage);
+            const imageResponse = await updateProfileImage(profileImage);
+            console.log("[Signup] 프로필 이미지 업로드 응답:", imageResponse);
+            const imageUrl = imageResponse.data?.profileImageUrl || imageResponse.data?.profileImageUrl;
+            console.log("[Signup] 프로필 이미지 URL:", imageUrl);
+            const userData = {
+              userId: signupResponse.data?.userId || "",
+              email: formData.email,
+              nickname: formData.nickname,
+              username: formData.nickname,
+              profileImageUrl: imageUrl,
+            };
+            console.log("[Signup] 로그인할 사용자 데이터:", userData);
+            authLogin(token, refreshToken, userData);
+          } catch (error: any) {
+            console.error("[Signup] 프로필 이미지 업로드 실패:", error);
+            // 이미지 업로드 실패해도 회원가입은 성공으로 처리
+            const userData = {
+              userId: signupResponse.data?.userId || "",
+              email: formData.email,
+              nickname: formData.nickname,
+              username: formData.nickname,
+            };
+            authLogin(token, refreshToken, userData);
+          }
+        } else {
+          const userData = {
+            userId: signupResponse.data?.userId || "",
+            email: formData.email,
+            nickname: formData.nickname,
+          };
+          authLogin(token, refreshToken, userData);
+        }
 
         // redirect 파라미터가 있으면 그 경로로, 없으면 홈으로
         router.push(redirectPath || "/");

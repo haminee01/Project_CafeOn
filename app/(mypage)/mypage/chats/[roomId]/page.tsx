@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import ChatMessageList from "@/components/chat/ChatMessageList";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import { useDmChat } from "@/hooks/useDmChat";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { usePrivateChatFlow } from "@/hooks/usePrivateChatFlow";
 import PrivateChatModal from "@/components/chat/PrivateChatModal";
 import ProfileMiniPopup from "@/components/common/ProfileMiniPopup";

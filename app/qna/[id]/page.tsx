@@ -4,7 +4,7 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useQuestionDetail, useAnswerList } from "@/hooks/useQnA";
 import { QuestionVisibility } from "@/types/qna";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 

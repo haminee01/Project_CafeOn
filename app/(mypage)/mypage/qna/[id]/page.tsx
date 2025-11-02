@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 import { useMyQuestionDetail } from "@/hooks/useMyQuestionDetail";
 import { useMyQuestionActions } from "@/hooks/useMyQuestionActions";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import QuestionEditModal from "@/components/qna/QuestionEditModal";
 import { useToast } from "@/components/common/Toast";
 

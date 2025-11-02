@@ -7,7 +7,7 @@ import { useState } from "react";
 import { togglePostLike, deletePostMutator } from "@/api/community";
 import { useRouter } from "next/navigation";
 import ReportModal from "@/components/modals/ReportModal";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToastContext } from "@/components/common/ToastProvider";
 import ProfileIcon from "@/components/chat/ProfileIcon";
 
@@ -98,17 +98,14 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
         <div className="flex justify-between items-center text-sm text-gray-500 mt-3">
           <div className="flex items-center gap-3">
             {/* 작성자 아바타 */}
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-              {post.authorProfileImageUrl ? (
-                <img
-                  src={post.authorProfileImageUrl}
-                  alt="프로필 이미지"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <ProfileIcon size="md" />
-              )}
-            </div>
+            <ProfileIcon 
+              size="md" 
+              imageUrl={
+                isAuthor && user?.profileImageUrl
+                  ? user.profileImageUrl
+                  : post.authorProfileImageUrl
+              }
+            />
             <span className="text-gray-700">{post.author || "익명"}</span>
             <span>
               작성일:{" "}

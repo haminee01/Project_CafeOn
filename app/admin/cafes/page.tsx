@@ -11,6 +11,8 @@ export default function AdminCafesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [cafeToDelete, setCafeToDelete] = useState<any>(null);
   // API에서 전체 카페 데이터 조회
   useEffect(() => {
     const fetchCafes = async () => {
@@ -108,21 +110,18 @@ export default function AdminCafesPage() {
       </div>
 
       {/* 검색바 */}
+      <div className="w-full max-w-4/5">
+        <SearchBar
+          placeholder="카페명, 주소, 설명으로 검색..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+      </div>
       
-        <div className="w-full max-w-4/5">
-          <SearchBar
-            placeholder="카페명, 주소, 설명으로 검색..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
-        </div>
-        
-        <div className="text-sm text-gray-500">
-          총 {filteredCafes.length}개 카페
-        </div>
+      <div className="text-sm text-gray-500">
+        총 {filteredCafes.length}개 카페
+      </div>
 
-<<<<<<< HEAD
-      {/* 카페 개수 */}
       {/* 카페 그리드 - 한 줄에 4개씩 */}
       {loading ? (
         <div className="text-center py-12">
@@ -155,7 +154,7 @@ export default function AdminCafesPage() {
                   color="gray" 
                   size="sm" 
                   className="flex-1"
-                  onClick={() => {}}
+                  onClick={() => handleDeleteClick(cafe)}
                 >
                   삭제
                 </Button>

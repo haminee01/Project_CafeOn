@@ -7,9 +7,11 @@ interface User {
   userId: string;
   email: string;
   nickname: string;
+  username?: string; // 호환성을 위한 필드 (nickname의 alias)
   name?: string;
   phone?: string;
   role?: string;
+  profileImageUrl?: string;
 }
 
 interface AuthContextType {
@@ -17,6 +19,8 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isLoggedIn: boolean; // useAuth.ts 호환성
+  currentUserId: string | undefined; // useAuth.ts 호환성
   login: (token: string, refreshToken: string, userData?: User) => void;
   logout: () => void;
   updateUser: (userData: User) => void;
@@ -35,14 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedToken = localStorage.getItem("accessToken");
     
+    console.log("[AuthContext] 초기 로드 - 토큰 존재:", !!storedToken);
+    
     // 토큰이 없으면 인증되지 않은 상태로 처리
     if (!storedToken) {
+      console.log("[AuthContext] 토큰 없음 - 비인증 상태로 처리");
       // 토큰이 없는데 사용자 정보만 남아있으면 정리
       if (localStorage.getItem("user") || localStorage.getItem("userInfo")) {
         localStorage.removeItem("user");
         localStorage.removeItem("userInfo");
       }
       setIsLoading(false);
+      setIsAuthenticated(false);
       return;
     }
 
@@ -60,13 +68,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : {
               userId: userData.id,
               nickname: userData.username || userData.nickname,
+              username: userData.username || userData.nickname,
               email: userData.email,
               name: userData.name,
               phone: userData.phone,
               role: userData.role,
+              profileImageUrl: userData.profileImageUrl,
             };
         setUser(authUser);
         setIsAuthenticated(true);
+        console.log("[AuthContext] 토큰 + 사용자 정보 있음 - 인증 상태로 설정");
       } catch (error) {
         console.error("사용자 정보 파싱 오류:", error);
         // 파싱 오류 시 모든 정보 삭제
@@ -78,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
       // 토큰은 있지만 사용자 정보가 없으면 토큰도 삭제
+      console.log("[AuthContext] 토큰만 있음 - 토큰 삭제 및 비인증 상태로 설정");
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       setIsAuthenticated(false);
@@ -132,6 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         isAuthenticated,
         isLoading,
+        isLoggedIn: isAuthenticated, // useAuth.ts 호환성
+        currentUserId: user?.userId || user?.id, // useAuth.ts 호환성
         login,
         logout,
         updateUser,

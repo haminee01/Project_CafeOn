@@ -13,7 +13,7 @@ import ChatSidebar from "../../../../src/components/chat/ChatSidebar";
 import ProfileMiniPopup from "../../../../src/components/common/ProfileMiniPopup";
 import { useEscapeKey } from "../../../../src/hooks/useEscapeKey";
 import { usePrivateChatFlow } from "../../../../src/hooks/usePrivateChatFlow";
-import { useAuth } from "../../../../src/hooks/useAuth";
+import { useAuth } from "../../../../src/contexts/AuthContext";
 
 const ProfileIcon: React.FC<{ size?: string }> = ({ size = "w-8 h-8" }) => (
   <div
