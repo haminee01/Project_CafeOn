@@ -22,6 +22,7 @@ export default function AdminMembersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
+  const [allMembers, setAllMembers] = useState<Member[]>([]); // 전체 회원 (클라이언트 필터링용)
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -36,7 +37,38 @@ export default function AdminMembersPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) {
         setMembers([]);
+        setAllMembers([]);
         setLoading(false);
+        return;
+      }
+
+      // 페널티 3회 탭은 전체 회원을 가져와 클라이언트에서 필터링
+      if (activeTab === "penalty") {
+        const response = await getAdminMembers({
+          page: 0,
+          size: 1000, // 충분히 큰 값
+          search: searchTerm,
+          status: undefined, // 전체
+        });
+        
+        const pageData = response?.data || response;
+        const memberList = pageData?.content || [];
+        
+        // 페널티 3회 이상만 필터링
+        const filteredMembers = memberList.filter((member: Member) => member.penaltyCount >= 3);
+        
+        setAllMembers(memberList);
+        
+        // 클라이언트 페이지네이션
+        const itemsPerPage = 10;
+        const totalPagesCount = Math.ceil(filteredMembers.length / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pagedMembers = filteredMembers.slice(startIndex, endIndex);
+        
+        setMembers(pagedMembers);
+        setTotalPages(totalPagesCount);
+        
         return;
       }
 
@@ -67,6 +99,7 @@ export default function AdminMembersPage() {
     } catch (error) {
       console.error("회원 목록 조회 실패:", error);
       setMembers([]);
+      setAllMembers([]);
     } finally {
       setLoading(false);
     }
@@ -218,6 +251,15 @@ export default function AdminMembersPage() {
         <h1 className="text-3xl font-bold text-gray-900">회원 관리</h1>
       </div>
 
+      {/* 검색바 */}
+      <div className="w-full max-w-4/5">
+        <SearchBar
+          placeholder="이름으로 검색..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+      </div>
+
       {/* 탭 */}
       <div className="flex border-b border-gray-200">
         <button
@@ -250,19 +292,20 @@ export default function AdminMembersPage() {
         >
           정지 회원
         </button>
+        <button
+          onClick={() => { setActiveTab("penalty"); setCurrentPage(1); }}
+          className={`px-4 py-2 text-base font-medium ${
+            activeTab === "penalty"
+              ? "border-b-2 border-primary text-primary"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          페널티 3회 이상
+        </button>
       </div>
 
       <div className="text-sm text-gray-500">
         총 {members.length}명 회원
-      </div>
-
-      {/* 검색바 */}
-      <div className="w-full max-w-4/5">
-        <SearchBar
-          placeholder="이름으로 검색..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-        />
       </div>
 
       {/* 회원 목록 */}
