@@ -141,7 +141,7 @@ export default function AdminMembersPage() {
     setSuspensionReason("");
 
     // 정지 해제인 경우 확인 모달 먼저 표시
-    if (member.status === "suspended") {
+    if (member.status?.toUpperCase() === "SUSPENDED") {
       setShowSuspensionConfirmModal(true);
     } else {
       setShowSuspensionModal(true);
@@ -161,7 +161,7 @@ export default function AdminMembersPage() {
             member.id === selectedMember.id
               ? {
                   ...member,
-                  status: member.status === "active" ? "suspended" : "active",
+                  status: member.status?.toUpperCase() === "ACTIVE" ? "SUSPENDED" : "ACTIVE",
                 }
               : member
           )
@@ -194,7 +194,7 @@ export default function AdminMembersPage() {
         setMembers((prevMembers) =>
           prevMembers.map((member) =>
             member.id === selectedMember.id
-              ? { ...member, status: "active" }
+              ? { ...member, status: "ACTIVE" }
               : member
           )
         );
@@ -284,7 +284,7 @@ export default function AdminMembersPage() {
                 <p className="text-sm text-gray-500">{member.email}</p>
                 <p className="text-sm text-gray-500">
                   페널티: {member.penaltyCount}회 | 상태:{" "}
-                  {member.status === "active" ? "정상" : "정지"}
+                  {member.status?.toUpperCase() === "ACTIVE" ? "정상" : "정지"}
                 </p>
               </div>
               <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
@@ -296,11 +296,11 @@ export default function AdminMembersPage() {
                   페널티
                 </Button>
                 <Button
-                  color={member.status === "active" ? "warning" : "gray"}
+                  color={member.status?.toUpperCase() === "ACTIVE" ? "warning" : "gray"}
                   size="sm"
                   onClick={() => handleSuspensionClick(member)}
                 >
-                  {member.status === "active" ? "정지" : "정지 해제"}
+                  {member.status?.toUpperCase() === "ACTIVE" ? "정지" : "정지 해제"}
                 </Button>
               </div>
             </div>
@@ -403,7 +403,7 @@ export default function AdminMembersPage() {
                 onClick={handleSuspensionConfirm}
                 disabled={!suspensionReason.trim()}
               >
-                {selectedMember?.status === "active" ? "정지하기" : "정지 해제"}
+                {selectedMember?.status?.toUpperCase() === "ACTIVE" ? "정지하기" : "정지 해제"}
               </Button>
             </div>
           </div>
