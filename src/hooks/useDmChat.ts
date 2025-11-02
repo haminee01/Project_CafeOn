@@ -278,6 +278,7 @@ export const useDmChat = ({
                 isMyMessage: isMyMessage,
                 senderId: data.senderNickname,
                 messageType: data.messageType,
+                images: data.images?.map((img) => img.imageUrl) || undefined,
               };
 
               // 중복 메시지 방지
@@ -428,6 +429,7 @@ export const useDmChat = ({
                   isMyMessage: msg.mine,
                   senderId: msg.senderNickname,
                   messageType: msg.messageType,
+                  images: msg.images?.map((img) => img.imageUrl) || undefined,
                 })
               );
 
@@ -664,6 +666,7 @@ export const useDmChat = ({
                 isMyMessage: msg.mine,
                 senderId: msg.senderNickname,
                 messageType: msg.messageType,
+                images: msg.images?.map((img) => img.imageUrl) || undefined,
               })
             );
             setMessages(historyMessages);
@@ -838,6 +841,7 @@ export const useDmChat = ({
               isMyMessage: msg.mine,
               senderId: msg.senderNickname,
               messageType: msg.messageType,
+              images: msg.images?.map((img) => img.imageUrl) || undefined,
             })
           );
           setMessages(historyMessages);

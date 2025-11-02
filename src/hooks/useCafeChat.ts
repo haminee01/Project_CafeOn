@@ -261,6 +261,7 @@ export const useCafeChat = ({
               isMyMessage: isMine,
               senderId: data.senderNickname,
               messageType: data.messageType,
+              images: data.images?.map((img) => img.imageUrl) || undefined,
             };
 
             // 낙관적 메시지 교체 및 중복 방지

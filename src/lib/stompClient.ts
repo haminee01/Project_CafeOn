@@ -61,6 +61,11 @@ export interface ChatMessage {
   mine: boolean;
   messageType: "TEXT" | "SYSTEM" | "SYSTEM_JOIN" | string;
   createdAt: string;
+  images?: Array<{
+    imageId: number;
+    originalFileName: string;
+    imageUrl: string;
+  }>;
 }
 
 export interface ChatNotification {

@@ -41,30 +41,56 @@ export const useAuth = () => {
 
   useEffect(() => {
     // 로컬 스토리지에서 사용자 정보 확인
-    const checkAuth = () => {
+    const checkAuth = async () => {
       try {
         const token = localStorage.getItem("accessToken");
-        const userInfo = localStorage.getItem("userInfo");
 
         if (token) {
-          // userInfo가 있으면 사용, 없으면 토큰에서 추출
-          if (userInfo) {
-            const parsedUser = JSON.parse(userInfo);
-            setUser(parsedUser);
-          } else {
-            // 토큰에서 사용자 정보 추출
-            const decodedUser = decodeToken(token);
-            if (decodedUser) {
-              setUser(decodedUser as User);
-              // 추출한 정보를 로컬 스토리지에 저장
-              localStorage.setItem("userInfo", JSON.stringify(decodedUser));
+          // API로 실제 사용자 정보 조회 (닉네임 포함)
+          try {
+            const API_BASE_URL =
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+            const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            if (response.ok) {
+              const userData = await response.json();
+
+              // 응답에서 사용자 정보 추출
+              const data = userData.data || userData;
+              const userId = data.userId || data.id || data.sub;
+              const nickname = data.nickname || data.name || data.username;
+              const email = data.email;
+
+              const userInfo: User = {
+                id: userId,
+                username: nickname,
+                email: email || "test@naver.com",
+              };
+
+              setUser(userInfo);
+              localStorage.setItem("userInfo", JSON.stringify(userInfo));
+              setIsLoading(false);
+              return;
             }
+          } catch (apiError) {
+            console.error("/api/users/me 호출 실패, 토큰에서 추출:", apiError);
+          }
+
+          // API 실패 시 토큰에서 추출
+          const decodedUser = decodeToken(token);
+          if (decodedUser) {
+            setUser(decodedUser as User);
+            localStorage.setItem("userInfo", JSON.stringify(decodedUser));
           }
         } else {
           setUser(null);
         }
       } catch (error) {
-        console.error("인증 정보 확인 중 오류:", error);
         setUser(null);
       } finally {
         setIsLoading(false);

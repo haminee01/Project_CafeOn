@@ -74,6 +74,11 @@ export interface ChatHistoryMessage {
   mine: boolean;
   messageType: "TEXT" | "SYSTEM" | string;
   createdAt: string;
+  images?: Array<{
+    imageId: number;
+    originalFileName: string;
+    imageUrl: string;
+  }>;
 }
 
 // 채팅 히스토리 응답 타입 (커서 페이징)
@@ -247,7 +252,7 @@ export const joinCafeGroupChat = async (
       if (!response.ok) {
         let errorText = "";
         let errorData: any = null;
-        
+
         try {
           errorText = await response.text();
           // 빈 문자열이 아니고 유효한 JSON인 경우 파싱 시도
@@ -262,7 +267,7 @@ export const joinCafeGroupChat = async (
         } catch (textError) {
           console.warn("에러 응답 본문 읽기 실패:", textError);
         }
-        
+
         // 에러 정보 구성
         const errorInfo: any = {
           status: response.status,
@@ -270,11 +275,11 @@ export const joinCafeGroupChat = async (
           cafeId,
           url: `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
         };
-        
+
         if (errorText) {
           errorInfo.errorText = errorText;
         }
-        
+
         if (errorData) {
           errorInfo.errorData = errorData;
           // 백엔드에서 보내는 메시지가 있는 경우 포함
@@ -282,7 +287,7 @@ export const joinCafeGroupChat = async (
             errorInfo.message = errorData.message;
           }
         }
-        
+
         console.error("채팅방 참여 API 에러:", errorInfo);
 
         // 400 에러인 경우 더 자세한 정보 제공
@@ -296,7 +301,7 @@ export const joinCafeGroupChat = async (
           });
 
           // 에러 응답을 JSON으로 파싱 시도
-          if (errorData && typeof errorData === 'object') {
+          if (errorData && typeof errorData === "object") {
             console.error("에러 응답 상세:", errorData);
 
             // "가입 상태 조회 실패" 에러인 경우 특별 처리

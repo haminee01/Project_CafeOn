@@ -16,7 +16,7 @@ import {
   CommentLikeResponse,
   ReportRequest,
   ReportResponse,
-} from "@/types/Post";
+} from "@/types/post";
 
 // BASE_URL은 환경에 따라 다를 수 있습니다. 예: http://localhost:8080
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
@@ -57,6 +57,8 @@ interface BackendPostDetailResponse {
   title: string;
   content: string;
   authorNickname: string;
+  authorId?: string; // 작성자 userId 추가
+  authorUserId?: string; // 백엔드가 다른 필드명을 사용할 수도 있음
   authorProfileImageUrl: string | null;
   type: string;
   viewCount: number;
@@ -172,6 +174,7 @@ export const getPostDetail = async (
     type: backendData.type as PostDetailType["type"],
     title: backendData.title,
     author: backendData.authorNickname, // authorNickname -> author로 매핑
+    authorId: backendData.authorId || backendData.authorUserId, // 작성자 userId 매핑
     authorProfileImageUrl: backendData.authorProfileImageUrl,
     created_at: backendData.createdAt, // createdAt -> created_at으로 매핑
     updated_at: backendData.updatedAt,
@@ -473,8 +476,11 @@ export async function updatePostMutator(
   formData.append("post", jsonBlob);
 
   // 이미지 파일들 추가
-  if (arg.image && arg.image.length > 0) {
-    arg.image.forEach((file: File) => {
+  const images = (arg as any).Image || arg.image;
+  console.log("updatePostMutator - 이미지 확인:", images?.length || 0, "개");
+  if (images && images.length > 0) {
+    images.forEach((file: File, idx: number) => {
+      console.log(`수정 - 이미지 ${idx + 1}:`, file.name, file.size, "bytes");
       formData.append("image", file);
     });
   }

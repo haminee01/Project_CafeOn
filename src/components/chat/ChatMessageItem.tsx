@@ -111,14 +111,40 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           </span>
 
           {/* 메시지 내용 */}
-          <div
-            className={`p-3 rounded-xl shadow-sm ${
-              isMyMessage
-                ? "bg-[#6E4213] text-white rounded-br-none"
-                : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
-            }`}
-          >
-            {message.content}
+          <div className="flex flex-col gap-2">
+            {/* 텍스트 메시지 */}
+            {message.content && (
+              <div
+                className={`p-3 rounded-xl shadow-sm ${
+                  isMyMessage
+                    ? "bg-[#6E4213] text-white rounded-br-none"
+                    : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
+                }`}
+              >
+                {message.content}
+              </div>
+            )}
+
+            {/* 이미지 표시 */}
+            {message.images && message.images.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {message.images.map((imageUrl, index) => (
+                  <div
+                    key={index}
+                    className={`overflow-hidden rounded-xl shadow-sm ${
+                      isMyMessage ? "rounded-br-none" : "rounded-tl-none"
+                    }`}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`채팅 이미지 ${index + 1}`}
+                      className="max-w-xs w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => window.open(imageUrl, "_blank")}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 읽지 않은 사람 수 표시 (읽지 않은 사람이 있을 때만, 내 메시지에도 표시) */}

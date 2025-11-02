@@ -5,6 +5,7 @@ export interface ChatMessage {
   isMyMessage: boolean;
   senderId: string;
   messageType?: string; // 메시지 타입 추가 (TEXT, SYSTEM 등)
+  images?: string[]; // 이미지 URL 배열
 }
 
 export interface UserProfile {

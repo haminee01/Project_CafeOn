@@ -248,6 +248,7 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
         isMyMessage: isMyMessage,
         senderId: historyMsg.senderNickname, // 임시로 nickname을 ID로 사용
         messageType: historyMsg.messageType, // 메시지 타입 추가
+        images: historyMsg.images?.map((img) => img.imageUrl) || undefined, // 이미지 URL 매핑
       };
 
       // console.log("히스토리 메시지 변환:", {

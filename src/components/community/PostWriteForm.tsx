@@ -1,6 +1,6 @@
 "use client";
 
-import { PostType } from "@/types/Post";
+import { PostType } from "@/types/post";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPostMutator, updatePostMutator } from "@/api/community";
@@ -51,11 +51,19 @@ export default function PostWriteForm({
     setError(null);
 
     try {
+      console.log("=== 게시글 제출 시작 ===");
+      console.log("현재 images state:", images.length, "개");
+
       // 1. 데이터 객체 구성
       // 유효한 이미지만 필터링
       const validImages = images.filter(
         (file) => file && file.size > 0 && file.type.startsWith("image/")
       );
+
+      console.log("유효한 이미지:", validImages.length, "개");
+      validImages.forEach((file, idx) => {
+        console.log(`전송할 이미지 ${idx + 1}:`, file.name, file.size, "bytes");
+      });
 
       const postData = {
         title,
@@ -63,6 +71,11 @@ export default function PostWriteForm({
         content,
         Image: validImages.length > 0 ? validImages : undefined,
       };
+
+      console.log(
+        "postData.Image:",
+        postData.Image ? `${postData.Image.length}개` : "없음"
+      );
 
       let response;
 
@@ -100,8 +113,10 @@ export default function PostWriteForm({
 
   // 이미지 첨부 핸들러
   const handleImageAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("=== 이미지 첨부 시작 ===");
     if (e.target.files) {
       const files = Array.from(e.target.files);
+      console.log("선택된 파일 개수:", files.length);
 
       // 유효한 이미지 파일만 필터링
       const validFiles = files.filter(
@@ -111,6 +126,15 @@ export default function PostWriteForm({
           file.type.startsWith("image/") &&
           file.size <= 10 * 1024 * 1024 // 10MB 제한
       );
+
+      console.log("유효한 파일 개수:", validFiles.length);
+      validFiles.forEach((file, idx) => {
+        console.log(`파일 ${idx + 1}:`, {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        });
+      });
 
       // 최대 3장 제한
       if (validFiles.length > 3) {
@@ -126,6 +150,7 @@ export default function PostWriteForm({
       }
 
       setImages(validFiles);
+      console.log("✅ 이미지 state 업데이트 완료:", validFiles.length, "개");
     }
   };
 

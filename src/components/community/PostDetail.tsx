@@ -2,8 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import { PostDetail as PostDetailType } from "@/types/Post";
-import { useState } from "react";
+import { PostDetail as PostDetailType } from "@/types/post";
+import { useState, useMemo } from "react";
 import { togglePostLike, deletePostMutator } from "@/api/community";
 import { useRouter } from "next/navigation";
 import ReportModal from "@/components/modals/ReportModal";
@@ -38,9 +38,46 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // 작성자 여부 확인 (JWT 토큰의 sub 필드로 사용자 ID 비교)
-  // 백엔드에서 authorId를 제공하지 않으므로 임시로 작성자명으로 비교
-  const isAuthor = isLoggedIn && user?.username === post.author;
+  // 작성자 여부 확인 (userId로 비교)
+  const isAuthor = useMemo(() => {
+    console.log("=== 작성자 확인 시작 ===");
+    console.log("user 전체 객체:", user);
+    console.log("post.author:", post.author);
+    console.log("post.authorId:", post.authorId);
+
+    if (!isLoggedIn || !user) {
+      console.log("❌ 로그인 안됨");
+      return false;
+    }
+
+    // userId가 있으면 userId로 비교 (가장 정확)
+    if (post.authorId && user.id) {
+      const isMatch = user.id === post.authorId;
+      console.log("✅ userId로 비교:", {
+        "user.id": user.id,
+        "post.authorId": post.authorId,
+        isMatch,
+      });
+      return isMatch;
+    }
+
+    console.log("⚠️ userId 비교 불가 (post.authorId 또는 user.id 없음)");
+
+    // userId가 없으면 닉네임으로 폴백 (대소문자 구분 없이 비교)
+    console.log("user.username:", user.username);
+
+    const currentNickname = (user.username || "").trim().toLowerCase();
+    const postAuthor = (post.author || "").trim().toLowerCase();
+    const isMatch = currentNickname === postAuthor;
+
+    console.log("📝 닉네임으로 비교:", {
+      currentNickname,
+      postAuthor,
+      isMatch,
+    });
+
+    return isMatch;
+  }, [isLoggedIn, user, post.author, post.authorId]);
 
   // 실제 좋아요/취소 핸들러
   const handleLike = async () => {

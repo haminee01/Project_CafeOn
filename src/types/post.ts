@@ -38,6 +38,7 @@ export interface PostDetail {
   title: string;
   content: string;
   author: string;
+  authorId?: string; // 작성자 userId 추가
   authorProfileImageUrl?: string | null;
   created_at: string;
   updated_at?: string;
