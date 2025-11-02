@@ -12,6 +12,13 @@ export default function HomePage() {
   const [wishlistTopCafes, setWishlistTopCafes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 이미지가 있는 카페만 필터링하는 함수
+  const hasValidImage = (cafe: any) => {
+    const imageUrl = cafe.photoUrl || cafe.photo_url || 
+                    (cafe.images && Array.isArray(cafe.images) && cafe.images.length > 0 ? cafe.images[0] : null);
+    return imageUrl && imageUrl.trim() !== '';
+  };
+
   // 카페 데이터 조회
   useEffect(() => {
     const fetchCafes = async () => {
@@ -27,7 +34,8 @@ export default function HomePage() {
         console.log("인기 카페 API 응답:", hot);
         console.log("찜 많은 카페 API 응답:", wishlist);
         
-        setRandomCafes(Array.isArray(random) ? random : []);
+        // "이런 카페는 어때요?" 섹션에서만 이미지가 있는 카페만 필터링
+        setRandomCafes(Array.isArray(random) ? random.filter(hasValidImage) : []);
         setHotCafes(Array.isArray(hot) ? hot : []);
         setWishlistTopCafes(Array.isArray(wishlist) ? wishlist : []);
       } catch (error: any) {
