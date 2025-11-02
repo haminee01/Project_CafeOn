@@ -256,7 +256,7 @@ export default function AdminMembersPage() {
 
       <div className="w-full max-w-4/5">
         <SearchBar
-          placeholder="이름, 이메일로 검색..."
+          placeholder="이름으로 검색..."
           value={searchTerm}
           onChange={handleSearchChange}
         />
