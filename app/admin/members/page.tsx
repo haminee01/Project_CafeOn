@@ -252,17 +252,17 @@ export default function AdminMembersPage() {
         </button>
       </div>
 
-      {/* 검색바 */}
+      <div className="text-sm text-gray-500">
+        총 {members.length}명 회원
+      </div>
 
+      {/* 검색바 */}
       <div className="w-full max-w-4/5">
         <SearchBar
           placeholder="이름으로 검색..."
           value={searchTerm}
           onChange={handleSearchChange}
         />
-      </div>
-      <div className="text-sm text-gray-500">
-        총 {members.length}명 회원
       </div>
 
       {/* 회원 목록 */}
