@@ -136,8 +136,8 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
         <div className="flex justify-between items-center text-sm text-gray-500 mt-3">
           <div className="flex items-center gap-3">
             {/* 작성자 아바타 */}
-            <ProfileIcon 
-              size="md" 
+            <ProfileIcon
+              size="md"
               imageUrl={
                 isAuthor && user?.profileImageUrl
                   ? user.profileImageUrl
@@ -150,10 +150,7 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
               {post.created_at ? formatDateTime(post.created_at) : "날짜 없음"}
             </span>
             {post.updated_at && (
-              <span>
-                수정일:{" "}
-                {formatDateTime(post.updated_at)}
-              </span>
+              <span>수정일: {formatDateTime(post.updated_at)}</span>
             )}
           </div>
           <div className="space-x-4">

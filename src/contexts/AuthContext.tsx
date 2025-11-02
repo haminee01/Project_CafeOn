@@ -38,66 +38,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 초기 로드 시 로컬 스토리지에서 인증 정보 복원
   useEffect(() => {
-    const storedToken = localStorage.getItem("accessToken");
+    const fetchUserInfo = async () => {
+      const storedToken = localStorage.getItem("accessToken");
 
-    console.log("[AuthContext] 초기 로드 - 토큰 존재:", !!storedToken);
+      console.log("[AuthContext] 초기 로드 - 토큰 존재:", !!storedToken);
 
-    // 토큰이 없으면 인증되지 않은 상태로 처리
-    if (!storedToken) {
-      console.log("[AuthContext] 토큰 없음 - 비인증 상태로 처리");
-      // 토큰이 없는데 사용자 정보만 남아있으면 정리
-      if (localStorage.getItem("user") || localStorage.getItem("userInfo")) {
-        localStorage.removeItem("user");
-        localStorage.removeItem("userInfo");
+      // 토큰이 없으면 인증되지 않은 상태로 처리
+      if (!storedToken) {
+        console.log("[AuthContext] 토큰 없음 - 비인증 상태로 처리");
+        // 토큰이 없는데 사용자 정보만 남아있으면 정리
+        if (localStorage.getItem("user") || localStorage.getItem("userInfo")) {
+          localStorage.removeItem("user");
+          localStorage.removeItem("userInfo");
+        }
+        setIsLoading(false);
+        setIsAuthenticated(false);
+        return;
       }
-      setIsLoading(false);
-      setIsAuthenticated(false);
-      return;
-    }
 
-    // 토큰이 있으면 사용자 정보 확인
-    const storedUser =
-      localStorage.getItem("user") || localStorage.getItem("userInfo");
-
-    if (storedUser) {
+      // 토큰이 있으면 API로 사용자 정보 조회
       try {
-        setToken(storedToken);
-        const userData = JSON.parse(storedUser);
-        // userInfo 형식을 AuthContext User 형식으로 변환
-        const authUser = userData.userId
-          ? userData
-          : {
-              userId: userData.id,
-              nickname: userData.username || userData.nickname,
-              username: userData.username || userData.nickname,
-              email: userData.email,
-              name: userData.name,
-              phone: userData.phone,
-              role: userData.role,
-              profileImageUrl: userData.profileImageUrl,
-            };
-        setUser(authUser);
-        setIsAuthenticated(true);
-        console.log("[AuthContext] 토큰 + 사용자 정보 있음 - 인증 상태로 설정");
+        const API_BASE_URL =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          console.log("✅ [AuthContext] /api/users/me 응답:", userData);
+
+          const data = userData.data || userData;
+          const authUser: User = {
+            userId: data.userId || data.id,
+            id: data.userId || data.id,
+            nickname: data.nickname,
+            username: data.nickname,
+            email: data.email,
+            name: data.name,
+            phone: data.phone,
+            role: data.role,
+            profileImageUrl: data.profileImageUrl,
+          };
+
+          console.log("✅ [AuthContext] 사용자 정보 설정:", authUser);
+          setUser(authUser);
+          setToken(storedToken);
+          setIsAuthenticated(true);
+          localStorage.setItem("user", JSON.stringify(authUser));
+        } else {
+          console.error("[AuthContext] /api/users/me 실패:", response.status);
+          // API 실패 시 토큰 삭제
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("user");
+          localStorage.removeItem("userInfo");
+          setIsAuthenticated(false);
+        }
       } catch (error) {
-        console.error("사용자 정보 파싱 오류:", error);
-        // 파싱 오류 시 모든 정보 삭제
+        console.error("[AuthContext] API 호출 오류:", error);
+        // 에러 시 토큰 삭제
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
         localStorage.removeItem("userInfo");
         setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      // 토큰은 있지만 사용자 정보가 없으면 토큰도 삭제
-      console.log(
-        "[AuthContext] 토큰만 있음 - 토큰 삭제 및 비인증 상태로 설정"
-      );
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      setIsAuthenticated(false);
-    }
-    setIsLoading(false);
+    };
+
+    fetchUserInfo();
   }, []);
 
   const login = (
