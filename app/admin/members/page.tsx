@@ -23,6 +23,7 @@ export default function AdminMembersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
 
   // 회원 목록 조회
   useEffect(() => {
@@ -48,8 +49,20 @@ export default function AdminMembersPage() {
       });
 
       // API 응답 구조에 따라 조정
-      const memberList = response?.data?.content || response?.content || [];
+      // Spring Data Page 구조: { content: [...], totalPages: N, totalElements: M, ... }
+      const pageData = response?.data || response;
+      const memberList = pageData?.content || [];
+      const totalPagesCount = pageData?.totalPages || 1;
+      
       setMembers(memberList);
+      setTotalPages(totalPagesCount);
+      
+      console.log("API 응답:", {
+        members: memberList.length,
+        totalPages: totalPagesCount,
+        currentPage,
+        response
+      });
     } catch (error) {
       console.error("회원 목록 조회 실패:", error);
       setMembers([]);
@@ -74,17 +87,6 @@ export default function AdminMembersPage() {
     }
   });
 
-  const filteredMembers = members.filter((member) => {
-    const matchesTab = activeTab === "all" || member.status === activeTab;
-    const matchesSearch =
-      searchTerm.trim() === "" ||
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
-
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -259,12 +261,17 @@ export default function AdminMembersPage() {
         />
       </div>
       <div className="text-sm text-gray-500">
-        총 {filteredMembers.length}명 회원
+        총 {members.length}명 회원
       </div>
 
       {/* 회원 목록 */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600">회원 데이터를 불러오는 중...</p>
+        </div>
+      ) : (
       <div className="space-y-4">
-        {filteredMembers.map((member) => (
+        {members.map((member) => (
           <div
             key={member.id}
             className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
@@ -299,6 +306,7 @@ export default function AdminMembersPage() {
           </div>
         ))}
       </div>
+      )}
 
       {/* 페이지네이션 */}
       <Pagination
