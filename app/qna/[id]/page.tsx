@@ -7,6 +7,7 @@ import { QuestionVisibility } from "@/types/qna";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
+import { formatDateTime } from "@/utils/dateFormat";
 
 interface QuestionDetailPageProps {
   params: Promise<{
@@ -177,12 +178,12 @@ export default function QuestionDetailPage({
               <span>작성자: {question.authorNickname}</span>
               <span>
                 작성일:{" "}
-                {new Date(question.createdAt).toLocaleDateString("ko-KR")}
+                {formatDateTime(question.createdAt)}
               </span>
               {question.updatedAt !== question.createdAt && (
                 <span>
                   수정일:{" "}
-                  {new Date(question.updatedAt).toLocaleDateString("ko-KR")}
+                  {formatDateTime(question.updatedAt)}
                 </span>
               )}
             </div>

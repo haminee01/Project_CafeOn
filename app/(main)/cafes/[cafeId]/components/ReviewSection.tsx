@@ -9,36 +9,7 @@ import Toast from "@/components/common/Toast";
 import ReportReviewModal from "@/components/modals/ReportReviewModal";
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
 import ProfileIcon from "@/components/chat/ProfileIcon";
-
-// 날짜 포맷 함수
-const formatDate = (dateString: string): string => {
-  if (!dateString) return "";
-  try {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      return "오늘";
-    } else if (diffDays === 1) {
-      return "어제";
-    } else if (diffDays < 7) {
-      return `${diffDays}일 전`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks}주 전`;
-    } else if (diffDays < 365) {
-      const months = Math.floor(diffDays / 30);
-      return `${months}개월 전`;
-    } else {
-      const years = Math.floor(diffDays / 365);
-      return `${years}년 전`;
-    }
-  } catch {
-    return dateString;
-  }
-};
+import { formatRelativeTime } from "@/utils/dateFormat";
 
 interface ReviewSectionProps {
   cafeId: string;
@@ -113,7 +84,7 @@ export default function ReviewSection({
           user: r.reviewerNickname || "익명",
           rating: r.rating,
           content: r.content,
-          date: formatDate(r.createdAt),
+          date: formatRelativeTime(r.createdAt),
           createdAt: r.createdAt, // 정렬을 위한 원본 날짜 저장
           likes: 0,
           images: reviewImages,
@@ -179,7 +150,7 @@ export default function ReviewSection({
                 user: r.reviewerNickname || "익명",
                 rating: r.rating,
                 content: r.content,
-                date: formatDate(r.createdAt),
+                date: formatRelativeTime(r.createdAt),
                 createdAt: r.createdAt, // 정렬을 위한 원본 날짜 저장
                 likes: 0,
                 images: reviewImages,

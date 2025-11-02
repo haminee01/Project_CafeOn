@@ -14,6 +14,7 @@ import ReportModal from "@/components/modals/ReportModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToastContext } from "@/components/common/ToastProvider";
 import ProfileIcon from "@/components/chat/ProfileIcon";
+import { formatDateTime } from "@/utils/dateFormat";
 
 interface TemporaryAlertProps {
   message: string;
@@ -247,15 +248,7 @@ export default function CommentItem({
               )}
             </span>
             <span className="text-sm text-gray-500">
-              {comment.created_at
-                ? new Date(comment.created_at).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "날짜 없음"}
+              {comment.created_at ? formatDateTime(comment.created_at) : "날짜 없음"}
             </span>
           </div>
           <div className="flex space-x-2 text-sm text-gray-500">

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { PostListItem, PostType } from "@/types/Post";
 import ProfileIcon from "@/components/chat/ProfileIcon";
+import { formatDateTime } from "@/utils/dateFormat";
 
 interface PostItemProps {
   post: PostListItem;
@@ -74,15 +75,7 @@ export default function PostItem({ post }: PostItemProps) {
             <span>조회: {post.views?.toLocaleString() || 0}</span>
             <span>좋아요: {post.likes?.toLocaleString() || 0}</span>
             <span>
-              {post.created_at
-                ? new Date(post.created_at).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "날짜 없음"}
+              {post.created_at ? formatDateTime(post.created_at) : "날짜 없음"}
             </span>
           </div>
         </div>

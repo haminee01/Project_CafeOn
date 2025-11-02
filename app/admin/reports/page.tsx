@@ -12,22 +12,7 @@ import {
   deleteReview,
 } from "@/lib/api";
 import { deletePostMutator, deleteCommentMutator } from "@/api/community";
-
-// 날짜 포맷 함수
-const formatDate = (dateString: string): string => {
-  if (!dateString) return "";
-  try {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}.${month}.${day} ${hours}:${minutes}`;
-  } catch {
-    return dateString;
-  }
-};
+import { formatDateTime } from "@/utils/dateFormat";
 
 interface Report {
   id: number;
@@ -95,7 +80,7 @@ export default function AdminReportsPage() {
             type,
             content: r.content || "",
             status: r.status === "PENDING" ? "unprocessed" : "processed",
-            date: formatDate(r.createdAt || ""),
+            date: formatDateTime(r.createdAt || ""),
             reporter: r.reporterNickname || "",
             reportedUser: r.reportedNickname || "",
             reason: r.content || "",
@@ -146,7 +131,7 @@ export default function AdminReportsPage() {
           originalImages: detailData.target?.imageUrls || [],
           adminComment: detailData.adminNote,
           processedBy: detailData.handledBy,
-          processedDate: formatDate(detailData.handledAt || ""),
+          processedDate: formatDateTime(detailData.handledAt || ""),
         };
         setSelectedReport(enrichedReport);
       } else {

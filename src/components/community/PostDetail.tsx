@@ -10,6 +10,7 @@ import ReportModal from "@/components/modals/ReportModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToastContext } from "@/components/common/ToastProvider";
 import ProfileIcon from "@/components/chat/ProfileIcon";
+import { formatDateTime } from "@/utils/dateFormat";
 
 interface PostDetailProps {
   post: PostDetailType;
@@ -109,26 +110,12 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
             <span className="text-gray-700">{post.author || "익명"}</span>
             <span>
               작성일:{" "}
-              {post.created_at
-                ? new Date(post.created_at).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "날짜 없음"}
+              {post.created_at ? formatDateTime(post.created_at) : "날짜 없음"}
             </span>
             {post.updated_at && (
               <span>
                 수정일:{" "}
-                {new Date(post.updated_at).toLocaleDateString("ko-KR", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatDateTime(post.updated_at)}
               </span>
             )}
           </div>

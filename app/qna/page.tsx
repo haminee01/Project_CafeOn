@@ -7,6 +7,7 @@ import { useQuestionList } from "@/hooks/useQnA";
 import { QuestionVisibility } from "@/types/qna";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
+import { formatSimpleDate } from "@/utils/dateFormat";
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -168,7 +169,7 @@ const QuestionList = ({
 
                   {/* 작성일 정보 */}
                   <div className="text-sm text-gray-500 ml-4">
-                    {new Date(item.createdAt).toLocaleDateString("ko-KR")}
+                    {formatSimpleDate(item.createdAt)}
                   </div>
 
                   {/* 화살표 아이콘 */}

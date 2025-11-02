@@ -10,6 +10,7 @@ import {
   QuestionVisibility,
 } from "@/hooks/useMyQuestions";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatSimpleDate } from "@/utils/dateFormat";
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -129,7 +130,7 @@ const InquiryContent = ({
 
                   {/* 작성일 정보 */}
                   <div className="text-sm text-gray-500 ml-4">
-                    {new Date(item.createdAt).toLocaleDateString("ko-KR")}
+                    {formatSimpleDate(item.createdAt)}
                   </div>
 
                   {/* 화살표 아이콘 */}
