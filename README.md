@@ -82,7 +82,7 @@ npm start
 - 카페 마커 클릭 시 상세 정보 표시
 
 ### 6. 사용자 기능
-- 소셜 로그인 (카카오, 네이버, 구글)
+- 로그인 
 - 마이페이지
   - 작성한 리뷰 관리
   - 찜한 카페 관리
@@ -188,10 +188,6 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 # Google Maps API
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 
-# 소셜 로그인 (선택사항)
-NEXT_PUBLIC_NAVER_CLIENT_ID=your_naver_client_id
-NEXT_PUBLIC_KAKAO_CLIENT_ID=your_kakao_client_id
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 > **참고**: `.env.local` 파일은 Git에 커밋하지 마세요. `.gitignore`에 포함되어 있습니다.
