@@ -129,12 +129,14 @@ export async function getNearbyCafes(params: {
   radius?: number;
 }) {
   try {
+    // 근처 카페 조회는 시간이 걸릴 수 있으므로 타임아웃을 더 길게 설정
     const response = await apiClient.get("/api/cafes/nearby", {
       params: {
         latitude: params.latitude,
         longitude: params.longitude,
         radius: params.radius || 1000,
       },
+      timeout: 30000, // 30초로 증가 (Kakao API 호출 + DB 조회 시간 고려)
     });
 
     // 백엔드 응답 형식에 따라 처리
@@ -148,6 +150,12 @@ export async function getNearbyCafes(params: {
     }
     return [];
   } catch (error: any) {
+    // 타임아웃 에러인 경우 특별 처리
+    if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+      console.warn("근처 카페 조회 타임아웃 (30초 초과), 빈 배열 반환");
+      return [];
+    }
+    
     console.error("근처 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
     console.warn("근처 카페 API 실패, 빈 배열 반환");
@@ -157,17 +165,57 @@ export async function getNearbyCafes(params: {
 
 // 백엔드 카페 응답을 프론트엔드 Cafe 타입으로 변환
 function convertCafeResponseToCafe(cafe: any): any {
+  // 평점 처리: avgRating이 우선, 없으면 avg_rating 사용
+  let avgRating = null;
+  
+  // avgRating 필드 확인 (백엔드에서 보내는 필드)
+  if (cafe.avgRating != null && cafe.avgRating !== undefined && cafe.avgRating !== '') {
+    if (typeof cafe.avgRating === 'number') {
+      avgRating = cafe.avgRating;
+    } else if (typeof cafe.avgRating === 'string') {
+      const parsed = parseFloat(cafe.avgRating);
+      avgRating = !isNaN(parsed) ? parsed : null;
+    } else {
+      // 객체인 경우 (BigDecimal 직렬화 형태일 수 있음)
+      const stringValue = String(cafe.avgRating);
+      const parsed = parseFloat(stringValue);
+      avgRating = !isNaN(parsed) ? parsed : null;
+    }
+  }
+  
+  // avg_rating 필드 확인 (fallback)
+  if (avgRating == null && cafe.avg_rating != null && cafe.avg_rating !== undefined && cafe.avg_rating !== '') {
+    if (typeof cafe.avg_rating === 'number') {
+      avgRating = cafe.avg_rating;
+    } else {
+      const parsed = parseFloat(String(cafe.avg_rating));
+      avgRating = !isNaN(parsed) ? parsed : null;
+    }
+  }
+  
+  // 최종적으로 null이면 0으로 설정 (백엔드 기본값과 동일)
+  const finalRating = avgRating != null ? avgRating : 0;
+  
+  // 디버깅용 로그 (개발 중에만)
+  if (process.env.NODE_ENV === 'development' && cafe.cafeId) {
+    console.log(`[Cafe ${cafe.cafeId}] 원본 avgRating:`, cafe.avgRating, typeof cafe.avgRating, '-> 변환된 값:', finalRating);
+  }
+  
   return {
     cafe_id: String(cafe.cafeId || cafe.id || cafe.cafe_id || ""),
+    cafeId: cafe.cafeId || cafe.id || cafe.cafe_id,
     name: cafe.name || "",
     address: cafe.address || "",
     latitude: cafe.latitude || 0,
     longitude: cafe.longitude || 0,
     open_hours: cafe.openHours || cafe.open_hours || "",
-    avg_rating: cafe.avgRating || cafe.avg_rating || 0,
+    avg_rating: finalRating,
+    avgRating: finalRating, // 원본 필드도 함께 저장
     created_at: cafe.createdAt || cafe.created_at || "",
     description: cafe.description || cafe.reviewsSummary || "",
     tags: Array.isArray(cafe.tags) ? cafe.tags : [],
+    photoUrl: cafe.photoUrl || cafe.photo_url || cafe.imageUrl || cafe.image_url || null,
+    images: cafe.images || (cafe.photoUrl ? [cafe.photoUrl] : []) || [],
   };
 }
 
@@ -178,6 +226,11 @@ export async function getRandomCafes() {
 
     // 백엔드 응답 형식에 따라 처리
     const data = response.data?.data || response.data;
+
+    // 디버깅: 첫 번째 카페의 원본 응답 확인
+    if (process.env.NODE_ENV === 'development' && Array.isArray(data) && data.length > 0) {
+      console.log('[getRandomCafes] 첫 번째 카페 원본 응답:', JSON.stringify(data[0], null, 2));
+    }
 
     // 배열인지 확인하고 변환
     if (Array.isArray(data)) {
@@ -199,6 +252,11 @@ export async function getHotCafes() {
 
     // 백엔드 응답 형식에 따라 처리
     const data = response.data?.data || response.data;
+
+    // 디버깅: 첫 번째 카페의 원본 응답 확인
+    if (process.env.NODE_ENV === 'development' && Array.isArray(data) && data.length > 0) {
+      console.log('[getHotCafes] 첫 번째 카페 원본 응답:', JSON.stringify(data[0], null, 2));
+    }
 
     // 배열인지 확인하고 변환
     if (Array.isArray(data)) {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, use, useEffect } from "react";
-import Header from "@/components/common/Header";
 import { getCafeDetail, getRandomCafes } from "@/lib/api";
 import CafeInfoSection from "app/(main)/cafes/[cafeId]/components/CafeInfoSection";
 import CafeFeaturesSection from "app/(main)/cafes/[cafeId]/components/CafeFeaturesSection";
@@ -12,7 +11,6 @@ import ReportModal from "@/components/modals/ReportModal";
 import ReviewWriteModal from "@/components/modals/ReviewWriteModal";
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
 // SaveModal은 더 이상 사용하지 않음 (위시리스트 기능으로 대체)
-import Footer from "@/components/common/Footer";
 import { useEscapeKey } from "../../../../src/hooks/useEscapeKey";
 import { useAuth } from "@/contexts/AuthContext";
 import CafeChatModal from "../../../../src/components/chat/CafeChatModal";
@@ -43,6 +41,32 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   // 카페 상세 정보 로드
   useEffect(() => {
     const mapApiToCafeDetail = (data: any) => {
+      // 이미지 처리: photoUrl을 우선하고, photos 배열이 있으면 추가
+      let images: string[] = [];
+      
+      // photoUrl이 있으면 배열에 추가
+      if (data.photoUrl) {
+        images.push(data.photoUrl);
+      }
+      
+      // photos 배열이 있으면 추가 (중복 제거)
+      if (Array.isArray(data.photos) && data.photos.length > 0) {
+        data.photos.forEach((photo: string) => {
+          if (photo && !images.includes(photo)) {
+            images.push(photo);
+          }
+        });
+      }
+      
+      // 디버깅 로그 (개발 환경)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[CafeDetail] API 응답 데이터:', {
+          photoUrl: data.photoUrl,
+          photos: data.photos,
+          최종_images: images,
+        });
+      }
+      
       // API 응답(CafeDetailResponse)을 화면에서 사용하는 CafeDetail 형태로 변환
       return {
         id: String(data.id ?? ""),
@@ -52,7 +76,8 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
         address: data.address ?? "",
         subway: "", // API에 없으므로 공백
         phone: data.phone ?? "",
-        images: Array.isArray(data.photos) ? data.photos : [],
+        images: images,
+        photoUrl: data.photoUrl || null, // photoUrl도 직접 저장
         rating: data.rating ?? "",
         hoursDetail: {
           status: "", // API에 별도 상태 없음
@@ -163,13 +188,11 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-gray-600">
             카페 정보를 불러오는 중...
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -177,20 +200,17 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
   if (!cafe) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-red-600">
             {error || "카페 정보를 찾을 수 없습니다."}
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
 
       {/* 카페 메인 정보 섹션 */}
       <CafeInfoSection
@@ -262,7 +282,6 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
         />
       )}
 
-      <Footer />
     </div>
   );
 }

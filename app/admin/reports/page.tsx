@@ -501,44 +501,47 @@ export default function AdminReportsPage() {
             </div>
 
             {/* 액션 버튼 */}
-            <div className="flex justify-end gap-3 mt-6">
-              <Button color="gray" size="md" onClick={handleCloseModal}>
-                닫기
-              </Button>
-              {selectedReport.status === "unprocessed" && (
-                <Button color="primary" size="md" onClick={handleProcessClick}>
-                  처리하기
-                </Button>
-              )}
-              {selectedReport.type === "comment" && selectedReport.targetId && (
-                <Button
-                  color="secondary"
-                  size="md"
-                  onClick={() => {
-                    // 댓글의 경우 targetId가 commentId이므로,
-                    // 백엔드에서 신고 상세 API에 postId를 추가로 반환해야 함
-                    // 현재는 댓글 ID만 있으므로 경고 표시
-                    alert(
-                      "댓글 보기 기능은 아직 준비되지 않았습니다. 백엔드 API 수정이 필요합니다."
-                    );
-                  }}
-                >
-                  원본 댓글 보기
-                </Button>
-              )}
-              {selectedReport.type === "post" && selectedReport.targetId && (
-                <Button
-                  color="secondary"
-                  size="md"
-                  onClick={() => {
-                    router.push(`/community/posts/${selectedReport.targetId}`);
-                  }}
-                >
-                  원본 게시글 보기
-                </Button>
-              )}
-
-              {/* 오른쪽 버튼들 */}
+            <div className="flex justify-between items-center gap-3 mt-6">
+              <div className="flex gap-3">
+                {selectedReport.type === "comment" && selectedReport.targetId && (
+                  <Button
+                    color="secondary"
+                    size="md"
+                    onClick={() => {
+                      // 댓글의 경우 targetId가 commentId이므로,
+                      // 백엔드에서 신고 상세 API에 postId를 추가로 반환해야 함
+                      // 현재는 댓글 ID만 있으므로 경고 표시
+                      alert(
+                        "댓글 보기 기능은 아직 준비되지 않았습니다. 백엔드 API 수정이 필요합니다."
+                      );
+                    }}
+                  >
+                    원본 댓글 보기
+                  </Button>
+                )}
+                {selectedReport.type === "post" && selectedReport.targetId && (
+                  <Button
+                    color="secondary"
+                    size="md"
+                    onClick={() => {
+                      router.push(`/community/posts/${selectedReport.targetId}`);
+                    }}
+                  >
+                    원본 게시글 보기
+                  </Button>
+                )}
+                {selectedReport.type === "review" && selectedReport.targetId && (
+                  <Button
+                    color="secondary"
+                    size="md"
+                    onClick={() => {
+                      router.push(`/cafes/${selectedReport.targetId}`);
+                    }}
+                  >
+                    원본 리뷰 보기
+                  </Button>
+                )}
+              </div>
               <div className="flex gap-3">
                 <Button color="gray" size="md" onClick={handleCloseModal}>
                   닫기

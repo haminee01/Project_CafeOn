@@ -1,57 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { use } from "react";
+import { getAdminMemberDetail, getUserPenalties } from "@/lib/api";
 
 interface MemberDetailPageProps {
-  params: {
+  params: Promise<{
     memberId: string;
-  };
+  }>;
 }
 
 export default function MemberDetailPage({ params }: MemberDetailPageProps) {
   const router = useRouter();
+  const resolvedParams = use(params);
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [suspensionReason, setSuspensionReason] = useState("");
-  // Next.js 15에서 params는 Promise이므로 React.use()로 unwrap
-  const { memberId } = use(params as any);
+  const [member, setMember] = useState<any>(null);
+  const [penaltyHistory, setPenaltyHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // 실제로는 API에서 가져올 데이터
-  const member = {
-    id: parseInt(params.memberId),
-    name: "김이름",
-    email: "test@test.com",
-    nickname: "닉네임님",
-    keywords: ["#데이트", "#우중카페", "#카공"],
-    penaltyScore: 2,
-    status: "active",
-    profileImage:
-      "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=120&h=120&fit=crop&crop=center",
-  };
+  // 회원 상세 정보 및 패널티 내역 조회
+  useEffect(() => {
+    const fetchMemberData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  // 페널티 내역 데이터
-  const penaltyHistory = [
-    {
-      id: 1,
-      reason: "부적절한 리뷰 작성",
-      date: "2024.01.20",
-      admin: "관리자1",
-    },
-    {
-      id: 2,
-      reason: "스팸 댓글 작성",
-      date: "2024.01.15",
-      admin: "관리자2",
-    },
-    {
-      id: 3,
-      reason: "허위 정보 유포",
-      date: "2024.01.10",
-      admin: "관리자1",
-    },
-  ];
+        // 병렬로 회원 상세 정보와 패널티 내역 조회
+        const [memberDetail, penalties] = await Promise.all([
+          getAdminMemberDetail(resolvedParams.memberId),
+          getUserPenalties(resolvedParams.memberId),
+        ]);
+
+        // 회원 정보 설정
+        const memberData = memberDetail?.data || memberDetail;
+        setMember({
+          id: memberData?.id || resolvedParams.memberId,
+          name: memberData?.name || "",
+          email: memberData?.email || "",
+          nickname: memberData?.nickname || "",
+          keywords: memberData?.keywords || [],
+          penaltyScore: memberData?.penaltyCount || memberData?.penalty_count || 0,
+          status: memberData?.status?.toLowerCase() || "active",
+        });
+
+        // 패널티 내역 설정
+        const penaltiesData = penalties?.data || penalties || [];
+        const formattedPenalties = Array.isArray(penaltiesData)
+          ? penaltiesData.map((p: any) => ({
+              id: p.penaltyId || p.penalty_id || p.id,
+              reason: p.reason || "",
+              date: p.createdAt || p.created_at || "",
+              admin: p.adminNickname || p.admin_nickname || "관리자",
+              type: p.penaltyType || p.penalty_type,
+              status: p.status,
+            }))
+          : [];
+        setPenaltyHistory(formattedPenalties);
+      } catch (err: any) {
+        console.error("회원 정보 조회 실패:", err);
+        setError(err.message || "회원 정보를 불러오는데 실패했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (resolvedParams.memberId) {
+      fetchMemberData();
+    }
+  }, [resolvedParams.memberId]);
 
   // 페널티 총 횟수 계산
   const totalPenaltyCount = penaltyHistory.length;
@@ -79,6 +99,28 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
     setShowSuspensionModal(false);
     setSuspensionReason("");
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-gray-600">회원 정보를 불러오는 중...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !member) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-red-600">
+            {error || "회원 정보를 찾을 수 없습니다."}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

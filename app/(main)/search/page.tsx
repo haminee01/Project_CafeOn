@@ -2,13 +2,11 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import Header from "@/components/common/Header";
 import { Cafe } from "@/types/cafe";
 import SearchBar from "@/components/common/SearchBar";
 import CategoryFilter from "app/(main)/search/components/CategoryFilter";
 import CafeGrid from "@/components/cafes/CafeGrid";
 import Pagination from "@/components/common/Pagination";
-import Footer from "@/components/common/Footer";
 import { searchCafes } from "@/lib/api";
 
 // 반응형 아이템 수 설정
@@ -143,7 +141,6 @@ export default function SearchResultsPage() {
 
   return (
     <div>
-      <Header />
       <SearchBar
         value={searchQuery}
         onChange={setSearchQuery}
@@ -200,7 +197,6 @@ export default function SearchResultsPage() {
           </div>
         )}
       </div>
-      <Footer />
     </div>
   );
 }

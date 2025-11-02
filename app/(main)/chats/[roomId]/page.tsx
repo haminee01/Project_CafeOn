@@ -10,8 +10,6 @@ import {
   sendChatMessage,
 } from "@/api/chat";
 import { ChatHistoryMessage } from "@/api/chat";
-import Header from "@/components/common/Header";
-import Footer from "@/components/common/Footer";
 
 export default function ChatPage() {
   const params = useParams();
@@ -256,7 +254,6 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="bg-white rounded-lg shadow-sm border">
@@ -364,7 +361,6 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }
