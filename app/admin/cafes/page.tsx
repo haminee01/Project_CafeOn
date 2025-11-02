@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { mockCafes } from "@/data/mockCafes";
 import Button from "@/components/common/Button";
 import Pagination from "@/components/common/Pagination";
 import SearchBar from "@/components/common/SearchBar";
 import { getAllCafes } from "@/lib/api";
 export default function AdminCafesPage() {
-  const [cafes, setCafes] = useState(mockCafes);
-  const [filteredCafes, setFilteredCafes] = useState(mockCafes);
+  const [cafes, setCafes] = useState<any[]>([]);
+  const [filteredCafes, setFilteredCafes] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -32,10 +31,14 @@ export default function AdminCafesPage() {
           }));
           setCafes(transformedCafes);
           setFilteredCafes(transformedCafes);
+        } else {
+          setCafes([]);
+          setFilteredCafes([]);
         }
       } catch (error) {
         console.error("카페 데이터 로드 실패:", error);
-        // API 실패 시 mock 데이터 유지
+        setCafes([]);
+        setFilteredCafes([]);
       } finally {
         setLoading(false);
       }

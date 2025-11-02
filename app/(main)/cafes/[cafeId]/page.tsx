@@ -2,8 +2,6 @@
 
 import { useState, use, useEffect } from "react";
 import Header from "@/components/common/Header";
-import { mockCafes } from "@/data/mockCafes";
-import { createCafeDetail, getSimilarCafes } from "@/data/cafeUtils";
 import { getCafeDetail, getRandomCafes } from "@/lib/api";
 import CafeInfoSection from "app/(main)/cafes/[cafeId]/components/CafeInfoSection";
 import CafeFeaturesSection from "app/(main)/cafes/[cafeId]/components/CafeFeaturesSection";
@@ -84,16 +82,7 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       } catch (err: any) {
         console.error("카페 상세 정보 조회 실패:", err);
         setError(err.message || "카페 정보를 불러오는데 실패했습니다.");
-
-        // API 실패 시 mock 데이터로 fallback
-        const cafeData = mockCafes.find(
-          (c) => c.cafe_id === resolvedParams.cafeId
-        );
-        const defaultCafe =
-          mockCafes.find((c) => c.cafe_id === "33") || mockCafes[0];
-        const selectedCafe = cafeData || defaultCafe;
-        const fallbackCafe = createCafeDetail(selectedCafe);
-        setCafe(fallbackCafe);
+        setCafe(null);
       } finally {
         setLoading(false);
       }
@@ -102,19 +91,19 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
     fetchCafeDetail();
   }, [resolvedParams.cafeId]);
 
-  // 랜덤 카페 조회 (유사 카페 섹션용)
+  // 유사 카페 조회 (랜덤 카페 사용)
   useEffect(() => {
-    const fetchRandomCafes = async () => {
+    const fetchSimilarCafes = async () => {
       try {
         const cafes = await getRandomCafes();
         setSimilarCafes(Array.isArray(cafes) ? cafes : []);
       } catch (error: any) {
-        console.error("랜덤 카페 조회 실패:", error);
+        console.error("유사 카페 조회 실패:", error);
         setSimilarCafes([]);
       }
     };
 
-    fetchRandomCafes();
+    fetchSimilarCafes();
   }, []);
 
   // 2. 현재 카페 정보 메타

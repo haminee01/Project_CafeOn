@@ -28,16 +28,7 @@ const POST_TYPE_OPTIONS: {
   { value: "INFO", label: "정보", color: "bg-yellow-500" },
 ];
 
-// Mock 데이터 생성 (총 50개의 항목) - 다른 탭용
-const createMockItems = (prefix: string) => {
-  return Array.from({ length: 50 }, (_, i) => ({
-    id: i + 1,
-    title: `${prefix} ${i + 1}: 어쩌구 저쩌구 내용은 여기에 들어갑니다.`,
-    date: `2024-05-${String((i % 30) + 1).padStart(2, "0")}`,
-  }));
-};
-
-const mockData: Record<string, ReturnType<typeof createMockItems>> = {};
+// Mock 데이터 제거됨
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -92,12 +83,10 @@ const HistoryContent = ({
     size: ITEMS_PER_PAGE,
   });
 
-  // 다른 탭인 경우 Mock 데이터 사용
-  const totalItems = mockData[activeTab] || [];
-  const mockTotalPages = Math.ceil(totalItems.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentItems = totalItems.slice(startIndex, endIndex);
+  // 다른 탭인 경우 빈 데이터 사용
+  const totalItems: any[] = [];
+  const mockTotalPages = 0;
+  const currentItems: any[] = [];
 
   // 내가 쓴 글 탭 렌더링
   if (activeTab === "posts") {

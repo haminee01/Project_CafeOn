@@ -23,66 +23,6 @@ export default function AdminMembersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
-  const [useMockData, setUseMockData] = useState(false);
-
-  const mockMembers = [
-    {
-      id: "1",
-      name: "김철수",
-      email: "kim@example.com",
-      status: "active",
-      penaltyCount: 0,
-    },
-    {
-      id: "2",
-      name: "이영희",
-      email: "lee@example.com",
-      status: "active",
-      penaltyCount: 2,
-    },
-    {
-      id: "3",
-      name: "박민수",
-      email: "park@example.com",
-      status: "suspended",
-      penaltyCount: 5,
-    },
-    {
-      id: "4",
-      name: "최유리",
-      email: "choi@example.com",
-      status: "active",
-      penaltyCount: 0,
-    },
-    {
-      id: "5",
-      name: "정대현",
-      email: "jung@example.com",
-      status: "active",
-      penaltyCount: 1,
-    },
-    {
-      id: "6",
-      name: "한지민",
-      email: "han@example.com",
-      status: "suspended",
-      penaltyCount: 8,
-    },
-    {
-      id: "7",
-      name: "강동원",
-      email: "kang@example.com",
-      status: "active",
-      penaltyCount: 0,
-    },
-    {
-      id: "8",
-      name: "송혜교",
-      email: "song@example.com",
-      status: "active",
-      penaltyCount: 3,
-    },
-  ];
 
   // 회원 목록 조회
   useEffect(() => {
@@ -94,8 +34,7 @@ export default function AdminMembersPage() {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        setMembers(mockMembers);
-        setUseMockData(true);
+        setMembers([]);
         setLoading(false);
         return;
       }
@@ -111,11 +50,9 @@ export default function AdminMembersPage() {
       // API 응답 구조에 따라 조정
       const memberList = response?.data?.content || response?.content || [];
       setMembers(memberList);
-      setUseMockData(false);
     } catch (error) {
       console.error("회원 목록 조회 실패:", error);
-      setMembers(mockMembers);
-      setUseMockData(true);
+      setMembers([]);
     } finally {
       setLoading(false);
     }
@@ -168,12 +105,10 @@ export default function AdminMembersPage() {
   const handlePenaltyConfirm = async () => {
     if (selectedMember && penaltyReason.trim()) {
       try {
-        if (!useMockData) {
-          await addAdminPenalty(selectedMember.id, {
-            reason: penaltyReason,
-            reasonCode: "DISCOMFORT",
-          });
-        }
+        await addAdminPenalty(selectedMember.id, {
+          reason: penaltyReason,
+          reasonCode: "DISCOMFORT",
+        });
 
         setMembers((prevMembers) =>
           prevMembers.map((member) =>
@@ -213,12 +148,10 @@ export default function AdminMembersPage() {
   const handleSuspensionConfirm = async () => {
     if (selectedMember && suspensionReason.trim()) {
       try {
-        if (!useMockData) {
-          await suspendAdminUser(selectedMember.id, {
-            duration: "7d",
-            reason: suspensionReason,
-          });
-        }
+        await suspendAdminUser(selectedMember.id, {
+          duration: "7d",
+          reason: suspensionReason,
+        });
 
         setMembers((prevMembers) =>
           prevMembers.map((member) =>
@@ -249,13 +182,11 @@ export default function AdminMembersPage() {
   const handleSuspensionConfirmClick = async () => {
     if (selectedMember) {
       try {
-        if (!useMockData) {
-          // 정지 해제는 suspend API로 status를 변경
-          await suspendAdminUser(selectedMember.id, {
-            duration: "0d",
-            reason: "정지 해제",
-          });
-        }
+        // 정지 해제는 suspend API로 status를 변경
+        await suspendAdminUser(selectedMember.id, {
+          duration: "0d",
+          reason: "정지 해제",
+        });
 
         setMembers((prevMembers) =>
           prevMembers.map((member) =>

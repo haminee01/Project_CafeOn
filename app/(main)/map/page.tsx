@@ -118,19 +118,40 @@ export default function MapPage() {
   const fetchWishlist = async () => {
     setLoading(true);
     try {
-      const params: any = {
-        page: 0,
-        size: 20,
-      };
+      // "all"인 경우 모든 카테고리를 개별적으로 조회하고 합치기
+      if (savedCategory === "all") {
+        const allCategories = ["HIDEOUT", "WORK", "ATMOSPHERE", "TASTE", "PLANNED"];
+        const allPromises = allCategories.map((category) =>
+          getWishlist({
+            page: 0,
+            size: 20,
+            category,
+          }).catch(() => ({ data: { content: [] } })) // 개별 카테고리 실패 시 빈 배열
+        );
 
-      // "all"이 아닌 경우 카테고리 필터 추가
-      if (savedCategory !== "all") {
-        params.category = categoryMap[savedCategory];
+        const allResponses = await Promise.all(allPromises);
+        const allItems = allResponses.flatMap(
+          (response) => response?.data?.content || response?.content || []
+        );
+
+        // 중복 제거 (같은 cafeId가 여러 카테고리에 있을 수 있음)
+        const uniqueItems = Array.from(
+          new Map(allItems.map((item) => [item.cafeId || item.wishlistId, item])).values()
+        );
+
+        setWishlistItems(uniqueItems);
+      } else {
+        // 특정 카테고리 조회
+        const params: any = {
+          page: 0,
+          size: 20,
+          category: categoryMap[savedCategory],
+        };
+
+        const response = await getWishlist(params);
+        const items = response?.data?.content || response?.content || [];
+        setWishlistItems(items);
       }
-
-      const response = await getWishlist(params);
-      const items = response?.data?.content || response?.content || [];
-      setWishlistItems(items);
     } catch (error: any) {
       console.error("위시리스트 조회 실패:", error);
 
@@ -174,7 +195,7 @@ export default function MapPage() {
       case "home":
         return nearbyCafes; // API 데이터
       case "saved":
-        return mockCafes.slice(0, 3); // 저장된 카페 (예시)
+        return []; // 저장된 카페는 위시리스트 API에서 가져옴
       case "popular":
         return []; // 인기 카페는 추후 API 연결 필요
       default:
@@ -418,7 +439,6 @@ export default function MapPage() {
                         <span className="text-gray-400 text-xs">이미지</span>
                       </div>
 
-<<<<<<< HEAD
                       {/* 카페 정보 */}
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900 mb-1">
@@ -471,20 +491,6 @@ export default function MapPage() {
                           </button>
                         </div>
                       </div>
-=======
-                  {/* 카페 정보 */}
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">
-                      {cafe.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-2">
-                      영업 중 리뷰 999+
-                    </p>
-                    <div className="flex gap-2">
-                      <button className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                        베이커리
-                      </button>
->>>>>>> feature/hamin/merge-all
                     </div>
                   </div>
                 );

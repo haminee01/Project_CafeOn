@@ -542,6 +542,12 @@ export const getUnreadNotifications = async (): Promise<
   try {
     const token = localStorage.getItem("accessToken");
 
+    // 토큰이 없으면 빈 배열 반환 (인증되지 않은 사용자)
+    if (!token) {
+      console.log("토큰이 없어 알림 목록 조회를 건너뜁니다.");
+      return [];
+    }
+
     console.log("읽지 않은 알림 목록 조회 요청:", {
       url: `${API_BASE_URL}/api/notifications/unread`,
       token: token ? "토큰 존재" : "토큰 없음",
@@ -557,22 +563,28 @@ export const getUnreadNotifications = async (): Promise<
     });
 
     if (!response.ok) {
-      console.error(
-        "알림 목록 조회 API 에러:",
-        response.status,
-        response.statusText
-      );
-
-      // 403 Forbidden, 404, 500 에러인 경우 빈 배열 반환
+      // 403 Forbidden, 404, 500 에러인 경우 빈 배열 반환 (조용히 처리)
       if (
         response.status === 403 ||
         response.status === 404 ||
         response.status === 500
       ) {
-        console.log("알림 목록 API 에러, 빈 배열 반환:", response.status);
+        // 콘솔 에러 대신 로그만 출력 (403은 인증/권한 문제일 수 있으므로 정상 상황일 수 있음)
+        if (response.status !== 403) {
+          console.error(
+            "알림 목록 조회 API 에러:",
+            response.status,
+            response.statusText
+          );
+        }
         return [];
       }
 
+      console.error(
+        "알림 목록 조회 API 에러:",
+        response.status,
+        response.statusText
+      );
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
