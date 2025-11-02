@@ -146,13 +146,9 @@ export default function AdminMembersPage() {
           reasonCode: "DISCOMFORT",
         });
 
-        setMembers((prevMembers) =>
-          prevMembers.map((member) =>
-            member.id === selectedMember.id
-              ? { ...member, penaltyCount: member.penaltyCount + 1 }
-              : member
-          )
-        );
+        // API에서 최신 데이터 다시 가져오기
+        await fetchMembers();
+        
         setShowPenaltyModal(false);
         setSelectedMember(null);
         setPenaltyReason("");
@@ -189,16 +185,9 @@ export default function AdminMembersPage() {
           reason: suspensionReason,
         });
 
-        setMembers((prevMembers) =>
-          prevMembers.map((member) =>
-            member.id === selectedMember.id
-              ? {
-                  ...member,
-                  status: member.status?.toUpperCase() === "ACTIVE" ? "SUSPENDED" : "ACTIVE",
-                }
-              : member
-          )
-        );
+        // API에서 최신 데이터 다시 가져오기
+        await fetchMembers();
+        
         setShowSuspensionModal(false);
         setSelectedMember(null);
         setSuspensionReason("");
@@ -224,13 +213,8 @@ export default function AdminMembersPage() {
           reason: "정지 해제",
         });
 
-        setMembers((prevMembers) =>
-          prevMembers.map((member) =>
-            member.id === selectedMember.id
-              ? { ...member, status: "ACTIVE" }
-              : member
-          )
-        );
+        // API에서 최신 데이터 다시 가져오기
+        await fetchMembers();
       } catch (error) {
         console.error("정지 해제 실패:", error);
       }

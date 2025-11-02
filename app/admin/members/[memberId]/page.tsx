@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { use } from "react";
 import { getAdminMemberDetail, getUserPenalties } from "@/lib/api";
+import { formatDateTime } from "@/utils/dateFormat";
 
 interface MemberDetailPageProps {
   params: Promise<{
@@ -53,7 +54,7 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
           ? penaltiesData.map((p: any) => ({
               id: p.penaltyId || p.penalty_id || p.id,
               reason: p.reason || "",
-              date: p.createdAt || p.created_at || "",
+              date: formatDateTime(p.createdAt || p.created_at || ""),
               admin: p.adminNickname || p.admin_nickname || "관리자",
               type: p.penaltyType || p.penalty_type,
               status: p.status,
