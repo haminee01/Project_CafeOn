@@ -41,44 +41,20 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
 
   // 작성자 여부 확인 (userId로 비교)
   const isAuthor = useMemo(() => {
-    console.log("=== 작성자 확인 시작 ===");
-    console.log("user 전체 객체:", user);
-    console.log("post.author:", post.author);
-    console.log("post.authorId:", post.authorId);
-
     if (!isLoggedIn || !user) {
-      console.log("❌ 로그인 안됨");
       return false;
     }
 
     // userId가 있으면 userId로 비교 (가장 정확)
-    if (post.authorId && user.id) {
-      const isMatch = user.id === post.authorId;
-      console.log("✅ userId로 비교:", {
-        "user.id": user.id,
-        "post.authorId": post.authorId,
-        isMatch,
-      });
-      return isMatch;
+    if (post.authorId && currentUserId) {
+      return currentUserId === post.authorId;
     }
 
-    console.log("⚠️ userId 비교 불가 (post.authorId 또는 user.id 없음)");
-
     // userId가 없으면 닉네임으로 폴백 (대소문자 구분 없이 비교)
-    console.log("user.username:", user.username);
-
     const currentNickname = (user.username || "").trim().toLowerCase();
     const postAuthor = (post.author || "").trim().toLowerCase();
-    const isMatch = currentNickname === postAuthor;
-
-    console.log("📝 닉네임으로 비교:", {
-      currentNickname,
-      postAuthor,
-      isMatch,
-    });
-
-    return isMatch;
-  }, [isLoggedIn, user, post.author, post.authorId]);
+    return currentNickname === postAuthor;
+  }, [isLoggedIn, user, currentUserId, post.author, post.authorId]);
 
   // 실제 좋아요/취소 핸들러
   const handleLike = async () => {
@@ -87,7 +63,6 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
     setIsLikeLoading(true);
     try {
       const response = await togglePostLike(post.id);
-      console.log("좋아요 응답:", response);
 
       // 응답 타입: { message, liked }
       if (response) {
@@ -171,18 +146,31 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
           </p>
         ))}
 
-        {/* 이미지 표시 */}
+        {/* 이미지 표시 (리뷰와 동일한 UI) */}
         {post.Images && post.Images.length > 0 && (
-          <div className="mt-6 space-y-4">
-            {post.Images.map((imgSrc, index) => (
-              // Next.js Image 컴포넌트 사용을 권장하지만, 간단한 목업을 위해 img 태그 사용
-              <img
-                key={index}
-                src={imgSrc}
-                alt={`게시글 이미지 ${index + 1}`}
-                className="max-w-full h-auto rounded-lg shadow-sm"
-              />
-            ))}
+          <div className="mt-6">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {post.Images.map((imgSrc, index) => (
+                <img
+                  key={index}
+                  src={imgSrc}
+                  alt={`게시글 이미지 ${index + 1}`}
+                  className="w-32 h-32 object-cover rounded-lg flex-shrink-0 border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(imgSrc, "_blank")}
+                  onError={(e) => {
+                    // 이미지 로드 실패 시 플레이스홀더로 대체
+                    e.currentTarget.src =
+                      "data:image/svg+xml;base64," +
+                      btoa(`
+                      <svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="128" height="128" fill="#e5e7eb"/>
+                        <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-family="sans-serif" font-size="14">이미지 없음</text>
+                      </svg>
+                    `);
+                  }}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

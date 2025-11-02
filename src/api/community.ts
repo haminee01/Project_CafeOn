@@ -62,13 +62,17 @@ interface BackendPostDetailResponse {
   authorProfileImageUrl: string | null;
   type: string;
   viewCount: number;
-  images: Array<{
-    imageId?: number;
-    id?: number;
-    originalFileName?: string;
-    storedFileName?: string;
-    imageUrl: string;
-  }>;
+  images?: Array<
+    | {
+        imageId?: number;
+        id?: number;
+        fileName?: string;
+        publicUrl?: string; // S3 공개 URL
+        imageUrl?: string;
+        url?: string;
+      }
+    | string
+  >;
   createdAt: string;
   updatedAt: string;
   likeCount: number;
@@ -160,33 +164,50 @@ export const getPostDetail = async (
 ): Promise<PostDetailResponse> => {
   const url = `/api/posts/${postId}`;
 
-  console.log(`[API] Fetching post ${postId}`);
-
   const backendResponse = await fetcher<BackendPostDetailApiResponse>(url);
 
   // 백엔드 응답을 프론트엔드 형식으로 변환
   const backendData = backendResponse.data;
 
-  console.log("백엔드 이미지 데이터:", backendData.images);
+  // 이미지 URL 배열 추출 (리뷰와 동일한 방식)
+  let imageUrls: string[] = [];
+
+  if (backendData.images && Array.isArray(backendData.images)) {
+    if (backendData.images.length > 0) {
+      const firstItem = backendData.images[0];
+
+      if (typeof firstItem === "string") {
+        // 이미 문자열 배열인 경우
+        imageUrls = backendData.images as string[];
+      } else if (firstItem && typeof firstItem === "object") {
+        // 객체 배열인 경우 - publicUrl 또는 imageUrl 필드 사용
+        imageUrls = backendData.images
+          .map((img: any) => {
+            const url = img.publicUrl || img.imageUrl || img.url || "";
+            // URL 디코딩 (백엔드가 인코딩된 URL을 보내는 경우 대비)
+            return url ? decodeURIComponent(url) : "";
+          })
+          .filter(Boolean) as string[];
+      }
+    }
+  }
 
   const transformedData: PostDetailResponse = {
     id: backendData.id,
     type: backendData.type as PostDetailType["type"],
     title: backendData.title,
-    author: backendData.authorNickname, // authorNickname -> author로 매핑
-    authorId: backendData.authorId || backendData.authorUserId, // 작성자 userId 매핑
+    author: backendData.authorNickname,
+    authorId: backendData.authorId || backendData.authorUserId,
     authorProfileImageUrl: backendData.authorProfileImageUrl,
-    created_at: backendData.createdAt, // createdAt -> created_at으로 매핑
+    created_at: backendData.createdAt,
     updated_at: backendData.updatedAt,
-    views: backendData.viewCount, // viewCount -> views로 매핑
-    likes: backendData.likeCount, // likeCount -> likes로 매핑
-    comments: 0, // 댓글 수는 별도 API로 조회
+    views: backendData.viewCount,
+    likes: backendData.likeCount,
+    comments: 0,
     content: backendData.content,
-    Images: backendData.images?.map((img) => img.imageUrl) || [], // 이미지 URL 배열로 변환 (없으면 빈 배열)
+    Images: imageUrls,
     likedByMe: backendData.likedByMe,
   };
-
-  console.log("변환된 이미지 URLs:", transformedData.Images);
 
   return transformedData;
 };
@@ -296,10 +317,6 @@ export async function createPostMutator(
     };
   }
 ): Promise<PostCreateResponse> {
-  console.log("=== createPostMutator 시작 ===");
-  console.log("arg:", arg);
-  console.log("url:", url);
-
   const formData = new FormData();
 
   // 게시글 데이터를 JSON으로 추가 (백엔드 @RequestPart 구조에 맞춤)
@@ -315,30 +332,11 @@ export async function createPostMutator(
   );
   formData.append("post", jsonBlob);
 
-  // 이미지 파일들 추가 (백엔드에서는 "image"로 받음)
-  console.log("전송할 이미지 개수:", arg.Image?.length || 0);
+  // 이미지 파일들 추가 (백엔드에서는 "images"로 받음)
   if (arg.Image && arg.Image.length > 0) {
-    arg.Image.forEach((file, index) => {
-      console.log(`이미지 ${index + 1}:`, file.name, file.size, "bytes");
-      formData.append("image", file);
+    arg.Image.forEach((file) => {
+      formData.append("images", file);
     });
-  }
-
-  console.log("FormData entries:");
-  for (const [key, value] of formData.entries()) {
-    if (value instanceof File) {
-      console.log(`  ${key}: File(${value.name}, ${value.size} bytes)`);
-    } else if (
-      value &&
-      typeof value === "object" &&
-      "type" in value &&
-      "size" in value
-    ) {
-      const blob = value as Blob;
-      console.log(`  ${key}: Blob(${blob.size} bytes, ${blob.type})`);
-    } else {
-      console.log(`  ${key}:`, value);
-    }
   }
 
   // 로컬 스토리지에서 인증 토큰 가져오기
@@ -352,30 +350,11 @@ export async function createPostMutator(
   }
 
   const correctUrl = `${API_BASE_URL}/api/posts`;
-  console.log("게시글 작성 API 호출:", {
-    url: correctUrl,
-    hasToken: !!authToken,
-    tokenPreview: authToken ? authToken.substring(0, 20) + "..." : null,
-    formDataEntries: Array.from(formData.entries()).map(([key, value]) => ({
-      key,
-      value: value instanceof File ? `File: ${value.name}` : value,
-    })),
-  });
-
-  // 백엔드는 항상 multipart/form-data를 기대하므로 FormData 사용
-  console.log("FormData API 사용");
-  console.log("FormData API URL:", correctUrl);
 
   const response = await fetch(correctUrl, {
     method: "POST",
     headers,
     body: formData,
-  });
-
-  console.log("API 응답:", {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok,
   });
 
   if (!response.ok) {
@@ -411,16 +390,6 @@ export async function createPostMutator(
   }
 
   const result = await response.json();
-  console.log("게시글 작성 성공:", result);
-
-  // 이미지 데이터 확인
-  if (result.data && result.data.images) {
-    console.log("작성된 게시글의 이미지 배열:", result.data.images);
-    console.log(
-      "이미지 URL들:",
-      result.data.images.map((img: any) => img.imageUrl || img)
-    );
-  }
 
   // 백엔드 응답을 프론트엔드 형식으로 변환
   if (result.data) {
@@ -481,7 +450,7 @@ export async function updatePostMutator(
   if (images && images.length > 0) {
     images.forEach((file: File, idx: number) => {
       console.log(`수정 - 이미지 ${idx + 1}:`, file.name, file.size, "bytes");
-      formData.append("image", file);
+      formData.append("images", file);
     });
   }
 
