@@ -1,6 +1,6 @@
 "use client";
 
-import { PostType } from "@/types/post";
+import { PostType } from "@/types/Post";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPostMutator, updatePostMutator } from "@/api/community";

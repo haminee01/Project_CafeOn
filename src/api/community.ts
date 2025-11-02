@@ -16,7 +16,7 @@ import {
   CommentLikeResponse,
   ReportRequest,
   ReportResponse,
-} from "@/types/post";
+} from "@/types/Post";
 
 // BASE_URL은 환경에 따라 다를 수 있습니다. 예: http://localhost:8080
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";

@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { PostDetail as PostDetailType } from "@/types/post";
+import { PostDetail as PostDetailType } from "@/types/Post";
 import { useState, useMemo } from "react";
 import { togglePostLike, deletePostMutator } from "@/api/community";
 import { useRouter } from "next/navigation";
