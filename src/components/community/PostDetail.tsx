@@ -88,11 +88,11 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
       const response = await togglePostLike(post.id);
       console.log("좋아요 응답:", response);
 
-      // 응답 타입: { message, data: { liked, likes } }
-      if (response?.data) {
-        const { liked, likes } = response.data;
-        setIsLiked(liked);
-        setCurrentLikes(likes);
+      // 응답 타입: { message, liked }
+      if (response) {
+        setIsLiked(response.liked);
+        // likes는 응답에 없으므로 로컬에서 계산
+        setCurrentLikes(response.liked ? currentLikes + 1 : currentLikes - 1);
       }
     } catch (error) {
       console.error("좋아요 처리 실패:", error);

@@ -38,7 +38,7 @@ export interface PostDetail {
   title: string;
   content: string;
   author: string;
-  authorId?: string; // 작성자 userId 추가
+  authorId?: string; // 작성자 userId
   authorProfileImageUrl?: string | null;
   created_at: string;
   updated_at?: string;
@@ -82,11 +82,7 @@ export interface PostDeleteResponse {
 // 게시글 좋아요 응답 타입
 export interface PostLikeResponse {
   message: string;
-  data: {
-    postId: number;
-    liked: boolean;
-    likes: number;
-  };
+  liked: boolean;
 }
 
 // 댓글 생성 요청 타입
@@ -97,19 +93,8 @@ export interface CommentCreateRequest {
 
 // 댓글 생성 응답 타입
 export interface CommentCreateResponse {
+  id: number;
   message: string;
-  data: {
-    commentId: number;
-    content: string;
-    authorName: string;
-    authorNickname?: string;
-    createdAt: string;
-    likeCount: number;
-    likedByMe: boolean;
-    parentId: number | null;
-    postId: number;
-    children?: any[];
-  };
 }
 
 // 댓글 수정 응답 타입
@@ -125,11 +110,7 @@ export interface CommentDeleteResponse {
 // 댓글 좋아요 응답 타입
 export interface CommentLikeResponse {
   message: string;
-  data: {
-    commentId: number;
-    liked: boolean;
-    likes: number;
-  };
+  liked: boolean;
 }
 
 // 신고 요청 타입
