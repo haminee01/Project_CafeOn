@@ -108,9 +108,12 @@ export default function MapPage() {
         radius: 2000, // 2km 반경
       });
 
-      // API가 배열을 반환하면 그대로 사용
+      // API가 배열을 반환하면 그대로 사용, 이미지 있는 카페만 필터링
       if (Array.isArray(cafes) && cafes.length > 0) {
-        setNearbyCafes(cafes);
+        const cafesWithImages = cafes.filter(cafe => 
+          cafe.photoUrl || (cafe.images && cafe.images.length > 0)
+        );
+        setNearbyCafes(cafesWithImages);
       } else {
         // 빈 배열 반환
         setNearbyCafes([]);
@@ -127,9 +130,12 @@ export default function MapPage() {
     try {
       const cafes = await getHotCafes();
       
-      // API가 배열을 반환하면 그대로 사용
+      // API가 배열을 반환하면 그대로 사용, 이미지 있는 카페만 필터링
       if (Array.isArray(cafes) && cafes.length > 0) {
-        setPopularCafes(cafes);
+        const cafesWithImages = cafes.filter(cafe => 
+          cafe.photoUrl || (cafe.images && cafe.images.length > 0)
+        );
+        setPopularCafes(cafesWithImages);
       } else {
         // 빈 배열 반환
         setPopularCafes([]);

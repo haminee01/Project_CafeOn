@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import ProfileIcon from "./ProfileIcon";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatMessageItemProps {
   message: ChatMessage;

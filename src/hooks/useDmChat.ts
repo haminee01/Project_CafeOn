@@ -26,7 +26,7 @@ import {
   ChatMessage as StompChatMessage,
 } from "@/lib/stompClient";
 import { Client } from "@stomp/stompjs";
-import { useAuth } from "./useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UseDmChatProps {
   counterpartId: string;

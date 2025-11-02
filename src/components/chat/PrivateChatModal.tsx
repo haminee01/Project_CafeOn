@@ -5,7 +5,7 @@ import ChatMessageList from "./ChatMessageList";
 import ChatMessageInput from "./ChatMessageInput";
 import ChatSidebar from "./ChatSidebar";
 import { useDmChat } from "../../hooks/useDmChat";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface PrivateChatModalProps {
   targetUser: {

@@ -22,7 +22,9 @@ export default function AdminMembersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
+  const [allMembers, setAllMembers] = useState<Member[]>([]); // 전체 회원 (클라이언트 필터링용)
   const [loading, setLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
 
   // 회원 목록 조회
   useEffect(() => {
@@ -35,11 +37,43 @@ export default function AdminMembersPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) {
         setMembers([]);
+        setAllMembers([]);
         setLoading(false);
         return;
       }
 
-      const status = activeTab === "all" ? undefined : activeTab.toUpperCase();
+      // 페널티 3회 탭은 전체 회원을 가져와 클라이언트에서 필터링
+      if (activeTab === "penalty") {
+        const response = await getAdminMembers({
+          page: 0,
+          size: 1000, // 충분히 큰 값
+          search: searchTerm,
+          status: undefined, // 전체
+        });
+        
+        const pageData = response?.data || response;
+        const memberList = pageData?.content || [];
+        
+        // 페널티 3회 이상만 필터링
+        const filteredMembers = memberList.filter((member: Member) => member.penaltyCount >= 3);
+        
+        setAllMembers(memberList);
+        
+        // 클라이언트 페이지네이션
+        const itemsPerPage = 10;
+        const totalPagesCount = Math.ceil(filteredMembers.length / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pagedMembers = filteredMembers.slice(startIndex, endIndex);
+        
+        setMembers(pagedMembers);
+        setTotalPages(totalPagesCount);
+        
+        return;
+      }
+
+      // 백엔드가 기대하는 status 값: "normal", "suspended", 또는 undefined (all)
+      const status = activeTab === "all" ? undefined : activeTab === "active" ? "normal" : activeTab;
       const response = await getAdminMembers({
         page: currentPage - 1,
         size: 10,
@@ -48,11 +82,24 @@ export default function AdminMembersPage() {
       });
 
       // API 응답 구조에 따라 조정
-      const memberList = response?.data?.content || response?.content || [];
+      // Spring Data Page 구조: { content: [...], totalPages: N, totalElements: M, ... }
+      const pageData = response?.data || response;
+      const memberList = pageData?.content || [];
+      const totalPagesCount = pageData?.totalPages || 1;
+      
       setMembers(memberList);
+      setTotalPages(totalPagesCount);
+      
+      console.log("API 응답:", {
+        members: memberList.length,
+        totalPages: totalPagesCount,
+        currentPage,
+        response
+      });
     } catch (error) {
       console.error("회원 목록 조회 실패:", error);
       setMembers([]);
+      setAllMembers([]);
     } finally {
       setLoading(false);
     }
@@ -74,17 +121,6 @@ export default function AdminMembersPage() {
     }
   });
 
-  const filteredMembers = members.filter((member) => {
-    const matchesTab = activeTab === "all" || member.status === activeTab;
-    const matchesSearch =
-      searchTerm.trim() === "" ||
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
-
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -110,13 +146,9 @@ export default function AdminMembersPage() {
           reasonCode: "DISCOMFORT",
         });
 
-        setMembers((prevMembers) =>
-          prevMembers.map((member) =>
-            member.id === selectedMember.id
-              ? { ...member, penaltyCount: member.penaltyCount + 1 }
-              : member
-          )
-        );
+        // API에서 최신 데이터 다시 가져오기
+        await fetchMembers();
+        
         setShowPenaltyModal(false);
         setSelectedMember(null);
         setPenaltyReason("");
@@ -138,7 +170,7 @@ export default function AdminMembersPage() {
     setSuspensionReason("");
 
     // 정지 해제인 경우 확인 모달 먼저 표시
-    if (member.status === "suspended") {
+    if (member.status?.toUpperCase() === "SUSPENDED") {
       setShowSuspensionConfirmModal(true);
     } else {
       setShowSuspensionModal(true);
@@ -153,16 +185,9 @@ export default function AdminMembersPage() {
           reason: suspensionReason,
         });
 
-        setMembers((prevMembers) =>
-          prevMembers.map((member) =>
-            member.id === selectedMember.id
-              ? {
-                  ...member,
-                  status: member.status === "active" ? "suspended" : "active",
-                }
-              : member
-          )
-        );
+        // API에서 최신 데이터 다시 가져오기
+        await fetchMembers();
+        
         setShowSuspensionModal(false);
         setSelectedMember(null);
         setSuspensionReason("");
@@ -188,13 +213,8 @@ export default function AdminMembersPage() {
           reason: "정지 해제",
         });
 
-        setMembers((prevMembers) =>
-          prevMembers.map((member) =>
-            member.id === selectedMember.id
-              ? { ...member, status: "active" }
-              : member
-          )
-        );
+        // API에서 최신 데이터 다시 가져오기
+        await fetchMembers();
       } catch (error) {
         console.error("정지 해제 실패:", error);
       }
@@ -215,10 +235,19 @@ export default function AdminMembersPage() {
         <h1 className="text-3xl font-bold text-gray-900">회원 관리</h1>
       </div>
 
+      {/* 검색바 */}
+      <div className="w-full max-w-4/5">
+        <SearchBar
+          placeholder="이름으로 검색..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+      </div>
+
       {/* 탭 */}
       <div className="flex border-b border-gray-200">
         <button
-          onClick={() => setActiveTab("all")}
+          onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "all"
               ? "border-b-2 border-primary text-primary"
@@ -228,7 +257,7 @@ export default function AdminMembersPage() {
           전체 회원
         </button>
         <button
-          onClick={() => setActiveTab("active")}
+          onClick={() => { setActiveTab("active"); setCurrentPage(1); }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "active"
               ? "border-b-2 border-primary text-primary"
@@ -238,7 +267,7 @@ export default function AdminMembersPage() {
           정상 회원
         </button>
         <button
-          onClick={() => setActiveTab("suspended")}
+          onClick={() => { setActiveTab("suspended"); setCurrentPage(1); }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "suspended"
               ? "border-b-2 border-primary text-primary"
@@ -247,24 +276,30 @@ export default function AdminMembersPage() {
         >
           정지 회원
         </button>
+        <button
+          onClick={() => { setActiveTab("penalty"); setCurrentPage(1); }}
+          className={`px-4 py-2 text-base font-medium ${
+            activeTab === "penalty"
+              ? "border-b-2 border-primary text-primary"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          페널티 3회 이상
+        </button>
       </div>
 
-      {/* 검색바 */}
-
-      <div className="w-full max-w-4/5">
-        <SearchBar
-          placeholder="이름, 이메일로 검색..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-        />
-      </div>
       <div className="text-sm text-gray-500">
-        총 {filteredMembers.length}명 회원
+        총 {members.length}명 회원
       </div>
 
       {/* 회원 목록 */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600">회원 데이터를 불러오는 중...</p>
+        </div>
+      ) : (
       <div className="space-y-4">
-        {filteredMembers.map((member) => (
+        {members.map((member) => (
           <div
             key={member.id}
             className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
@@ -276,7 +311,7 @@ export default function AdminMembersPage() {
                 <p className="text-sm text-gray-500">{member.email}</p>
                 <p className="text-sm text-gray-500">
                   페널티: {member.penaltyCount}회 | 상태:{" "}
-                  {member.status === "active" ? "정상" : "정지"}
+                  {member.status?.toUpperCase() === "ACTIVE" ? "정상" : "정지"}
                 </p>
               </div>
               <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
@@ -288,17 +323,18 @@ export default function AdminMembersPage() {
                   페널티
                 </Button>
                 <Button
-                  color={member.status === "active" ? "warning" : "gray"}
+                  color={member.status?.toUpperCase() === "ACTIVE" ? "warning" : "gray"}
                   size="sm"
                   onClick={() => handleSuspensionClick(member)}
                 >
-                  {member.status === "active" ? "정지" : "정지 해제"}
+                  {member.status?.toUpperCase() === "ACTIVE" ? "정지" : "정지 해제"}
                 </Button>
               </div>
             </div>
           </div>
         ))}
       </div>
+      )}
 
       {/* 페이지네이션 */}
       <Pagination
@@ -394,7 +430,7 @@ export default function AdminMembersPage() {
                 onClick={handleSuspensionConfirm}
                 disabled={!suspensionReason.trim()}
               >
-                {selectedMember?.status === "active" ? "정지하기" : "정지 해제"}
+                {selectedMember?.status?.toUpperCase() === "ACTIVE" ? "정지하기" : "정지 해제"}
               </Button>
             </div>
           </div>

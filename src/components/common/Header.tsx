@@ -35,6 +35,11 @@ const Header = ({ className = "" }: HeaderProps) => {
 
   const { isAuthenticated, user, logout, isLoading } = useAuth();
 
+  // 디버그 로그
+  useEffect(() => {
+    console.log("[Header] 렌더링 - isLoading:", isLoading, "isAuthenticated:", isAuthenticated);
+  }, [isLoading, isAuthenticated]);
+
   // 알림 개수 조회 및 실시간 업데이트
   useEffect(() => {
     if (!isAuthenticated) {

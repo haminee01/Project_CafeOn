@@ -293,11 +293,13 @@ export default function ReviewWriteModal({
 
         {/* 토스트 */}
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
+          <div className="fixed top-4 right-4 z-[60]">
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => setToast(null)}
+            />
+          </div>
         )}
       </div>
     </div>

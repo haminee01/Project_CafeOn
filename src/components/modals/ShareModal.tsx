@@ -12,6 +12,8 @@ interface ShareModalProps {
   cafe: {
     name: string;
     address: string;
+    photoUrl?: string | null;
+    images?: string[];
   };
   cafeId?: string | number;
 }
@@ -58,6 +60,10 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
   const handleSocialShare = (platformId: string) => {
     const text = `${cafe.name} - ${cafe.address}`;
     const url = shareUrl;
+    
+    // 카페 이미지 URL 가져오기 (photoUrl 우선, 없으면 images 첫 번째)
+    const cafeImageUrl = cafe.photoUrl || (cafe.images && cafe.images.length > 0 ? cafe.images[0] : null) 
+      || "https://mud-kage.kakao.com/dn/Q2iNx/btqgeRgV54P/VLdBs9cvyn8BJXB3o7N8UK/kakaolink40_original.png";
 
     switch (platformId) {
       case "instagram":
@@ -106,8 +112,7 @@ export default function ShareModal({ onClose, cafe, cafeId }: ShareModalProps) {
               content: {
                 title: cafe.name,
                 description: cafe.address,
-                imageUrl:
-                  "https://mud-kage.kakao.com/dn/Q2iNx/btqgeRgV54P/VLdBs9cvyn8BJXB3o7N8UK/kakaolink40_original.png", // 기본 카카오 이미지 (실제 카페 이미지로 교체 가능)
+                imageUrl: cafeImageUrl, // 카페 이미지 URL 사용
                 link: {
                   mobileWebUrl: url,
                   webUrl: url,

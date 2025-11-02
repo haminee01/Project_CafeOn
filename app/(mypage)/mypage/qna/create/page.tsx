@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import QuestionForm from "@/components/qna/QuestionForm";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/common/Toast";
 
 export default function CreateQuestionPage() {

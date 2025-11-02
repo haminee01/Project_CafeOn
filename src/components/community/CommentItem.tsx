@@ -11,16 +11,17 @@ import {
   getComments,
 } from "@/api/community";
 import ReportModal from "@/components/modals/ReportModal";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToastContext } from "@/components/common/ToastProvider";
 import ProfileIcon from "@/components/chat/ProfileIcon";
+import { formatDateTime } from "@/utils/dateFormat";
 
 interface TemporaryAlertProps {
   message: string;
 }
 
 const TemporaryAlert = ({ message }: TemporaryAlertProps) => (
-  <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#999999] text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300">
+  <div className="fixed top-4 right-4 bg-[#999999] text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300">
     {message}
   </div>
 );
@@ -230,9 +231,10 @@ export default function CommentItem({
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-              <ProfileIcon size="sm" />
-            </div>
+            <ProfileIcon 
+              size="sm" 
+              imageUrl={isMyComment && user?.profileImageUrl ? user.profileImageUrl : undefined}
+            />
             <span
               className={`font-semibold ${
                 isMyComment ? "text-[#6E4213]" : "text-gray-800"
@@ -246,15 +248,7 @@ export default function CommentItem({
               )}
             </span>
             <span className="text-sm text-gray-500">
-              {comment.created_at
-                ? new Date(comment.created_at).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "날짜 없음"}
+              {comment.created_at ? formatDateTime(comment.created_at) : "날짜 없음"}
             </span>
           </div>
           <div className="flex space-x-2 text-sm text-gray-500">

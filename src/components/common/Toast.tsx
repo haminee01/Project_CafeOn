@@ -56,7 +56,7 @@ export function useToast() {
   }, []);
 
   const ToastContainer = () => (
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 space-y-2">
+    <div className="fixed top-4 right-4 z-50 space-y-2">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}
@@ -107,7 +107,7 @@ export default function Toast({
   return (
     <div
       className={`px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+        isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"
       } ${getTypeStyles()}`}
     >
       <div className="flex items-center gap-2">

@@ -49,7 +49,7 @@ export default function AdminCafesPage() {
     fetchCafes();
   }, []);
   
-  const itemsPerPage = 9;
+  const itemsPerPage = 12;
   const totalPages = Math.ceil(filteredCafes.length / itemsPerPage);
   
   // 현재 페이지에 표시할 카페들
@@ -77,26 +77,6 @@ export default function AdminCafesPage() {
     setCurrentPage(1); // 검색 시 첫 페이지로 이동
   };
 
-  const handleDeleteClick = (cafe: any) => {
-    setCafeToDelete(cafe);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (cafeToDelete) {
-      const updatedCafes = cafes.filter(cafe => cafe.cafe_id !== cafeToDelete.cafe_id);
-      setCafes(updatedCafes);
-      setFilteredCafes(updatedCafes);
-      setShowDeleteModal(false);
-      setCafeToDelete(null);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setShowDeleteModal(false);
-    setCafeToDelete(null);
-  };
-
   return (
     <div className="space-y-6">
       {/* 페이지 헤더 */}
@@ -108,21 +88,18 @@ export default function AdminCafesPage() {
       </div>
 
       {/* 검색바 */}
+      <div className="w-full max-w-4/5">
+        <SearchBar
+          placeholder="카페명, 주소, 설명으로 검색..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+      </div>
       
-        <div className="w-full max-w-4/5">
-          <SearchBar
-            placeholder="카페명, 주소, 설명으로 검색..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
-        </div>
-        
-        <div className="text-sm text-gray-500">
-          총 {filteredCafes.length}개 카페
-        </div>
+      <div className="text-sm text-gray-500">
+        총 {filteredCafes.length}개 카페
+      </div>
 
-<<<<<<< HEAD
-      {/* 카페 개수 */}
       {/* 카페 그리드 - 한 줄에 4개씩 */}
       {loading ? (
         <div className="text-center py-12">
@@ -133,33 +110,29 @@ export default function AdminCafesPage() {
         {currentCafes.map((cafe) => (
           <div key={cafe.cafe_id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             {/* 카페 이미지 */}
-            <div className="h-48 bg-gray-200 flex items-center justify-center">
-              <div className="text-center text-gray-400">
-                <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                </svg>
-                <p className="text-sm">카페 이미지</p>
-              </div>
+            <div className="h-48 bg-gray-200 flex items-center justify-center overflow-hidden">
+              {cafe.photoUrl || (cafe.images && cafe.images.length > 0) ? (
+                <img 
+                  src={cafe.photoUrl || cafe.images[0]} 
+                  alt={cafe.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-center text-gray-400">
+                  <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm">카페 이미지</p>
+                </div>
+              )}
             </div>
 
             {/* 카페 정보 */}
             <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">{cafe.name}</h3>
-              
-              {/* 액션 버튼 */}
-              <div className="flex gap-2">
-                <Button color="secondary" size="sm" className="flex-1">
-                  수정
-                </Button>
-                <Button 
-                  color="gray" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => {}}
-                >
-                  삭제
-                </Button>
-              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">{cafe.name}</h3>
+              {cafe.address && (
+                <p className="text-sm text-gray-500 truncate">{cafe.address}</p>
+              )}
             </div>
           </div>
         ))}

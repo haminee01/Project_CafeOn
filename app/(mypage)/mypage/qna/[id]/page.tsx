@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 import { useMyQuestionDetail } from "@/hooks/useMyQuestionDetail";
 import { useMyQuestionActions } from "@/hooks/useMyQuestionActions";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import QuestionEditModal from "@/components/qna/QuestionEditModal";
 import { useToast } from "@/components/common/Toast";
+import { formatDateTime } from "@/utils/dateFormat";
 
 interface QuestionDetailPageProps {
   params: Promise<{
@@ -267,24 +268,12 @@ export default function QuestionDetailPage({
               </div>
               <div>
                 <span className="font-medium">작성일:</span>{" "}
-                {new Date(question.createdAt).toLocaleDateString("ko-KR", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatDateTime(question.createdAt)}
               </div>
               {question.updatedAt !== question.createdAt && (
                 <div>
                   <span className="font-medium">수정일:</span>{" "}
-                  {new Date(question.updatedAt).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(question.updatedAt)}
                 </div>
               )}
             </div>

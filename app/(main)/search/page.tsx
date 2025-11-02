@@ -45,7 +45,11 @@ export default function SearchResultsPage() {
       setLoading(true);
       try {
         const results = await searchCafes(searchQuery, selectedCategory || undefined);
-        setCafes(results);
+        // 이미지가 있는 카페만 필터링
+        const cafesWithImages = results.filter(cafe => 
+          cafe.photoUrl || (cafe.images && cafe.images.length > 0)
+        );
+        setCafes(cafesWithImages);
       } catch (error: any) {
         console.error("카페 검색 실패:", error);
         setCafes([]);
