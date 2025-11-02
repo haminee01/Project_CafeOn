@@ -245,14 +245,45 @@ export const joinCafeGroupChat = async (
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("채팅방 참여 API 에러:", {
+        let errorText = "";
+        let errorData: any = null;
+        
+        try {
+          errorText = await response.text();
+          // 빈 문자열이 아니고 유효한 JSON인 경우 파싱 시도
+          if (errorText && errorText.trim()) {
+            try {
+              errorData = JSON.parse(errorText);
+            } catch (parseError) {
+              // JSON 파싱 실패 시 텍스트 그대로 사용
+              errorData = errorText;
+            }
+          }
+        } catch (textError) {
+          console.warn("에러 응답 본문 읽기 실패:", textError);
+        }
+        
+        // 에러 정보 구성
+        const errorInfo: any = {
           status: response.status,
           statusText: response.statusText,
-          errorText,
           cafeId,
           url: `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
-        });
+        };
+        
+        if (errorText) {
+          errorInfo.errorText = errorText;
+        }
+        
+        if (errorData) {
+          errorInfo.errorData = errorData;
+          // 백엔드에서 보내는 메시지가 있는 경우 포함
+          if (errorData.message) {
+            errorInfo.message = errorData.message;
+          }
+        }
+        
+        console.error("채팅방 참여 API 에러:", errorInfo);
 
         // 400 에러인 경우 더 자세한 정보 제공
         if (response.status === 400) {
@@ -261,17 +292,17 @@ export const joinCafeGroupChat = async (
             cafeIdType: typeof cafeId,
             cafeIdParsed: parseInt(cafeId),
             isNaN: isNaN(parseInt(cafeId)),
+            errorMessage: errorData?.message || errorText || "상세 정보 없음",
           });
 
           // 에러 응답을 JSON으로 파싱 시도
-          try {
-            const errorJson = JSON.parse(errorText);
-            console.error("에러 응답 상세:", errorJson);
+          if (errorData && typeof errorData === 'object') {
+            console.error("에러 응답 상세:", errorData);
 
             // "가입 상태 조회 실패" 에러인 경우 특별 처리
             if (
-              errorJson.message &&
-              errorJson.message.includes("가입 상태 조회 실패")
+              errorData.message &&
+              errorData.message.includes("가입 상태 조회 실패")
             ) {
               console.error(
                 "가입 상태 조회 실패 - 사용자 인증 또는 권한 문제일 수 있음"
@@ -385,9 +416,9 @@ export const joinCafeGroupChat = async (
 
             // Hibernate 엔티티 ID null 에러 처리
             if (
-              errorJson.message &&
-              (errorJson.message.includes("has a null identifier") ||
-                errorJson.message.includes("ChatRoomEntity"))
+              errorData.message &&
+              (errorData.message.includes("has a null identifier") ||
+                errorData.message.includes("ChatRoomEntity"))
             ) {
               console.error(
                 "Hibernate 엔티티 ID null 에러 - 백엔드 데이터베이스 문제"
@@ -395,7 +426,7 @@ export const joinCafeGroupChat = async (
               console.error(
                 "채팅방 생성 시 데이터베이스 제약 조건 위반 또는 트랜잭션 문제"
               );
-              console.error("에러 상세:", errorJson.message);
+              console.error("에러 상세:", errorData.message);
 
               // 처음 시도인 경우 인증 상태 확인 후 자동 재시도
               if (retryCount === 0) {
@@ -413,9 +444,6 @@ export const joinCafeGroupChat = async (
                 }
               }
             }
-          } catch (parseError) {
-            console.error("에러 응답 파싱 실패:", parseError);
-            console.error("원본 에러 텍스트:", errorText);
           }
         }
 
@@ -542,6 +570,12 @@ export const getUnreadNotifications = async (): Promise<
   try {
     const token = localStorage.getItem("accessToken");
 
+    // 토큰이 없으면 빈 배열 반환 (인증되지 않은 사용자)
+    if (!token) {
+      console.log("토큰이 없어 알림 목록 조회를 건너뜁니다.");
+      return [];
+    }
+
     console.log("읽지 않은 알림 목록 조회 요청:", {
       url: `${API_BASE_URL}/api/notifications/unread`,
       token: token ? "토큰 존재" : "토큰 없음",
@@ -557,22 +591,28 @@ export const getUnreadNotifications = async (): Promise<
     });
 
     if (!response.ok) {
-      console.error(
-        "알림 목록 조회 API 에러:",
-        response.status,
-        response.statusText
-      );
-
-      // 403 Forbidden, 404, 500 에러인 경우 빈 배열 반환
+      // 403 Forbidden, 404, 500 에러인 경우 빈 배열 반환 (조용히 처리)
       if (
         response.status === 403 ||
         response.status === 404 ||
         response.status === 500
       ) {
-        console.log("알림 목록 API 에러, 빈 배열 반환:", response.status);
+        // 콘솔 에러 대신 로그만 출력 (403은 인증/권한 문제일 수 있으므로 정상 상황일 수 있음)
+        if (response.status !== 403) {
+          console.error(
+            "알림 목록 조회 API 에러:",
+            response.status,
+            response.statusText
+          );
+        }
         return [];
       }
 
+      console.error(
+        "알림 목록 조회 API 에러:",
+        response.status,
+        response.statusText
+      );
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { IoNotificationsOutline } from "react-icons/io5";
 import NotificationDropdown from "./NotificationDropdown";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,20 +14,6 @@ interface HeaderProps {
 const Header = ({ className = "" }: HeaderProps) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const headerRef = useRef<HTMLElement>(null);
-
-  // 중복 헤더 감지 및 숨기기
-  useEffect(() => {
-    if (headerRef.current) {
-      const headers = document.querySelectorAll("header");
-      if (headers.length > 1) {
-        // 첫 번째 헤더 이후의 모든 헤더 숨기기
-        for (let i = 1; i < headers.length; i++) {
-          (headers[i] as HTMLElement).style.display = "none";
-        }
-      }
-    }
-  }, []);
 
   const toggleNotification = () => {
     setIsNotificationOpen(!isNotificationOpen);
@@ -78,7 +64,7 @@ const Header = ({ className = "" }: HeaderProps) => {
   }, [isAuthenticated]);
 
   return (
-    <header ref={headerRef} className={`header-component ${className}`}>
+    <header className={`header-component ${className}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
@@ -101,7 +87,7 @@ const Header = ({ className = "" }: HeaderProps) => {
               />
             </div>
 
-            <Link href="/qna" className="text-gray-800 font-medium text-lg">
+            <Link href="/qna" className="text-gray-800 font-normal text-lg">
               QnA
             </Link>
             <Link
@@ -122,11 +108,13 @@ const Header = ({ className = "" }: HeaderProps) => {
 
           <div className="flex items-center space-x-6">
             {isLoading ? (
-              // 로딩 중일 때는 스켈레톤 표시
-              <div className="flex items-center space-x-6">
-                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
-              </div>
+              // 초기 로딩 중일 때는 기본적으로 로그인 버튼 표시 (토큰 확인 중)
+              <Link
+                href="/login"
+                className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+              >
+                로그인
+              </Link>
             ) : isAuthenticated ? (
               <>
                 <Link

@@ -83,27 +83,26 @@ export async function getAllCafes() {
 }
 
 // 카페 검색
-export async function searchCafes(query?: string) {
+export async function searchCafes(query?: string, tags?: string | string[]) {
   try {
-    // 항상 전체 카페를 가져온 후 클라이언트에서 필터링 (Kakao API 검색이 불안정)
-    const allResponse = await apiClient.get("/api/cafes/search");
-    const allCafes =
-      allResponse.data?.cafes || allResponse.data?.data || allResponse.data;
-
-    if (Array.isArray(allCafes)) {
-      if (query) {
-        // 검색어로 필터링 (대소문자 구분 없음)
-        const lowerQuery = query.toLowerCase();
-        const filtered = allCafes.filter((cafe: any) => {
-          const name = (cafe.name || "").toLowerCase();
-          const address = (cafe.address || "").toLowerCase();
-          return name.includes(lowerQuery) || address.includes(lowerQuery);
-        });
-        return filtered.map(convertCafeResponseToCafe);
-      } else {
-        // 전체 카페 반환
-        return allCafes.map(convertCafeResponseToCafe);
-      }
+    // 백엔드에 query와 tags 파라미터 전달 (명세서에 따라 tags 복수형 사용)
+    const params: any = {};
+    if (query) params.query = query;
+    if (tags) {
+      // 배열이면 각 태그를 개별 파라미터로 전달 (예: tags=분위기&tags=포토스팟)
+      // 단일 문자열이면 그대로 전달
+      params.tags = Array.isArray(tags) ? tags : tags;
+    }
+    
+    const response = await apiClient.get("/api/cafes/search", {
+      params,
+    });
+    
+    const cafes = response.data;
+    
+    // 배열인지 확인하고 변환
+    if (Array.isArray(cafes)) {
+      return cafes.map(convertCafeResponseToCafe);
     }
     return [];
   } catch (error: any) {
@@ -130,12 +129,14 @@ export async function getNearbyCafes(params: {
   radius?: number;
 }) {
   try {
+    // 근처 카페 조회는 시간이 걸릴 수 있으므로 타임아웃을 더 길게 설정
     const response = await apiClient.get("/api/cafes/nearby", {
       params: {
         latitude: params.latitude,
         longitude: params.longitude,
         radius: params.radius || 1000,
       },
+      timeout: 30000, // 30초로 증가 (Kakao API 호출 + DB 조회 시간 고려)
     });
 
     // 백엔드 응답 형식에 따라 처리
@@ -149,6 +150,12 @@ export async function getNearbyCafes(params: {
     }
     return [];
   } catch (error: any) {
+    // 타임아웃 에러인 경우 특별 처리
+    if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+      console.warn("근처 카페 조회 타임아웃 (30초 초과), 빈 배열 반환");
+      return [];
+    }
+    
     console.error("근처 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
     console.warn("근처 카페 API 실패, 빈 배열 반환");
@@ -158,17 +165,57 @@ export async function getNearbyCafes(params: {
 
 // 백엔드 카페 응답을 프론트엔드 Cafe 타입으로 변환
 function convertCafeResponseToCafe(cafe: any): any {
+  // 평점 처리: avgRating이 우선, 없으면 avg_rating 사용
+  let avgRating = null;
+  
+  // avgRating 필드 확인 (백엔드에서 보내는 필드)
+  if (cafe.avgRating != null && cafe.avgRating !== undefined && cafe.avgRating !== '') {
+    if (typeof cafe.avgRating === 'number') {
+      avgRating = cafe.avgRating;
+    } else if (typeof cafe.avgRating === 'string') {
+      const parsed = parseFloat(cafe.avgRating);
+      avgRating = !isNaN(parsed) ? parsed : null;
+    } else {
+      // 객체인 경우 (BigDecimal 직렬화 형태일 수 있음)
+      const stringValue = String(cafe.avgRating);
+      const parsed = parseFloat(stringValue);
+      avgRating = !isNaN(parsed) ? parsed : null;
+    }
+  }
+  
+  // avg_rating 필드 확인 (fallback)
+  if (avgRating == null && cafe.avg_rating != null && cafe.avg_rating !== undefined && cafe.avg_rating !== '') {
+    if (typeof cafe.avg_rating === 'number') {
+      avgRating = cafe.avg_rating;
+    } else {
+      const parsed = parseFloat(String(cafe.avg_rating));
+      avgRating = !isNaN(parsed) ? parsed : null;
+    }
+  }
+  
+  // 최종적으로 null이면 0으로 설정 (백엔드 기본값과 동일)
+  const finalRating = avgRating != null ? avgRating : 0;
+  
+  // 디버깅용 로그 (개발 중에만)
+  if (process.env.NODE_ENV === 'development' && cafe.cafeId) {
+    console.log(`[Cafe ${cafe.cafeId}] 원본 avgRating:`, cafe.avgRating, typeof cafe.avgRating, '-> 변환된 값:', finalRating);
+  }
+  
   return {
     cafe_id: String(cafe.cafeId || cafe.id || cafe.cafe_id || ""),
+    cafeId: cafe.cafeId || cafe.id || cafe.cafe_id,
     name: cafe.name || "",
     address: cafe.address || "",
     latitude: cafe.latitude || 0,
     longitude: cafe.longitude || 0,
     open_hours: cafe.openHours || cafe.open_hours || "",
-    avg_rating: cafe.avgRating || cafe.avg_rating || 0,
+    avg_rating: finalRating,
+    avgRating: finalRating, // 원본 필드도 함께 저장
     created_at: cafe.createdAt || cafe.created_at || "",
     description: cafe.description || cafe.reviewsSummary || "",
     tags: Array.isArray(cafe.tags) ? cafe.tags : [],
+    photoUrl: cafe.photoUrl || cafe.photo_url || cafe.imageUrl || cafe.image_url || null,
+    images: cafe.images || (cafe.photoUrl ? [cafe.photoUrl] : []) || [],
   };
 }
 
@@ -179,6 +226,11 @@ export async function getRandomCafes() {
 
     // 백엔드 응답 형식에 따라 처리
     const data = response.data?.data || response.data;
+
+    // 디버깅: 첫 번째 카페의 원본 응답 확인
+    if (process.env.NODE_ENV === 'development' && Array.isArray(data) && data.length > 0) {
+      console.log('[getRandomCafes] 첫 번째 카페 원본 응답:', JSON.stringify(data[0], null, 2));
+    }
 
     // 배열인지 확인하고 변환
     if (Array.isArray(data)) {
@@ -193,19 +245,93 @@ export async function getRandomCafes() {
   }
 }
 
+// 요즘 뜨고 있는 카페 top10 조회
+export async function getHotCafes() {
+  try {
+    const response = await apiClient.get("/api/cafes/hot10");
+
+    // 백엔드 응답 형식에 따라 처리
+    const data = response.data?.data || response.data;
+
+    // 디버깅: 첫 번째 카페의 원본 응답 확인
+    if (process.env.NODE_ENV === 'development' && Array.isArray(data) && data.length > 0) {
+      console.log('[getHotCafes] 첫 번째 카페 원본 응답:', JSON.stringify(data[0], null, 2));
+    }
+
+    // 배열인지 확인하고 변환
+    if (Array.isArray(data)) {
+      return data.map(convertCafeResponseToCafe);
+    }
+    return [];
+  } catch (error: any) {
+    console.error("인기 카페 조회 실패:", error);
+    // API 실패 시 빈 배열 반환
+    console.warn("인기 카페 API 실패, 빈 배열 반환");
+    return [];
+  }
+}
+
+// 찜 많은 카페 top10 조회
+export async function getWishlistTopCafes() {
+  try {
+    const response = await apiClient.get("/api/cafes/wish10");
+
+    // 백엔드 응답 형식에 따라 처리
+    const data = response.data?.data || response.data;
+
+    // 배열인지 확인하고 변환
+    if (Array.isArray(data)) {
+      return data.map(convertCafeResponseToCafe);
+    }
+    return [];
+  } catch (error: any) {
+    console.error("찜 많은 카페 조회 실패:", error);
+    // API 실패 시 빈 배열 반환
+    console.warn("찜 많은 카페 API 실패, 빈 배열 반환");
+    return [];
+  }
+}
+
+// 관련 카페 10개 조회
+// 백엔드 API가 아직 구현되지 않은 경우를 대비한 임시 처리
+export async function getRelatedCafes(cafeId: string) {
+  try {
+    const response = await apiClient.get("/api/cafes/related10", {
+      params: {
+        id: cafeId,
+      },
+    });
+
+    // 백엔드 응답 형식에 따라 처리
+    const cafesData = response.data?.cafes || response.data?.data || response.data;
+
+    // 배열인지 확인하고 변환
+    if (Array.isArray(cafesData)) {
+      return cafesData.map(convertCafeResponseToCafe);
+    }
+    return [];
+  } catch (error: any) {
+    // 백엔드 API가 아직 구현되지 않은 경우 404/500 에러가 발생할 수 있음
+    // 에러를 조용히 처리하고 빈 배열 반환 (또는 임시로 랜덤 카페 사용 가능)
+    if (error.response?.status === 404 || error.response?.status === 500) {
+      console.log("관련 카페 API가 아직 구현되지 않았습니다. 빈 배열을 반환합니다.");
+      return [];
+    }
+    
+    // 기타 에러의 경우에도 빈 배열 반환
+    console.warn("관련 카페 조회 실패:", error.response?.status || error.message);
+    return [];
+  }
+}
+
 // ==================== MyPage API ====================
 
 // ==================== Review API ====================
 
 // 카페별 리뷰 목록 조회
-export async function getCafeReviews(
-  cafeId: string,
-  sort: "latest" | "rating-high" | "rating-low" | "likes" = "latest"
-) {
+export async function getCafeReviews(cafeId: string) {
   try {
-    const response = await apiClient.get(`/api/cafes/${cafeId}/reviews`, {
-      params: { sort },
-    });
+    const response = await apiClient.get(`/api/cafes/${cafeId}/reviews`);
     return response.data || { reviews: [], count: 0 };
   } catch (error: any) {
     console.error("카페 리뷰 목록 조회 실패:", error);
@@ -342,9 +468,43 @@ export async function getWishlist(params?: {
   sort?: string;
 }) {
   try {
+    // 백엔드가 category를 필수로 요구하므로, category가 없으면 빈 결과 반환
+    if (!params?.category) {
+      console.log("위시리스트 조회: category 파라미터가 없어 빈 배열 반환");
+      return {
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: params?.page || 0,
+          size: params?.size || 20,
+        },
+      };
+    }
+
     const response = await apiClient.get("/api/my/wishlist", { params });
     return response.data;
   } catch (error: any) {
+    // 403 또는 401 에러인 경우 (권한 없음)
+    if (error.response?.status === 403 || error.response?.status === 401) {
+      console.log("위시리스트 조회: 로그인이 필요합니다.");
+      throw error;
+    }
+
+    // 500 에러 등 기타 에러인 경우 빈 결과 반환
+    if (error.response?.status === 500 || error.response?.status === 400) {
+      console.warn("위시리스트 조회 실패:", error.response?.status || error.message);
+      return {
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: params?.page || 0,
+          size: params?.size || 20,
+        },
+      };
+    }
+
     console.error("위시리스트 조회 API 호출 실패:", error);
     throw new Error(error.message || "위시리스트 조회 실패");
   }

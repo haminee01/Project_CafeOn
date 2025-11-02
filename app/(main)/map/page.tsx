@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Header from "@/components/common/Header";
-import Map from "@/components/map/Map";
-import { getWishlist, getNearbyCafes } from "@/lib/api";
+import MapComponent from "@/components/map/Map";
+import { getWishlist, getNearbyCafes, getHotCafes } from "@/lib/api";
 
 type TabType = "home" | "saved" | "popular";
 type SavedCategoryType =
@@ -30,6 +29,7 @@ export default function MapPage() {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [nearbyCafes, setNearbyCafes] = useState<any[]>([]);
+  const [popularCafes, setPopularCafes] = useState<any[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
@@ -79,6 +79,13 @@ export default function MapPage() {
     }
   }, [userLocation, activeTab]);
 
+  // 인기 카페 조회
+  useEffect(() => {
+    if (activeTab === "popular") {
+      fetchPopularCafes();
+    }
+  }, [activeTab]);
+
   // 위시리스트 조회
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -115,22 +122,64 @@ export default function MapPage() {
     }
   };
 
+  const fetchPopularCafes = async () => {
+    setLoading(true);
+    try {
+      const cafes = await getHotCafes();
+      
+      // API가 배열을 반환하면 그대로 사용
+      if (Array.isArray(cafes) && cafes.length > 0) {
+        setPopularCafes(cafes);
+      } else {
+        // 빈 배열 반환
+        setPopularCafes([]);
+      }
+    } catch (error: any) {
+      console.error("인기 카페 조회 실패:", error);
+      // API 실패 시 빈 배열 반환
+      setPopularCafes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchWishlist = async () => {
     setLoading(true);
     try {
-      const params: any = {
-        page: 0,
-        size: 20,
-      };
+      // "all"인 경우 모든 카테고리를 개별적으로 조회하고 합치기
+      if (savedCategory === "all") {
+        const allCategories = ["HIDEOUT", "WORK", "ATMOSPHERE", "TASTE", "PLANNED"];
+        const allPromises = allCategories.map((category) =>
+          getWishlist({
+            page: 0,
+            size: 20,
+            category,
+          }).catch(() => ({ data: { content: [] } })) // 개별 카테고리 실패 시 빈 배열
+        );
 
-      // "all"이 아닌 경우 카테고리 필터 추가
-      if (savedCategory !== "all") {
-        params.category = categoryMap[savedCategory];
+        const allResponses = await Promise.all(allPromises);
+        const allItems = allResponses.flatMap(
+          (response) => response?.data?.content || response?.content || []
+        );
+
+        // 중복 제거 (같은 cafeId가 여러 카테고리에 있을 수 있음)
+        // JavaScript 네이티브 Map 객체 사용 (React 컴포넌트 Map과 구분)
+        const itemsMap = new Map(allItems.map((item) => [item.cafeId || item.wishlistId, item]));
+        const uniqueItems = Array.from(itemsMap.values());
+
+        setWishlistItems(uniqueItems);
+      } else {
+        // 특정 카테고리 조회
+        const params: any = {
+          page: 0,
+          size: 20,
+          category: categoryMap[savedCategory],
+        };
+
+        const response = await getWishlist(params);
+        const items = response?.data?.content || response?.content || [];
+        setWishlistItems(items);
       }
-
-      const response = await getWishlist(params);
-      const items = response?.data?.content || response?.content || [];
-      setWishlistItems(items);
     } catch (error: any) {
       console.error("위시리스트 조회 실패:", error);
 
@@ -174,9 +223,9 @@ export default function MapPage() {
       case "home":
         return nearbyCafes; // API 데이터
       case "saved":
-        return mockCafes.slice(0, 3); // 저장된 카페 (예시)
+        return []; // 저장된 카페는 위시리스트 API에서 가져옴
       case "popular":
-        return []; // 인기 카페는 추후 API 연결 필요
+        return popularCafes; // 인기 카페 API 데이터
       default:
         return [];
     }
@@ -186,9 +235,8 @@ export default function MapPage() {
 
   return (
     <div className="min-h-screen relative">
-      <Header />
       {/* 지도 (전체 화면) */}
-      <Map className="h-screen" cafes={nearbyCafes} />
+      <MapComponent className="h-screen" cafes={getCafesByTab()} />
 
       {/* 통합 모달 - 탭과 리스트가 함께 */}
       <div className="absolute bg-white top-1/2 left-4 transform -translate-y-1/2 min-w-96 h-[60vh] rounded-lg shadow-lg z-20 flex flex-col">
@@ -413,12 +461,39 @@ export default function MapPage() {
                     onClick={handleCardClick}
                   >
                     <div className="flex gap-3">
-                      {/* 카페 이미지 플레이스홀더 */}
-                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-400 text-xs">이미지</span>
+                      {/* 카페 이미지 */}
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative">
+                        {(() => {
+                          const imageUrl = cafe.photoUrl || cafe.photo_url || (cafe.images && Array.isArray(cafe.images) && cafe.images.length > 0 ? cafe.images[0] : null);
+                          
+                          if (imageUrl) {
+                            return (
+                              <>
+                                <img
+                                  src={imageUrl}
+                                  alt={cafe.name || "카페 이미지"}
+                                  className="w-full h-full object-cover relative z-10"
+                                  onError={(e) => {
+                                    // 이미지 로드 실패 시 플레이스홀더 표시
+                                    e.currentTarget.style.display = "none";
+                                  }}
+                                />
+                                {/* 플레이스홀더 (이미지 로드 실패 시에만 보임) */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-200 -z-10">
+                                  <span className="text-gray-400 text-xs">이미지</span>
+                                </div>
+                              </>
+                            );
+                          }
+                          // 이미지가 없을 때 플레이스홀더
+                          return (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                              <span className="text-gray-400 text-xs">이미지</span>
+                            </div>
+                          );
+                        })()}
                       </div>
 
-<<<<<<< HEAD
                       {/* 카페 정보 */}
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900 mb-1">
@@ -471,20 +546,6 @@ export default function MapPage() {
                           </button>
                         </div>
                       </div>
-=======
-                  {/* 카페 정보 */}
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">
-                      {cafe.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-2">
-                      영업 중 리뷰 999+
-                    </p>
-                    <div className="flex gap-2">
-                      <button className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                        베이커리
-                      </button>
->>>>>>> feature/hamin/merge-all
                     </div>
                   </div>
                 );

@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/common/Button";
 import Pagination from "@/components/common/Pagination";
 import { useToastContext } from "@/components/common/ToastProvider";
+import {
+  getAdminInquiries,
+  getAdminInquiryDetail,
+  getAdminInquiryAnswers,
+  createAdminInquiryAnswer,
+} from "@/lib/api";
 
 interface Inquiry {
   id: number;
@@ -24,119 +30,94 @@ export default function AdminInquiriesPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [adminReply, setAdminReply] = useState("");
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
   const { showToast } = useToastContext();
 
-  const inquiries: Inquiry[] = [
-    {
-      id: 1,
-      title: "카페 등록 문의",
-      inquirer: "user1",
-      date: "2024.01.01",
-      status: "unprocessed",
-      content:
-        "안녕하세요. 새로운 카페를 등록하고 싶은데 어떻게 해야 하나요? 등록 절차와 필요한 서류가 궁금합니다.",
-      category: "카페 등록",
-    },
-    {
-      id: 2,
-      title: "리뷰 삭제 요청",
-      inquirer: "user2",
-      date: "2024.01.05",
-      status: "processed",
-      content:
-        "제가 작성한 리뷰가 부적절하게 삭제되었습니다. 복구가 가능한지 문의드립니다.",
-      category: "리뷰 관리",
-      adminReply:
-        "리뷰 삭제 사유를 확인한 결과, 커뮤니티 가이드라인 위반으로 삭제되었습니다. 복구는 어려우며, 앞으로 가이드라인을 준수해 주시기 바랍니다.",
-      processedDate: "2024.01.05",
-      processedBy: "관리자1",
-    },
-    {
-      id: 3,
-      title: "계정 정지 해제 문의",
-      inquirer: "user3",
-      date: "2024.01.10",
-      status: "unprocessed",
-      content:
-        "계정이 정지되었는데 해제 방법을 알려주세요. 언제부터 정지되었는지도 모르겠습니다.",
-      category: "계정 관리",
-    },
-    {
-      id: 4,
-      title: "광고 제휴 문의",
-      inquirer: "user4",
-      date: "2024.01.15",
-      status: "processed",
-      content: "카페 사장입니다. 광고 제휴에 관심이 있습니다. 문의드립니다.",
-      category: "제휴 문의",
-      adminReply:
-        "광고 제휴 문의 감사합니다. 담당자가 연락드릴 예정입니다. 1-2일 내에 연락드리겠습니다.",
-      processedDate: "2024.01.15",
-      processedBy: "관리자2",
-    },
-    {
-      id: 5,
-      title: "버그 리포트",
-      inquirer: "user5",
-      date: "2024.01.20",
-      status: "unprocessed",
-      content:
-        "앱에서 로그인이 안 되는 문제가 있습니다. 계속 로그인 화면으로 돌아갑니다.",
-      category: "기술 문의",
-    },
-    {
-      id: 6,
-      title: "개선 사항 제안",
-      inquirer: "user6",
-      date: "2024.01.25",
-      status: "processed",
-      content: "리뷰 작성 시 사진을 여러 장 첨부할 수 있으면 좋겠습니다.",
-      category: "기능 제안",
-      adminReply:
-        "좋은 제안 감사합니다. 개발팀에 전달하여 검토하겠습니다. 향후 업데이트에서 반영될 수 있습니다.",
-      processedDate: "2024.01.25",
-      processedBy: "관리자1",
-    },
-    {
-      id: 7,
-      title: "개인 정보 변경 요청",
-      inquirer: "user7",
-      date: "2024.01.28",
-      status: "unprocessed",
-      content: "이메일 주소를 변경하고 싶습니다. 어떻게 해야 하나요?",
-      category: "계정 관리",
-    },
-    {
-      id: 8,
-      title: "기타 문의",
-      inquirer: "user8",
-      date: "2024.02.01",
-      status: "processed",
-      content: "앱 사용법에 대해 궁금한 점이 있습니다.",
-      category: "기타",
-      adminReply:
-        "앱 사용법에 대한 자세한 내용은 도움말 섹션을 참고해 주세요. 추가 문의사항이 있으시면 언제든 연락주세요.",
-      processedDate: "2024.02.01",
-      processedBy: "관리자2",
-    },
-  ];
+  // 문의 목록 조회
+  useEffect(() => {
+    const fetchInquiries = async () => {
+      try {
+        setLoading(true);
+        const status =
+          activeTab === "unprocessed" ? "PENDING" : "ANSWERED";
+        const response = await getAdminInquiries({
+          page: currentPage - 1,
+          size: 10,
+          status,
+        });
 
-  const filteredInquiries = inquiries.filter((inquiry) =>
-    activeTab === "unprocessed"
-      ? inquiry.status === "unprocessed"
-      : inquiry.status === "processed"
-  );
+        const inquiriesData = response?.data?.content || response?.content || [];
+        const formattedInquiries = inquiriesData.map((inq: any) => ({
+          id: inq.id || inq.questionId,
+          title: inq.title || "",
+          inquirer: inq.authorNickname || inq.author_nickname || "",
+          date: inq.createdAt || inq.created_at || "",
+          status:
+            inq.status === "PENDING" || inq.status === "ANSWERED"
+              ? inq.status === "PENDING"
+                ? "unprocessed"
+                : "processed"
+              : "unprocessed",
+          content: inq.content || "",
+          category: inq.category || "기타",
+        }));
 
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(filteredInquiries.length / itemsPerPage);
+        setInquiries(formattedInquiries);
+
+        const totalElements =
+          response?.data?.totalElements || response?.totalElements || 0;
+        setTotalPages(
+          Math.ceil(totalElements / 10) || Math.ceil(inquiriesData.length / 10)
+        );
+      } catch (error: any) {
+        console.error("문의 목록 조회 실패:", error);
+        setInquiries([]);
+        setTotalPages(1);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInquiries();
+  }, [activeTab, currentPage]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const handleDetailClick = (inquiry: Inquiry) => {
-    setSelectedInquiry(inquiry);
-    setShowDetailModal(true);
+  const handleDetailClick = async (inquiry: Inquiry) => {
+    try {
+      // 문의 상세 정보 및 답변 목록 조회
+      const [detail, answers] = await Promise.all([
+        getAdminInquiryDetail(inquiry.id),
+        getAdminInquiryAnswers(inquiry.id),
+      ]);
+
+      const detailData = detail?.data || detail;
+      const answersData = answers?.data || answers || [];
+
+      // 가장 최신 답변을 관리자 답변으로 표시
+      const latestAnswer =
+        Array.isArray(answersData) && answersData.length > 0
+          ? answersData[answersData.length - 1]
+          : null;
+
+      setSelectedInquiry({
+        ...inquiry,
+        content: detailData?.content || inquiry.content,
+        adminReply: latestAnswer?.content || undefined,
+        processedDate: latestAnswer?.createdAt || latestAnswer?.created_at || undefined,
+        processedBy: latestAnswer?.adminNickname || latestAnswer?.admin_nickname || undefined,
+      });
+      setShowDetailModal(true);
+    } catch (error: any) {
+      console.error("문의 상세 조회 실패:", error);
+      // 상세 조회 실패 시 기본 정보만 표시
+      setSelectedInquiry(inquiry);
+      setShowDetailModal(true);
+    }
   };
 
   const handleCloseModal = () => {
@@ -145,13 +126,20 @@ export default function AdminInquiriesPage() {
     setAdminReply("");
   };
 
-  const handleReplyConfirm = () => {
+  const handleReplyConfirm = async () => {
     if (selectedInquiry && adminReply.trim()) {
-      // 실제로는 API 호출로 답변 처리
-      showToast("답변이 등록되었습니다.", "success");
-      setShowDetailModal(false);
-      setSelectedInquiry(null);
-      setAdminReply("");
+      try {
+        await createAdminInquiryAnswer(selectedInquiry.id, adminReply);
+        showToast("답변이 등록되었습니다.", "success");
+        setShowDetailModal(false);
+        setSelectedInquiry(null);
+        setAdminReply("");
+        // 목록 새로고침을 위해 페이지 재조회
+        setCurrentPage(1);
+      } catch (error: any) {
+        console.error("답변 작성 실패:", error);
+        showToast(error.message || "답변 작성에 실패했습니다.", "error");
+      }
     }
   };
 
@@ -191,8 +179,14 @@ export default function AdminInquiriesPage() {
       </div>
 
       {/* 문의 목록 */}
-      <div className="space-y-4">
-        {filteredInquiries.map((inquiry) => (
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600">문의 목록을 불러오는 중...</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {inquiries.length > 0 ? (
+            inquiries.map((inquiry) => (
           <div
             key={inquiry.id}
             className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
@@ -221,8 +215,16 @@ export default function AdminInquiriesPage() {
               </div>
             </div>
           </div>
-        ))}
-      </div>
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600">
+                {activeTab === "unprocessed" ? "미처리 문의가 없습니다." : "처리된 문의가 없습니다."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 페이지네이션 */}
       <Pagination

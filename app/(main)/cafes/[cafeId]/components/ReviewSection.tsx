@@ -87,17 +87,33 @@ export default function ReviewSection({
 
   // initialReviews 또는 sortBy 변경 시 리뷰 목록 새로고침 및 정렬
   useEffect(() => {
+    setLoading(true);
+    
     if (initialReviews && initialReviews.length > 0) {
       // initialReviews가 있으면 변환 수행
       const transformedReviews: CafeReview[] = initialReviews.map((r: any) => {
+        // 리뷰 이미지 처리: 다양한 형식 지원
+        let reviewImages: string[] = [];
+        if (r.images && Array.isArray(r.images)) {
+          reviewImages = r.images.map((img: any) => {
+            // 이미지가 객체인 경우
+            if (typeof img === 'object' && img !== null) {
+              return img.imageUrl || img.image_url || img.url || img.publicUrl || img.originalFileName || '';
+            }
+            // 이미지가 문자열인 경우
+            return img || '';
+          }).filter((url: string) => url && url.trim() !== '');
+        }
+        
         return {
           id: r.reviewId,
           user: r.reviewerNickname || "익명",
           rating: r.rating,
           content: r.content,
           date: formatDate(r.createdAt),
+          createdAt: r.createdAt, // 정렬을 위한 원본 날짜 저장
           likes: 0,
-          images: r.images?.map((img: any) => img.publicUrl || img.url) || [],
+          images: reviewImages,
           reviewerId: r.reviewerId,
         };
       });
@@ -113,10 +129,10 @@ export default function ReviewSection({
             return b.likes - a.likes;
           case "latest":
           default:
-            // 최신순은 날짜 기준 (먼저 날짜 문자열로 정렬, 그 다음 시간)
-            const dateA = new Date(a.date === "오늘" ? new Date() : a.date).getTime();
-            const dateB = new Date(b.date === "오늘" ? new Date() : b.date).getTime();
-            return dateB - dateA;
+            // 최신순은 원본 createdAt 날짜 기준 정렬
+            const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+            const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+            return dateB - dateA; // 최신순 (내림차순)
         }
       });
 
@@ -124,6 +140,9 @@ export default function ReviewSection({
     } else {
       setReviews([]);
     }
+    
+    // 로딩 완료
+    setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialReviews, sortBy]);
   
@@ -140,18 +159,49 @@ export default function ReviewSection({
           
           if (reviewData && reviewData.length > 0) {
             const transformedReviews: CafeReview[] = reviewData.map((r: any) => {
+              // 리뷰 이미지 처리
+              let reviewImages: string[] = [];
+              if (r.images && Array.isArray(r.images)) {
+                reviewImages = r.images.map((img: any) => {
+                  if (typeof img === 'object' && img !== null) {
+                    return img.imageUrl || img.image_url || img.url || img.publicUrl || img.originalFileName || '';
+                  }
+                  return img || '';
+                }).filter((url: string) => url && url.trim() !== '');
+              }
+              
               return {
                 id: r.reviewId,
                 user: r.reviewerNickname || "익명",
                 rating: r.rating,
                 content: r.content,
                 date: formatDate(r.createdAt),
+                createdAt: r.createdAt, // 정렬을 위한 원본 날짜 저장
                 likes: 0,
-                images: r.images?.map((img: any) => img.publicUrl || img.url) || [],
+                images: reviewImages,
                 reviewerId: r.reviewerId,
               };
             });
-            setReviews(transformedReviews);
+            
+            // 정렬 적용
+            const sortedReviews = [...transformedReviews].sort((a, b) => {
+              switch (sortBy) {
+                case "rating-high":
+                  return b.rating - a.rating;
+                case "rating-low":
+                  return a.rating - b.rating;
+                case "likes":
+                  return b.likes - a.likes;
+                case "latest":
+                default:
+                  // 최신순은 원본 createdAt 날짜 기준 정렬
+                  const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+                  const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+                  return dateB - dateA; // 최신순 (내림차순)
+              }
+            });
+            
+            setReviews(sortedReviews);
           } else {
             setReviews([]);
           }
@@ -166,7 +216,7 @@ export default function ReviewSection({
       forceRefreshReviews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger]);
+  }, [refreshTrigger, sortBy]); // sortBy도 의존성에 추가하여 정렬 기준 변경 시 재정렬
 
   const toggleMenu = (reviewId: number, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -439,7 +489,17 @@ export default function ReviewSection({
                                   key={index}
                                   src={image}
                                   alt={`리뷰 이미지 ${index + 1}`}
-                                  className="w-20 h-20 object-cover rounded-lg flex-shrink-0 border border-gray-200"
+                                  className="w-20 h-20 object-cover rounded-lg flex-shrink-0 border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.open(image, '_blank')}
+                                  onError={(e) => {
+                                    // 이미지 로드 실패 시 플레이스홀더로 대체
+                                    e.currentTarget.src = 'data:image/svg+xml;base64,' + btoa(`
+                                      <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+                                        <rect width="100%" height="100%" fill="#f3f4f6"/>
+                                        <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-family="Arial" font-size="12">이미지</text>
+                                      </svg>
+                                    `);
+                                  }}
                                 />
                               ))}
                             </div>

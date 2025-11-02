@@ -114,91 +114,6 @@ export default function AdminReportsPage() {
     fetchReports();
   }, [activeTab]);
 
-  // Mock data fallback (초기값)
-  const mockReports: Report[] = [
-    {
-      id: 1,
-      type: "review",
-      content: "부적절한 리뷰 내용입니다.",
-      status: "unprocessed",
-      date: "2024.01.01",
-      reporter: "신고자1",
-      reportedUser: "리뷰작성자1",
-      reason: "욕설 및 비방",
-      originalContent: "여기 맛있네요.... 정말 맛있어요! 강력 추천합니다.",
-      originalImages: [
-        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
-        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&crop=center",
-      ],
-    },
-    {
-      id: 2,
-      type: "post",
-      content: "스팸성 게시글입니다.",
-      status: "unprocessed",
-      date: "2024.01.02",
-      reporter: "신고자2",
-      reportedUser: "게시글작성자1",
-      reason: "스팸",
-      originalTitle: "카페 추천해요",
-      originalContent: "어쩌구 저쩌구 내용입니다...",
-      originalImages: [
-        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
-      ],
-    },
-    {
-      id: 3,
-      type: "review",
-      content: "허위 정보가 포함된 리뷰입니다.",
-      status: "processed",
-      date: "2024.01.03",
-      reporter: "신고자3",
-      reportedUser: "리뷰작성자2",
-      reason: "허위정보",
-      originalContent: "어쩌구 저쩌구 리뷰 내용...",
-      adminComment:
-        "신고 내용을 검토한 결과, 허위 정보가 포함되어 있음을 확인했습니다. 해당 리뷰를 삭제 처리하였습니다.",
-      processedDate: "2024.01.03",
-      processedBy: "관리자1",
-    },
-    {
-      id: 4,
-      type: "post",
-      content: "부적절한 게시글입니다.",
-      status: "unprocessed",
-      date: "2024.01.04",
-      reporter: "신고자4",
-      reportedUser: "게시글작성자2",
-      reason: "음란물",
-      originalTitle: "카페 후기",
-      originalContent: "어쩌구 저쩌구 게시글 내용...",
-      originalImages: [
-        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
-        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&crop=center",
-        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=300&fit=crop&crop=center",
-      ],
-    },
-    {
-      id: 5,
-      type: "review",
-      content: "중복 리뷰입니다.",
-      status: "processed",
-      date: "2024.01.05",
-      reporter: "신고자5",
-      reportedUser: "리뷰작성자3",
-      reason: "중복게시",
-      originalContent: "어쩌구 저쩌구 중복 리뷰...",
-      originalImages: [
-        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center",
-      ],
-
-      adminComment:
-        "동일한 사용자가 같은 카페에 중복으로 작성한 리뷰를 확인했습니다. 중복 리뷰를 삭제하고 경고 조치를 취했습니다.",
-      processedDate: "2024.01.05",
-      processedBy: "관리자2",
-    },
-  ];
-
   const filteredReports = reports.filter((report) =>
     activeTab === "unprocessed"
       ? report.status === "unprocessed"
@@ -586,44 +501,47 @@ export default function AdminReportsPage() {
             </div>
 
             {/* 액션 버튼 */}
-            <div className="flex justify-end gap-3 mt-6">
-              <Button color="gray" size="md" onClick={handleCloseModal}>
-                닫기
-              </Button>
-              {selectedReport.status === "unprocessed" && (
-                <Button color="primary" size="md" onClick={handleProcessClick}>
-                  처리하기
-                </Button>
-              )}
-              {selectedReport.type === "comment" && selectedReport.targetId && (
-                <Button
-                  color="secondary"
-                  size="md"
-                  onClick={() => {
-                    // 댓글의 경우 targetId가 commentId이므로,
-                    // 백엔드에서 신고 상세 API에 postId를 추가로 반환해야 함
-                    // 현재는 댓글 ID만 있으므로 경고 표시
-                    alert(
-                      "댓글 보기 기능은 아직 준비되지 않았습니다. 백엔드 API 수정이 필요합니다."
-                    );
-                  }}
-                >
-                  원본 댓글 보기
-                </Button>
-              )}
-              {selectedReport.type === "post" && selectedReport.targetId && (
-                <Button
-                  color="secondary"
-                  size="md"
-                  onClick={() => {
-                    router.push(`/community/posts/${selectedReport.targetId}`);
-                  }}
-                >
-                  원본 게시글 보기
-                </Button>
-              )}
-
-              {/* 오른쪽 버튼들 */}
+            <div className="flex justify-between items-center gap-3 mt-6">
+              <div className="flex gap-3">
+                {selectedReport.type === "comment" && selectedReport.targetId && (
+                  <Button
+                    color="secondary"
+                    size="md"
+                    onClick={() => {
+                      // 댓글의 경우 targetId가 commentId이므로,
+                      // 백엔드에서 신고 상세 API에 postId를 추가로 반환해야 함
+                      // 현재는 댓글 ID만 있으므로 경고 표시
+                      alert(
+                        "댓글 보기 기능은 아직 준비되지 않았습니다. 백엔드 API 수정이 필요합니다."
+                      );
+                    }}
+                  >
+                    원본 댓글 보기
+                  </Button>
+                )}
+                {selectedReport.type === "post" && selectedReport.targetId && (
+                  <Button
+                    color="secondary"
+                    size="md"
+                    onClick={() => {
+                      router.push(`/community/posts/${selectedReport.targetId}`);
+                    }}
+                  >
+                    원본 게시글 보기
+                  </Button>
+                )}
+                {selectedReport.type === "review" && selectedReport.targetId && (
+                  <Button
+                    color="secondary"
+                    size="md"
+                    onClick={() => {
+                      router.push(`/cafes/${selectedReport.targetId}`);
+                    }}
+                  >
+                    원본 리뷰 보기
+                  </Button>
+                )}
+              </div>
               <div className="flex gap-3">
                 <Button color="gray" size="md" onClick={handleCloseModal}>
                   닫기

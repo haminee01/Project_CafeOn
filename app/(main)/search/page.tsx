@@ -2,13 +2,11 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import Header from "@/components/common/Header";
 import { Cafe } from "@/types/cafe";
 import SearchBar from "@/components/common/SearchBar";
 import CategoryFilter from "app/(main)/search/components/CategoryFilter";
 import CafeGrid from "@/components/cafes/CafeGrid";
 import Pagination from "@/components/common/Pagination";
-import Footer from "@/components/common/Footer";
 import { searchCafes } from "@/lib/api";
 
 // 반응형 아이템 수 설정
@@ -41,12 +39,12 @@ export default function SearchResultsPage() {
     }
   }, [searchParams]);
 
-  // 검색어 변경 시 API 호출 (초기 로드 포함)
+  // 검색어/태그 변경 시 API 호출 (초기 로드 포함)
   useEffect(() => {
     const fetchCafes = async () => {
       setLoading(true);
       try {
-        const results = await searchCafes(searchQuery);
+        const results = await searchCafes(searchQuery, selectedCategory || undefined);
         setCafes(results);
       } catch (error: any) {
         console.error("카페 검색 실패:", error);
@@ -57,7 +55,7 @@ export default function SearchResultsPage() {
     };
 
     fetchCafes();
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategory]);
 
   // 화면 크기 변화 감지하여 아이템 수 업데이트
   useEffect(() => {
@@ -77,16 +75,8 @@ export default function SearchResultsPage() {
     };
   }, []);
 
-  // 태그 필터링 적용
-  const filteredCafes = useMemo(() => {
-    if (!selectedCategory) {
-      return cafes;
-    }
-    return cafes.filter((cafe) => cafe.tags && cafe.tags.includes(selectedCategory));
-  }, [cafes, selectedCategory]);
-
   // 페이지네이션
-  const totalPages = Math.ceil(filteredCafes.length / itemsPerPage);
+  const totalPages = Math.ceil(cafes.length / itemsPerPage);
 
   // 현재 페이지가 총 페이지 수를 초과하면 첫 페이지로 조정
   useEffect(() => {
@@ -104,7 +94,7 @@ export default function SearchResultsPage() {
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedCafes = filteredCafes.slice(startIndex, endIndex);
+  const paginatedCafes = cafes.slice(startIndex, endIndex);
 
   // 검색된 카페들의 태그 중복 제거 및 정렬 (원본 카페 목록 기준)
   const availableTags = useMemo(() => {
@@ -151,7 +141,6 @@ export default function SearchResultsPage() {
 
   return (
     <div>
-      <Header />
       <SearchBar
         value={searchQuery}
         onChange={setSearchQuery}
@@ -208,7 +197,6 @@ export default function SearchResultsPage() {
           </div>
         )}
       </div>
-      <Footer />
     </div>
   );
 }

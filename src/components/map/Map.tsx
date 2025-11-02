@@ -267,7 +267,14 @@ function Map({ className = "", cafes = [] }: MapProps) {
                      <span style="color: #6E4213; font-size: 14px;">⭐</span>
                      <span style="color: #374151; font-size: 13px; font-weight: 500;">
                        평점: <span style="color: #C19B6C; font-weight: 600;">${
-                         cafe.avg_rating || "정보 없음"
+                         (() => {
+                           const rating = cafe.avg_rating != null ? cafe.avg_rating : ((cafe as any).avgRating != null ? (cafe as any).avgRating : null);
+                           if (rating != null && rating !== undefined) {
+                             const numRating = typeof rating === 'number' ? rating : parseFloat(String(rating));
+                             return !isNaN(numRating) ? numRating.toFixed(1) : "정보 없음";
+                           }
+                           return "정보 없음";
+                         })()
                        }</span>
                      </span>
                    </div>
@@ -366,6 +373,36 @@ function Map({ className = "", cafes = [] }: MapProps) {
 
         // 지도 생성 시 마커 추가
         addMarkers(cafes);
+        
+        // 모든 마커를 포함하도록 지도 범위 조정
+        if (cafes.length > 0) {
+          const bounds = new (window as any).google.maps.LatLngBounds();
+          cafes.forEach((cafe) => {
+            if (cafe.latitude && cafe.longitude) {
+              bounds.extend({
+                lat: cafe.latitude,
+                lng: cafe.longitude,
+              });
+            }
+          });
+          
+          // bounds가 유효한 경우에만 fitBounds 적용
+          if (!bounds.isEmpty()) {
+            // 단일 마커인 경우를 대비해 padding 추가
+            if (cafes.length === 1) {
+              map.setCenter({
+                lat: cafes[0].latitude,
+                lng: cafes[0].longitude,
+              });
+              map.setZoom(15);
+            } else {
+              map.fitBounds(bounds, {
+                padding: 50, // 여백 추가
+              });
+            }
+          }
+        }
+        
         // 지도 클릭 시 모든 인포윈도우 닫기 및 맵 페이지로 이동
         map.addListener("click", () => {
           infoWindowsRef.current.forEach((iw) => iw.close());
@@ -464,7 +501,14 @@ function Map({ className = "", cafes = [] }: MapProps) {
                   <span style="color: #6E4213; font-size: 14px;">⭐</span>
                   <span style="color: #374151; font-size: 13px; font-weight: 500;">
                     평점: <span style="color: #C19B6C; font-weight: 600;">${
-                      cafe.avg_rating || "정보 없음"
+                      (() => {
+                        const rating = cafe.avg_rating != null ? cafe.avg_rating : ((cafe as any).avgRating != null ? (cafe as any).avgRating : null);
+                        if (rating != null && rating !== undefined) {
+                          const numRating = typeof rating === 'number' ? rating : parseFloat(String(rating));
+                          return !isNaN(numRating) ? numRating.toFixed(1) : "정보 없음";
+                        }
+                        return "정보 없음";
+                      })()
                     }</span>
                   </span>
                 </div>
@@ -518,6 +562,35 @@ function Map({ className = "", cafes = [] }: MapProps) {
     };
 
     addMarkers(cafes);
+    
+    // 모든 마커를 포함하도록 지도 범위 조정
+    if (cafes.length > 0 && mapInstance.current) {
+      const bounds = new (window as any).google.maps.LatLngBounds();
+      cafes.forEach((cafe) => {
+        if (cafe.latitude && cafe.longitude) {
+          bounds.extend({
+            lat: cafe.latitude,
+            lng: cafe.longitude,
+          });
+        }
+      });
+      
+      // bounds가 유효한 경우에만 fitBounds 적용
+      if (!bounds.isEmpty()) {
+        // 단일 마커인 경우를 대비해 padding 추가
+        if (cafes.length === 1) {
+          mapInstance.current.setCenter({
+            lat: cafes[0].latitude,
+            lng: cafes[0].longitude,
+          });
+          mapInstance.current.setZoom(15);
+        } else {
+          mapInstance.current.fitBounds(bounds, {
+            padding: 50, // 여백 추가
+          });
+        }
+      }
+    }
   }, [cafes, isMounted, router]);
 
   return (
