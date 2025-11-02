@@ -532,45 +532,86 @@ export async function updateAdminReport(id: number, data: { status: string }) {
 
 // ==================== User API ====================
 
+// 회원 정보 조회
+export async function getUserProfile() {
+  try {
+    const response = await apiClient.get("/api/users/me");
+    return response.data;
+  } catch (error: any) {
+    console.error("회원 정보 조회 실패:", error);
+    throw new Error(error.message || "회원 정보 조회 실패");
+  }
+}
+
+// 회원 정보 수정 (닉네임)
+export async function updateUserProfile(nickname: string) {
+  try {
+    const response = await apiClient.put("/api/users/me", { nickname });
+    return response.data;
+  } catch (error: any) {
+    console.error("회원 정보 수정 실패:", error);
+    throw new Error(error.message || "회원 정보 수정 실패");
+  }
+}
+
+// 프로필 이미지 변경
+export async function updateProfileImage(file: File) {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await apiClient.put(
+      "/api/users/me/profile-image",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("프로필 이미지 변경 실패:", error);
+    throw new Error(error.message || "프로필 이미지 변경 실패");
+  }
+}
+
+// 회원 탈퇴
+export async function deleteUser() {
+  try {
+    const response = await apiClient.delete("/api/users/me");
+    return response.data;
+  } catch (error: any) {
+    console.error("회원 탈퇴 실패:", error);
+    throw new Error(error.message || "회원 탈퇴 실패");
+  }
+}
+
 // 비밀번호 변경
 export async function changePassword(passwordData: {
   oldPassword: string;
   newPassword: string;
+  confirmPassword: string;
 }) {
   try {
-    const token = localStorage.getItem("accessToken");
-    const response = await fetch(`${API_BASE_URL}/api/auth/password`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: JSON.stringify(passwordData),
-    });
+    const response = await apiClient.put(
+      "/api/users/me/password",
+      passwordData
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("비밀번호 변경 실패:", error);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-
-      // 상태 코드별 에러 메시지
-      if (response.status === 400) {
-        throw new Error("현재 비밀번호가 일치하지 않습니다.");
-      } else if (response.status === 401) {
-        throw new Error("인증이 필요합니다. 다시 로그인해주세요.");
-      } else if (response.status === 403) {
-        throw new Error("접근 권한이 없습니다.");
-      } else if (response.status === 500) {
-        // 500 에러 시에도 현재 비밀번호 불일치로 처리
-        throw new Error("현재 비밀번호가 일치하지 않습니다.");
-      }
-
-      throw new Error(errorData.message || "비밀번호 변경에 실패했습니다.");
+    // 상태 코드별 에러 메시지
+    if (error.response?.status === 400) {
+      throw new Error("현재 비밀번호가 일치하지 않습니다.");
+    } else if (error.response?.status === 401) {
+      throw new Error("인증이 필요합니다. 다시 로그인해주세요.");
+    } else if (error.response?.status === 403) {
+      throw new Error("접근 권한이 없습니다.");
     }
 
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("비밀번호 변경 API 호출 실패:", error);
-    throw error;
+    throw new Error(error.message || "비밀번호 변경에 실패했습니다.");
   }
 }
 

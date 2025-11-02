@@ -1,92 +1,15 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Button from "@/components/common/Button";
-import { changePassword } from "@/lib/api";
-
-const demoKeywords = [
-  "#데이트",
-  "#우중카페",
-  "#카공",
-  "#조용한",
-  "#애견동반",
-  "#테라스",
-  "#디저트",
-  "#스터디",
-  "#24시간",
-];
-
-interface KeywordModalProps {
-  currentKeywords: string[];
-  onSave: (newKeywords: string[]) => void;
-  onClose: () => void;
-}
-
-const KeywordModal: React.FC<KeywordModalProps> = ({
-  currentKeywords,
-  onSave,
-  onClose,
-}) => {
-  const [selectedKeywords, setSelectedKeywords] =
-    useState<string[]>(currentKeywords);
-  const maxKeywords = 5;
-
-  const handleKeywordClick = (keyword: string) => {
-    if (selectedKeywords.includes(keyword)) {
-      setSelectedKeywords(selectedKeywords.filter((k) => k !== keyword));
-    } else {
-      if (selectedKeywords.length < maxKeywords) {
-        setSelectedKeywords([...selectedKeywords, keyword]);
-      } else {
-        alert(`최대 ${maxKeywords}개까지만 선택할 수 있습니다.`);
-      }
-    }
-  };
-
-  const handleSave = () => {
-    onSave(selectedKeywords);
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center h-full overflow-y-auto bg-gray-600 bg-opacity-50 w-full">
-      <div className="relative p-8 w-96 max-w-sm mx-auto bg-white rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold mb-2">선호 키워드 변경</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          최대 {maxKeywords}개까지 선택할 수 있습니다.
-        </p>
-
-        <div className="flex flex-wrap gap-2 mb-6">
-          {demoKeywords.map((keyword) => (
-            <span
-              key={keyword}
-              onClick={() => handleKeywordClick(keyword)}
-              className={`
-                px-3 py-1 rounded-full cursor-pointer transition-colors duration-200
-                ${
-                  selectedKeywords.includes(keyword)
-                    ? "bg-[#C19B6C] text-white font-semibold"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }
-              `}
-            >
-              {keyword}
-            </span>
-          ))}
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button onClick={onClose} size="sm" color="gray">
-            취소
-          </Button>
-          <Button onClick={handleSave} size="sm" color="primary">
-            저장
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import {
+  getUserProfile,
+  updateUserProfile,
+  updateProfileImage,
+  deleteUser,
+  changePassword,
+} from "@/lib/api";
+import { FaUser } from "react-icons/fa";
 
 const WithdrawalModal = ({
   onConfirm,
@@ -121,22 +44,68 @@ const PasswordAlert = () => (
 
 export default function MypageMainPage() {
   const [profile, setProfile] = useState({
-    name: "김이름",
-    email: "test@test.com",
-    keywords: "#데이트 #우중카페 #카공",
-    imageUrl: "",
+    nickname: "",
+    name: "",
+    email: "",
+    profileImageUrl: "",
   });
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [isKeywordModalOpen, setIsKeywordModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // useRef 훅을 사용하여 숨겨진 input 요소에 접근
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 페이지 로드 시 회원 정보 조회
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await getUserProfile();
+        const userData = response.data;
+        setProfile({
+          nickname: userData.nickname || "",
+          name: userData.name || "",
+          email: userData.email || "",
+          profileImageUrl: userData.profileImageUrl || "",
+        });
+      } catch (error) {
+        console.error("회원 정보 조회 실패:", error);
+        alert(
+          error instanceof Error
+            ? error.message
+            : "회원 정보를 불러오지 못했습니다."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  // 닉네임 저장 핸들러
+  const handleSaveNickname = async () => {
+    if (!profile.nickname.trim()) {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
+
+    try {
+      await updateUserProfile(profile.nickname);
+      alert("회원정보가 수정되었습니다.");
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? error.message
+          : "회원 정보 수정에 실패했습니다."
+      );
+    }
+  };
 
   // 프로필 사진 변경 버튼 클릭 핸들러
   const handleProfileImageChange = () => {
@@ -147,35 +116,48 @@ export default function MypageMainPage() {
   };
 
   // 파일 선택 시 호출되는 핸들러
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
-      // FileReader를 사용하여 파일 URL 생성
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      try {
+        const response = await updateProfileImage(file);
+        const newImageUrl = response.data.profileImageUrl;
         setProfile({
           ...profile,
-          imageUrl: reader.result as string,
+          profileImageUrl: newImageUrl,
         });
-      };
-      reader.readAsDataURL(file);
+        alert("프로필 이미지가 변경되었습니다.");
+      } catch (error) {
+        alert(
+          error instanceof Error
+            ? error.message
+            : "프로필 이미지 변경에 실패했습니다."
+        );
+      }
     }
-  };
-
-  // 선호 키워드 모달 핸들러
-  const handleOpenKeywordModal = () => setIsKeywordModalOpen(true);
-  const handleCloseKeywordModal = () => setIsKeywordModalOpen(false);
-  const handleSaveKeywords = (newKeywords: string[]) => {
-    const newKeywordsString = newKeywords.join(" ");
-    setProfile({ ...profile, keywords: newKeywordsString });
   };
 
   // 회원 탈퇴 모달 핸들러
   const handleOpenWithdrawalModal = () => setIsWithdrawalModalOpen(true);
   const handleCancelWithdrawal = () => setIsWithdrawalModalOpen(false);
-  const handleConfirmWithdrawal = () => {
-    alert("회원 탈퇴가 완료되었습니다.");
-    setIsWithdrawalModalOpen(false);
+  const handleConfirmWithdrawal = async () => {
+    try {
+      await deleteUser();
+      alert("회원탈퇴가 완료되었습니다.");
+      // 로컬 스토리지 정리 및 로그인 페이지로 이동
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    } catch (error) {
+      alert(
+        error instanceof Error ? error.message : "회원 탈퇴에 실패했습니다."
+      );
+    } finally {
+      setIsWithdrawalModalOpen(false);
+    }
   };
 
   // 비밀번호 변경 핸들러
@@ -202,6 +184,7 @@ export default function MypageMainPage() {
       await changePassword({
         oldPassword: oldPassword,
         newPassword: newPassword,
+        confirmPassword: confirmPassword,
       });
 
       // 성공 시 알림 표시
@@ -221,28 +204,32 @@ export default function MypageMainPage() {
 
   const ProfileIcon = () => (
     <div className="w-28 h-28 bg-gray-100 rounded-full flex items-center justify-center border-4 border-[#C19B6C] overflow-hidden">
-      {profile.imageUrl ? (
+      {profile.profileImageUrl ? (
         <img
-          src={profile.imageUrl}
+          src={profile.profileImageUrl}
           alt="프로필 사진"
           className="w-full h-full object-cover"
         />
       ) : (
-        <span className="text-6xl"></span>
+        <FaUser className="w-16 h-16 text-gray-400" />
       )}
     </div>
-  );
-
-  const KeywordBadge = ({ keyword }: { keyword: string }) => (
-    <span className="inline-block bg-[#999999] text-white text-sm font-medium mr-2 px-3 py-1 rounded-full">
-      {keyword}
-    </span>
   );
 
   const isPasswordChangeEnabled =
     oldPassword.length > 0 &&
     newPassword.length > 0 &&
     newPassword === confirmPassword;
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 md:p-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -251,7 +238,9 @@ export default function MypageMainPage() {
       <div className="flex flex-col lg:flex-row gap-10">
         <div className="flex flex-col items-center p-6 bg-white border-none border-gray-100 rounded-2xl shadow-sm lg:w-1/3 min-w-[250px] max-w-sm mx-auto lg:mx-0">
           <ProfileIcon />
-          <p className="mt-4 text-xl font-semibold text-gray-800">닉네임님</p>
+          <p className="mt-4 text-xl font-semibold text-gray-800">
+            {profile.nickname || "닉네임 없음"}
+          </p>
           <button
             className="mt-3 text-sm text-gray-500 hover:text-[#C19B6C] transition-colors"
             onClick={handleProfileImageChange}
@@ -271,15 +260,37 @@ export default function MypageMainPage() {
           <div className="space-y-4">
             <label className="block">
               <span className="text-sm font-medium text-gray-700 block mb-1">
+                닉네임
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={profile.nickname}
+                  onChange={(e) =>
+                    setProfile({ ...profile, nickname: e.target.value })
+                  }
+                  className="flex-1 px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
+                />
+                <Button
+                  size="md"
+                  color="primary"
+                  onClick={handleSaveNickname}
+                  className="hover:bg-[#6E4213]"
+                >
+                  저장
+                </Button>
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700 block mb-1">
                 이름
               </span>
               <input
                 type="text"
                 value={profile.name}
-                onChange={(e) =>
-                  setProfile({ ...profile, name: e.target.value })
-                }
-                className="w-full px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
+                readOnly
+                className="w-full px-4 py-3 border border-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
               />
             </label>
 
@@ -294,30 +305,6 @@ export default function MypageMainPage() {
                 className="w-full px-4 py-3 border border-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
               />
             </label>
-          </div>
-
-          <div className="pt-4 border-t border-[#CDCDCD]">
-            <span className="text-sm font-medium text-gray-700 block mb-2">
-              선호 키워드 설정
-            </span>
-            <div className="flex items-center space-x-4">
-              <span className="text-base font-medium text-gray-700">
-                키워드
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {profile.keywords.split(" ").map((keyword, index) => (
-                  <KeywordBadge key={index} keyword={keyword} />
-                ))}
-              </div>
-            </div>
-            <Button
-              size="sm"
-              color="primary"
-              onClick={handleOpenKeywordModal}
-              className="mt-2 hover:bg-[#C19B6C]"
-            >
-              선호 키워드 변경
-            </Button>
           </div>
 
           <div className="pt-4 border-t border-[#CDCDCD]">
@@ -374,14 +361,6 @@ export default function MypageMainPage() {
           </div>
         </div>
       </div>
-
-      {isKeywordModalOpen && (
-        <KeywordModal
-          currentKeywords={profile.keywords.split(" ")}
-          onSave={handleSaveKeywords}
-          onClose={handleCloseKeywordModal}
-        />
-      )}
 
       {isWithdrawalModalOpen && (
         <WithdrawalModal
