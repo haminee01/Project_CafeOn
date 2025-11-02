@@ -11,8 +11,6 @@ export default function AdminCafesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [cafeToDelete, setCafeToDelete] = useState<any>(null);
   // API에서 전체 카페 데이터 조회
   useEffect(() => {
     const fetchCafes = async () => {
@@ -79,26 +77,6 @@ export default function AdminCafesPage() {
     setCurrentPage(1); // 검색 시 첫 페이지로 이동
   };
 
-  const handleDeleteClick = (cafe: any) => {
-    setCafeToDelete(cafe);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (cafeToDelete) {
-      const updatedCafes = cafes.filter(cafe => cafe.cafe_id !== cafeToDelete.cafe_id);
-      setCafes(updatedCafes);
-      setFilteredCafes(updatedCafes);
-      setShowDeleteModal(false);
-      setCafeToDelete(null);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setShowDeleteModal(false);
-    setCafeToDelete(null);
-  };
-
   return (
     <div className="space-y-6">
       {/* 페이지 헤더 */}
@@ -151,22 +129,10 @@ export default function AdminCafesPage() {
 
             {/* 카페 정보 */}
             <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">{cafe.name}</h3>
-              
-              {/* 액션 버튼 */}
-              <div className="flex gap-2">
-                <Button color="secondary" size="sm" className="flex-1">
-                  수정
-                </Button>
-                <Button 
-                  color="gray" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => handleDeleteClick(cafe)}
-                >
-                  삭제
-                </Button>
-              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">{cafe.name}</h3>
+              {cafe.address && (
+                <p className="text-sm text-gray-500 truncate">{cafe.address}</p>
+              )}
             </div>
           </div>
         ))}
