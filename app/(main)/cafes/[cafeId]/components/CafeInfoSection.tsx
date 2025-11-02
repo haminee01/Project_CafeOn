@@ -26,6 +26,7 @@ export default function CafeInfoSection({
   onWriteReview,
 }: CafeInfoSectionProps) {
   const { isAuthenticated } = useAuth();
+  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   // 상세 시간 토글은 사용하지 않음 (백엔드에서 추가 정보 미제공)
   const [showHoursDetail] = useState<boolean>(false);
@@ -67,14 +68,55 @@ export default function CafeInfoSection({
     };
   };
 
+  // 이미지 배열 계산 (photoUrl도 포함)
+  const getCafeImages = () => {
+    const images: string[] = [];
+    
+    // 1. photoUrl이 있으면 먼저 추가
+    if ((cafe as any).photoUrl) {
+      images.push((cafe as any).photoUrl);
+    }
+    
+    // 2. images 배열이 있으면 추가 (photoUrl과 중복되지 않도록)
+    if (cafe.images && Array.isArray(cafe.images) && cafe.images.length > 0) {
+      cafe.images.forEach((img: string) => {
+        if (img && !images.includes(img)) {
+          images.push(img);
+        }
+      });
+    }
+    
+    // 3. photo_url (snake_case)도 확인
+    if ((cafe as any).photo_url && !images.includes((cafe as any).photo_url)) {
+      images.push((cafe as any).photo_url);
+    }
+    
+    // 디버깅 로그
+    if (process.env.NODE_ENV === 'development' && images.length === 0) {
+      console.log('[CafeInfoSection] 이미지 없음 - cafe 객체:', {
+        photoUrl: (cafe as any).photoUrl,
+        images: cafe.images,
+        photo_url: (cafe as any).photo_url,
+      });
+    }
+    
+    return images;
+  };
+
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % (cafe.images?.length || 1));
+    const images = getCafeImages();
+    if (images.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }
   };
 
   const prevImage = () => {
-    setCurrentImageIndex(
-      (prev) => (prev - 1 + (cafe.images?.length || 1)) % (cafe.images?.length || 1)
-    );
+    const images = getCafeImages();
+    if (images.length > 0) {
+      setCurrentImageIndex(
+        (prev) => (prev - 1 + images.length) % images.length
+      );
+    }
   };
 
   // 위시리스트 카테고리 로드
@@ -117,38 +159,44 @@ export default function CafeInfoSection({
         {/* 좌측 이미지 영역 */}
         <div className="relative">
           <div className="aspect-[4/3] bg-gray-200 rounded-lg overflow-hidden relative">
-            {cafe.images && cafe.images.length > 0 ? (
-              <img
-                src={cafe.images[currentImageIndex]}
-                alt={`${cafe.name} 이미지`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  // 이미지 로드 실패 시 기본 이미지로 대체
-                  e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`
-                    <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="100%" height="100%" fill="#f3f4f6"/>
-                      <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-family="Arial, sans-serif" font-size="18">
-                        ☕ 카페 이미지
-                      </text>
-                    </svg>
-                  `)}`;
-                }}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <div className="text-6xl mb-2">☕</div>
-                  <div className="text-lg font-medium">카페 이미지</div>
+            {(() => {
+              const images = getCafeImages();
+              const currentImage = images && images.length > 0 ? images[currentImageIndex] : null;
+              
+              if (currentImage) {
+                return (
+                  <img
+                    src={currentImage}
+                    alt={`${cafe.name} 이미지`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // 이미지 로드 실패 시 플레이스홀더 표시
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                );
+              }
+              
+              // 이미지가 없을 때 플레이스홀더
+              return (
+                <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <div className="text-6xl mb-2">☕</div>
+                    <div className="text-lg font-medium">카페 이미지</div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* 이미지 네비게이션 버튼 (여러 이미지가 있을 때만) */}
-            {cafe.images && cafe.images.length > 1 && (
+            {(() => {
+              const images = getCafeImages();
+              return images && images.length > 1;
+            })() && (
               <>
                 <button
                   onClick={prevImage}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all z-10"
                 >
                   <svg
                     className="w-5 h-5"
@@ -166,7 +214,7 @@ export default function CafeInfoSection({
                 </button>
                 <button
                   onClick={nextImage}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all z-10"
                 >
                   <svg
                     className="w-5 h-5"
@@ -184,8 +232,8 @@ export default function CafeInfoSection({
                 </button>
 
                 {/* 이미지 인디케이터 */}
-                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                  {cafe.images.map((_, index) => (
+                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1 z-10">
+                  {getCafeImages().map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}

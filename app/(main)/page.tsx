@@ -5,7 +5,6 @@ import Map from "@/components/map/Map";
 import SearchBar from "@/components/common/SearchBar";
 import CafeCarousel from "@/components/cafes/CafeCarousel";
 import { getRandomCafes, getHotCafes, getWishlistTopCafes } from "@/lib/api";
-import Footer from "@/components/common/Footer";
 
 export default function HomePage() {
   const [randomCafes, setRandomCafes] = useState<any[]>([]);
@@ -62,7 +61,7 @@ export default function HomePage() {
       )}
 
       {wishlistTopCafes.length > 0 && (
-        <div>
+        <div className="mt-10">
           <CafeCarousel
             cafes={wishlistTopCafes}
             title="찜 많은 카페"
@@ -72,7 +71,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <div>
+      <div className="mt-10">
         <CafeCarousel
           cafes={randomCafes}
           title="이런 카페는 어때요?"
@@ -80,7 +79,6 @@ export default function HomePage() {
           showAllButton={true}
         />
       </div>
-      <Footer />
     </div>
   );
 }

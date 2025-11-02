@@ -28,6 +28,8 @@ export default function AdminCafesPage() {
             avg_rating: cafe.avgRating || 0,
             latitude: cafe.latitude || 0,
             longitude: cafe.longitude || 0,
+            photoUrl: cafe.photoUrl || cafe.photo_url || null,
+            images: cafe.images || (cafe.photoUrl ? [cafe.photoUrl] : []),
           }));
           setCafes(transformedCafes);
           setFilteredCafes(transformedCafes);
