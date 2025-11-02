@@ -1,7 +1,7 @@
 "use client";
 
 import { PostType } from "@/types/Post";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createPostMutator, updatePostMutator } from "@/api/community";
 import { useToastContext } from "@/components/common/ToastProvider";
@@ -36,6 +36,7 @@ export default function PostWriteForm({
   const [content, setContent] = useState(initialData?.content || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // 수정 모드인지 확인
@@ -51,53 +52,26 @@ export default function PostWriteForm({
     setError(null);
 
     try {
-      console.log("=== 게시글 제출 시작 ===");
-      console.log("현재 images state:", images.length, "개");
-
-      // 1. 데이터 객체 구성
-      // 유효한 이미지만 필터링
-      const validImages = images.filter(
-        (file) => file && file.size > 0 && file.type.startsWith("image/")
-      );
-
-      console.log("유효한 이미지:", validImages.length, "개");
-      validImages.forEach((file, idx) => {
-        console.log(`전송할 이미지 ${idx + 1}:`, file.name, file.size, "bytes");
-      });
-
       const postData = {
         title,
         type,
         content,
-        Image: validImages.length > 0 ? validImages : undefined,
+        Image: images.length > 0 ? images : undefined,
       };
-
-      console.log(
-        "postData.Image:",
-        postData.Image ? `${postData.Image.length}개` : "없음"
-      );
 
       let response;
 
       if (isEditMode && targetPostId) {
-        // 2-1. 수정 모드: PUT API 호출
+        // 수정 모드: PUT API 호출
         const apiEndpoint = `/api/posts/${targetPostId}`;
         response = await updatePostMutator(apiEndpoint, { arg: postData });
-        console.log("게시글 수정 성공:", response);
-
         showToast("게시글이 수정되었습니다.", "success");
-
-        // 수정 후 상세 페이지로 이동
         router.push(`/community/${targetPostId}`);
       } else {
-        // 2-2. 작성 모드: POST API 호출
+        // 작성 모드: POST API 호출
         const apiEndpoint = "/api/posts";
         response = await createPostMutator(apiEndpoint, { arg: postData });
-        console.log("게시글 작성 성공:", response);
-
         showToast("게시글이 작성되었습니다.", "success");
-
-        // 작성 후 상세 페이지로 이동
         router.push(`/community/${response.id}`);
       }
     } catch (error) {
@@ -111,48 +85,38 @@ export default function PostWriteForm({
     }
   };
 
-  // 이미지 첨부 핸들러
+  // 이미지 첨부 핸들러 (리뷰와 동일)
   const handleImageAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("=== 이미지 첨부 시작 ===");
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      console.log("선택된 파일 개수:", files.length);
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files).slice(0, 5 - images.length); // 최대 5개까지
+      const newUrls = newFiles.map((file) => URL.createObjectURL(file));
 
-      // 유효한 이미지 파일만 필터링
-      const validFiles = files.filter(
-        (file) =>
-          file &&
-          file.size > 0 &&
-          file.type.startsWith("image/") &&
-          file.size <= 10 * 1024 * 1024 // 10MB 제한
-      );
-
-      console.log("유효한 파일 개수:", validFiles.length);
-      validFiles.forEach((file, idx) => {
-        console.log(`파일 ${idx + 1}:`, {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        });
-      });
-
-      // 최대 3장 제한
-      if (validFiles.length > 3) {
-        setError("이미지는 최대 3장까지 첨부할 수 있습니다.");
-        return;
-      }
-
-      // 유효하지 않은 파일이 있으면 경고
-      if (validFiles.length < files.length) {
-        setError("일부 파일이 유효하지 않아 제외되었습니다.");
-      } else {
-        setError(null);
-      }
-
-      setImages(validFiles);
-      console.log("✅ 이미지 state 업데이트 완료:", validFiles.length, "개");
+      setImages((prev) => [...prev, ...newFiles]);
+      setImagePreviewUrls((prev) => [...prev, ...newUrls]);
     }
   };
+
+  // 이미지 제거 핸들러
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviewUrls((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  // 이미지 영역 클릭 핸들러
+  const handleImageAreaClick = () => {
+    document.getElementById("file-upload")?.click();
+  };
+
+  // 컴포넌트 언마운트 시 메모리 정리 (리뷰와 동일)
+  useEffect(() => {
+    return () => {
+      imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const actionText = isEditMode ? "수정" : "작성";
 
@@ -209,36 +173,66 @@ export default function PostWriteForm({
         </p>
       </div>
 
-      {/* 3. 이미지 첨부 (Mock) */}
-      <div className="p-4 border border-dashed border-gray-300 rounded-lg">
-        <label
-          htmlFor="file-upload"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          이미지 첨부 (최대 3장)
-        </label>
+      {/* 3. 이미지 첨부 (리뷰와 동일한 UI) */}
+      <div className="space-y-4">
         <input
           id="file-upload"
           type="file"
-          accept="image/*"
           multiple
+          accept="image/*"
           onChange={handleImageAttach}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#CDCDCD] file:text-white hover:file:bg-[#C19B6C]"
+          className="hidden"
         />
-
-        {images.length > 0 && (
-          <div className="mt-3">
-            <div className="text-sm text-gray-600">
-              첨부된 파일: {images.map((file) => file.name).join(", ")}
-            </div>
-            <button
-              type="button"
-              onClick={() => setImages([])}
-              className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
-            >
-              이미지 제거
-            </button>
+        {imagePreviewUrls.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4">
+            {imagePreviewUrls.map((url, index) => (
+              <div key={index} className="relative">
+                <img
+                  src={url}
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-32 object-cover rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(index)}
+                  className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
+        ) : (
+          <div
+            onClick={handleImageAreaClick}
+            className="bg-gray-200 h-64 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors border-2 border-dashed border-gray-400"
+          >
+            <svg
+              className="w-12 h-12 text-gray-600 mb-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <p className="text-gray-600 text-sm">
+              사진을 첨부하려면 클릭하세요
+            </p>
+            <p className="text-gray-400 text-xs mt-1">최대 5장까지 첨부 가능</p>
+          </div>
+        )}
+
+        {imagePreviewUrls.length > 0 && imagePreviewUrls.length < 5 && (
+          <button
+            type="button"
+            onClick={handleImageAreaClick}
+            className="w-full px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold border-2 border-dashed border-gray-400"
+          >
+            + 사진 더 추가하기
+          </button>
         )}
       </div>
 
