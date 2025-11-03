@@ -1,7 +1,7 @@
 // mypage/chats/page.tsx
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getMyChatRooms } from "../../../../src/lib/api";
 import { MyChatRoom, MyChatRoomsResponse } from "../../../../src/types/chat";
@@ -469,7 +469,7 @@ const ChatListPage = () => {
   const [activeRoom, setActiveRoom] = useState<MyChatRoom | null>(null);
 
   // 채팅방 목록 로드
-  const loadChatRooms = async () => {
+  const loadChatRooms = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -491,8 +491,16 @@ const ChatListPage = () => {
         });
       });
 
-      setChatRooms(response.data.content);
-      console.log("채팅방 목록 로드 완료:", response.data.content);
+      // 현재 활성화된 채팅방의 unreadCount는 0으로 유지
+      const updatedRooms = response.data.content.map((room) => {
+        if (activeRoomId && room.roomId === activeRoomId) {
+          return { ...room, unreadCount: 0 };
+        }
+        return room;
+      });
+
+      setChatRooms(updatedRooms);
+      console.log("채팅방 목록 로드 완료:", updatedRooms);
     } catch (err) {
       console.error("채팅방 목록 로드 실패:", err);
       setError(
@@ -502,7 +510,7 @@ const ChatListPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeRoomId]);
 
   const handleRoomClick = (roomId: number) => {
     console.log("🔔 채팅방 클릭:", {
@@ -554,16 +562,14 @@ const ChatListPage = () => {
   useEffect(() => {
     loadChatRooms();
 
-    // 주기적으로 채팅방 목록 새로고침 (5초마다)
+    // 주기적으로 채팅방 목록 새로고침 (3초마다)
+    // 모든 채팅방의 안 읽은 메시지 수를 실시간 업데이트
     const interval = setInterval(() => {
-      // 현재 활성화된 채팅방이 있으면 읽지 않은 메시지 개수만 업데이트
-      if (activeRoomId) {
-        loadChatRooms();
-      }
-    }, 5000);
+      loadChatRooms();
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, [activeRoomId]);
+  }, [activeRoomId]); // activeRoomId 변경 시에도 새로고침
 
   return (
     <div className="flex h-[calc(100vh-200px)] w-full bg-white">
