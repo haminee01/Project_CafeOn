@@ -56,40 +56,12 @@ export default function CommentSection({
 
     setIsSubmitting(true);
     try {
-      const response = await createCommentMutator(postId, {
+      await createCommentMutator(postId, {
         content: newCommentContent,
       });
 
-      console.log("댓글 작성 성공:", response);
-      console.log("response.data:", response?.data);
-
-      // 새 댓글을 상태에 직접 추가 (API 응답에서 받은 데이터 사용)
-      if (response?.data) {
-        const newComment: Comment = {
-          id: response.data.commentId,
-          content: response.data.content,
-          author:
-            response.data.authorName || response.data.authorNickname || "익명",
-          likes: response.data.likeCount,
-          created_at: response.data.createdAt,
-          replies: [],
-          likedByMe: response.data.likedByMe,
-          parent_id: response.data.parentId,
-          children: response.data.children || [],
-        };
-
-        setComments((prev) => {
-          const updatedComments = [...prev, newComment];
-          // 상태 업데이트 후 콜백 호출을 useEffect로 분리
-          setTimeout(() => {
-            onCommentsChange?.(updatedComments);
-          }, 0);
-          return updatedComments;
-        });
-      } else {
-        // Fallback: 전체 새로고침
-        await refreshComments();
-      }
+      // 댓글 작성 후 목록 새로고침
+      await refreshComments();
 
       setNewCommentContent("");
     } catch (error) {
