@@ -49,33 +49,65 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
       <p className="text-gray-600 mb-6">{description}</p>
 
       <div className="relative">
-        {/* 좌우 버튼 */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={goToPrevious}
-            disabled={currentPage === 0}
-            className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
-              currentPage === 0
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md border"
-            }`}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
+        {/* 카페 카드 그리드 - 한 줄로 제한 */}
+        <div className="grid grid-cols-4 gap-5 px-12">
+          {currentCafes.map((cafe) => (
+            <CafeCard key={cafe.cafe_id} cafe={cafe} />
+          ))}
+        </div>
 
-          <div className="flex space-x-1">
+        {/* 좌우 버튼 - 카드 그리드 양 옆에 배치 */}
+        <button
+          onClick={goToPrevious}
+          disabled={currentPage === 0}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full transition-colors z-10 ${
+            currentPage === 0
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-white text-gray-700 hover:bg-gray-50 shadow-lg border"
+          }`}
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+
+        <button
+          onClick={goToNext}
+          disabled={currentPage === totalPages - 1}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full transition-colors z-10 ${
+            currentPage === totalPages - 1
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-white text-gray-700 hover:bg-gray-50 shadow-lg border"
+          }`}
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
+
+        {/* 페이지 인디케이터 */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-4">
             {Array.from({ length: totalPages }, (_, index) => (
               <button
                 key={index}
@@ -86,38 +118,7 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
               />
             ))}
           </div>
-
-          <button
-            onClick={goToNext}
-            disabled={currentPage === totalPages - 1}
-            className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
-              currentPage === totalPages - 1
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md border"
-            }`}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* 카페 카드 그리드 - 한 줄로 제한 */}
-        <div className="grid grid-cols-4 gap-4">
-          {currentCafes.map((cafe) => (
-            <CafeCard key={cafe.cafe_id} cafe={cafe} />
-          ))}
-        </div>
+        )}
       </div>
     </div>
   );

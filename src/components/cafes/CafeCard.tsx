@@ -17,7 +17,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, className = "" }) => {
 
   return (
     <div
-      className={`cursor-pointer flex flex-col ${className}`}
+      className={`cursor-pointer flex flex-col w-full max-w-[90%] mx-auto ${className}`}
       onClick={handleCardClick}
     >
       <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden rounded-lg">

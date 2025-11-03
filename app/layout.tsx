@@ -25,7 +25,7 @@ export default function RootLayout({
         {/* Kakao SDK for sharing */}
         <Script
           src="https://t1.kakaocdn.net/kakao_js_sdk/v1/kakao.min.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
 
         {/* Google Maps API 스크립트 */}
