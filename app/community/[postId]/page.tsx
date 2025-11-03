@@ -64,11 +64,25 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
         }
       } catch (err) {
         console.error("데이터 조회 실패:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "데이터를 불러오는데 실패했습니다."
-        );
+
+        // 인증 에러 체크
+        const errorMessage = err instanceof Error ? err.message : "";
+        const isAuthError =
+          errorMessage.includes("401") ||
+          errorMessage.includes("403") ||
+          errorMessage.includes("Unauthorized") ||
+          errorMessage.includes("인증") ||
+          errorMessage.includes("로그인");
+
+        if (isAuthError) {
+          setError("로그인한 사용자만 게시물을 확인할 수 있습니다.");
+        } else {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "데이터를 불러오는데 실패했습니다."
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -97,22 +111,47 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
   // 에러 상태
   if (error || !post) {
+    const isAuthError = error?.includes("로그인한 사용자만");
+
     return (
       <>
         <Header />
-        <main className="min-h-screen pt-10 pb-20 text-center text-xl text-gray-600">
-          <h1 className="text-3xl font-bold mb-5">
-            게시글을 찾을 수 없습니다.
-          </h1>
-          <p>
-            {error || `존재하지 않거나 삭제된 게시글입니다. (ID: ${postId})`}
-          </p>
-          <button
-            onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-[#6E4213] text-white rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            이전 페이지로 돌아가기
-          </button>
+        <main className="min-h-screen pt-10 pb-20 text-center">
+          <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-lg shadow-lg">
+            <h1 className="text-2xl font-bold mb-4 text-gray-800">
+              {isAuthError
+                ? "로그인이 필요합니다"
+                : "게시글을 찾을 수 없습니다"}
+            </h1>
+            <p className="text-gray-600 mb-6">
+              {error || `존재하지 않거나 삭제된 게시글입니다. (ID: ${postId})`}
+            </p>
+            <div className="flex gap-3 justify-center">
+              {isAuthError ? (
+                <>
+                  <button
+                    onClick={() => router.push("/login")}
+                    className="px-6 py-2 bg-[#6E4213] text-white rounded-lg hover:bg-[#5a360f] transition-colors"
+                  >
+                    로그인하기
+                  </button>
+                  <button
+                    onClick={() => router.push("/community")}
+                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    목록으로
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => router.back()}
+                  className="px-6 py-2 bg-[#6E4213] text-white rounded-lg hover:bg-[#5a360f] transition-colors"
+                >
+                  이전 페이지로
+                </button>
+              )}
+            </div>
+          </div>
         </main>
         <Footer />
       </>

@@ -9,6 +9,7 @@ import {
   leaveChatRoomNew,
   toggleChatMute,
   getChatRoomIdByCafeId,
+  readLatest,
   ChatRoomJoinResponse,
   ChatParticipant,
   ChatMessageResponse,
@@ -96,13 +97,16 @@ export const useCafeChat = ({
 
   // STOMP 관련 상태
   const stompClientRef = useRef<Client | null>(null);
-  const subscriptionRef = useRef<StompSubscription | null>(null);
+  const messageSubscriptionRef = useRef<StompSubscription | null>(null);
+  const readSubscriptionRef = useRef<StompSubscription | null>(null);
   // 전송 직후 서버 에코가 오기 전까지 화면에 보일 낙관적(임시) 메시지 목록
   const pendingMessagesRef = useRef<
     Array<{ id: string; content: string; ts: number }>
   >([]);
   // 서버가 인식하는 내 닉네임(참여자 목록 기반)을 저장하여 신뢰도 높은 비교에 사용
   const myNicknameRef = useRef<string | null>(null);
+  // 읽음 영수증: readerId별 마지막으로 적용된 lastReadChatId 저장 (중복 차감 방지)
+  const lastReadSeenRef = useRef<Map<string, number>>(new Map());
 
   // STOMP 클라이언트 연결
   const connectStomp = useCallback(async () => {
@@ -176,12 +180,17 @@ export const useCafeChat = ({
 
     try {
       // 기존 구독 해제
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-        subscriptionRef.current = null;
+      if (messageSubscriptionRef.current) {
+        messageSubscriptionRef.current.unsubscribe();
+        messageSubscriptionRef.current = null;
+      }
+      if (readSubscriptionRef.current) {
+        readSubscriptionRef.current.unsubscribe();
+        readSubscriptionRef.current = null;
       }
 
-      const subscription = stompClientRef.current.subscribe(
+      // 메시지 스트림 구독
+      const messageSubscription = stompClientRef.current.subscribe(
         `/sub/rooms/${roomId}`,
         (message) => {
           try {
@@ -262,6 +271,9 @@ export const useCafeChat = ({
               senderId: data.senderNickname,
               messageType: data.messageType,
               images: data.images?.map((img) => img.imageUrl) || undefined,
+              timeLabel: data.timeLabel,
+              othersUnreadUsers: data.othersUnreadUsers,
+              createdAt: data.createdAt,
             };
 
             // 낙관적 메시지 교체 및 중복 방지
@@ -300,14 +312,140 @@ export const useCafeChat = ({
                 detail: { roomId, messageId: newMessage.id },
               })
             );
+
+            // 시스템 메시지가 아닌 경우 400ms 후 readLatest 호출
+            const isSystem = data.messageType
+              ?.toUpperCase()
+              .startsWith("SYSTEM");
+            if (!isSystem && roomId) {
+              setTimeout(() => {
+                readLatest(roomId)
+                  .then(() => {
+                    // ✅ 실시간 메시지 수신 후 즉시 로컬 상태 업데이트
+                    setMessages((prevMessages) => {
+                      return prevMessages.map((msg) => {
+                        if (!msg.isMyMessage) {
+                          const currentCount = msg.othersUnreadUsers || 0;
+                          const newCount = Math.max(0, currentCount - 1);
+                          return {
+                            ...msg,
+                            othersUnreadUsers: newCount,
+                          };
+                        }
+                        return msg;
+                      });
+                    });
+
+                    setChatHistory((prevHistory) => {
+                      return prevHistory.map((msg) => {
+                        if (!msg.mine) {
+                          const currentCount =
+                            (msg as any).othersUnreadUsers || 0;
+                          const newCount = Math.max(0, currentCount - 1);
+                          return {
+                            ...msg,
+                            othersUnreadUsers: newCount,
+                          } as any;
+                        }
+                        return msg;
+                      });
+                    });
+
+                    console.log(
+                      "=== 실시간 메시지 수신 후 안읽음 수 즉시 감소 ==="
+                    );
+                  })
+                  .catch((err) =>
+                    console.error("메시지 수신 후 읽음 처리 실패:", err)
+                  );
+              }, 400);
+            }
           } catch (error) {
             console.error("메시지 파싱 오류:", error);
           }
         }
       );
 
-      subscriptionRef.current = subscription;
-      console.log(`STOMP 구독 성공: /sub/rooms/${roomId}`);
+      messageSubscriptionRef.current = messageSubscription;
+      console.log(`STOMP 메시지 구독 성공: /sub/rooms/${roomId}`);
+
+      // 읽음 영수증 스트림 구독
+      const readSubscription = stompClientRef.current.subscribe(
+        `/sub/rooms/${roomId}/read`,
+        (message) => {
+          try {
+            const readReceipt = JSON.parse(message.body);
+            console.log("읽음 영수증 수신:", readReceipt);
+
+            // { roomId, readerId, lastReadChatId }
+            if (
+              !readReceipt ||
+              !readReceipt.readerId ||
+              typeof readReceipt.lastReadChatId !== "number"
+            ) {
+              return;
+            }
+
+            const prev = lastReadSeenRef.current.get(readReceipt.readerId) || 0;
+            const cur = readReceipt.lastReadChatId;
+
+            // 이미 처리한 읽음 영수증은 무시
+            if (cur <= prev) {
+              console.log(
+                `읽음 영수증 중복 - 무시: readerId=${readReceipt.readerId}, prev=${prev}, cur=${cur}`
+              );
+              return;
+            }
+
+            lastReadSeenRef.current.set(readReceipt.readerId, cur);
+
+            // (prev, cur] 범위의 메시지들의 othersUnreadUsers를 1씩 감소
+            setMessages((prevMessages) => {
+              return prevMessages.map((msg) => {
+                const chatId = parseInt(msg.id.replace("history-", "")) || 0;
+                // 이 메시지가 (prev, cur] 범위에 있으면 안읽음 수 감소
+                if (chatId > prev && chatId <= cur) {
+                  const currentCount = msg.othersUnreadUsers || 0;
+                  const newCount = Math.max(0, currentCount - 1);
+                  console.log(
+                    `메시지 ${chatId} 안읽음 수: ${currentCount} → ${newCount}`
+                  );
+                  return {
+                    ...msg,
+                    othersUnreadUsers: newCount,
+                  };
+                }
+                return msg;
+              });
+            });
+
+            // ✅ chatHistory도 동일하게 업데이트
+            setChatHistory((prevHistory) => {
+              return prevHistory.map((msg) => {
+                const chatId = msg.chatId;
+                if (chatId > prev && chatId <= cur) {
+                  const currentCount = (msg as any).othersUnreadUsers || 0;
+                  const newCount = Math.max(0, currentCount - 1);
+                  return {
+                    ...msg,
+                    othersUnreadUsers: newCount,
+                  } as any;
+                }
+                return msg;
+              });
+            });
+
+            console.log(
+              `읽음 영수증 처리 완료: readerId=${readReceipt.readerId}, prev=${prev}, cur=${cur}`
+            );
+          } catch (error) {
+            console.error("읽음 영수증 파싱 오류:", error);
+          }
+        }
+      );
+
+      readSubscriptionRef.current = readSubscription;
+      console.log(`STOMP 읽음 영수증 구독 성공: /sub/rooms/${roomId}/read`);
     } catch (error) {
       console.error("STOMP 구독 실패:", error);
     }
@@ -315,9 +453,14 @@ export const useCafeChat = ({
 
   // STOMP 연결 해제
   const disconnectStomp = useCallback(() => {
-    if (subscriptionRef.current) {
-      subscriptionRef.current.unsubscribe();
-      subscriptionRef.current = null;
+    if (messageSubscriptionRef.current) {
+      messageSubscriptionRef.current.unsubscribe();
+      messageSubscriptionRef.current = null;
+    }
+
+    if (readSubscriptionRef.current) {
+      readSubscriptionRef.current.unsubscribe();
+      readSubscriptionRef.current = null;
     }
 
     if (stompClientRef.current) {
@@ -326,6 +469,7 @@ export const useCafeChat = ({
     }
 
     setStompConnected(false);
+    lastReadSeenRef.current.clear();
     console.log("STOMP 연결 해제");
   }, []);
 
@@ -509,12 +653,12 @@ export const useCafeChat = ({
           return datePattern.test(content.trim());
         };
 
-        // 날짜 메시지를 필터링하여 제외
-        const filteredItems = items.filter(
-          (msg: ChatHistoryMessage) => !isDateMessage(msg.message)
-        );
+        // 날짜 메시지만 필터링
+        const filteredItems = items.filter((msg: ChatHistoryMessage) => {
+          return !isDateMessage(msg.message);
+        });
 
-        // 새로운 히스토리를 기존 히스토리 뒤에 추가 (날짜 메시지 제외)
+        // 새로운 히스토리를 기존 히스토리 뒤에 추가 (필터링 후)
         setChatHistory((prev) => [...prev, ...filteredItems]);
         setHasMoreHistory(hasNext);
       } catch (err) {
@@ -525,7 +669,7 @@ export const useCafeChat = ({
         setIsLoadingHistory(false);
       }
     },
-    [roomId, chatHistory, isLoadingHistory]
+    [roomId, chatHistory, isLoadingHistory, cafeId]
   );
 
   // 채팅방 참여 (재시도 로직 포함)
@@ -627,17 +771,80 @@ export const useCafeChat = ({
           매핑존재: savedByOriginalId !== undefined,
         });
 
-        // 참여자 목록과 채팅 히스토리를 가져옴 (새로운 roomId 전달)
-        console.log("참여자 목록 및 채팅 히스토리 로드 시작:", newRoomId);
-        await Promise.all([
-          refreshParticipants(newRoomId),
-          loadMoreHistory(newRoomId),
-        ]);
-        console.log("참여자 목록 및 채팅 히스토리 로드 완료");
+        // 나간 채팅방인지 확인
+        const leftKey = `chat_left_${cafeId}`;
+        const hasLeft = localStorage.getItem(leftKey);
+
+        if (hasLeft) {
+          console.log(
+            "=== 이전에 나간 채팅방 재입장 - 히스토리 로드 안 함 ===",
+            cafeId
+          );
+          // 나간 기록 삭제
+          localStorage.removeItem(leftKey);
+
+          // 상태 완전 초기화 (빈 채팅방으로 시작)
+          setChatHistory([]);
+          setMessages([]);
+          setHasMoreHistory(false);
+
+          // 참여자 목록만 로드 (히스토리는 로드하지 않음)
+          await refreshParticipants(newRoomId);
+          console.log("참여자 목록만 로드 완료 (재입장)");
+        } else {
+          // 처음 입장하는 채팅방 - 히스토리 로드
+          console.log("참여자 목록 및 채팅 히스토리 로드 시작:", newRoomId);
+          await Promise.all([
+            refreshParticipants(newRoomId),
+            loadMoreHistory(newRoomId),
+          ]);
+          console.log("참여자 목록 및 채팅 히스토리 로드 완료");
+        }
 
         // STOMP 연결 및 구독
         console.log("STOMP 연결 시작 (useCafeChat)");
         await connectStomp();
+
+        // 방 입장 시 최신 메시지 읽음 처리
+        setTimeout(async () => {
+          try {
+            await readLatest(newRoomId);
+            console.log("입장 시 최신 메시지 읽음 처리 완료");
+
+            // ✅ 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
+            setMessages((prevMessages) => {
+              return prevMessages.map((msg) => {
+                if (!msg.isMyMessage) {
+                  const currentCount = msg.othersUnreadUsers || 0;
+                  const newCount = Math.max(0, currentCount - 1);
+                  return {
+                    ...msg,
+                    othersUnreadUsers: newCount,
+                  };
+                }
+                return msg;
+              });
+            });
+
+            setChatHistory((prevHistory) => {
+              return prevHistory.map((msg) => {
+                if (!msg.mine) {
+                  const currentCount = (msg as any).othersUnreadUsers || 0;
+                  const newCount = Math.max(0, currentCount - 1);
+                  return {
+                    ...msg,
+                    othersUnreadUsers: newCount,
+                  } as any;
+                }
+                return msg;
+              });
+            });
+
+            console.log("=== 입장 시 안읽음 수 즉시 감소 ===");
+          } catch (err) {
+            console.error("입장 시 읽음 처리 실패:", err);
+          }
+        }, 1000);
 
         // 연결 완료 후 구독 (약간의 지연)
         console.log("STOMP 연결 완료, 구독 시작:", newRoomId);
@@ -782,7 +989,20 @@ export const useCafeChat = ({
     setError(null);
 
     try {
+      console.log("=== 채팅방 나가기 시작 ===", { roomId, cafeId });
+
+      // 나가기 API 호출 - 반드시 성공해야 함
       await leaveChatRoomNew(roomId);
+      console.log("=== 채팅방 나가기 API 성공 ===");
+
+      // ✅ API 성공 후에만 로컬 스토리지에 기록
+      const leftKey = `chat_left_${cafeId}`;
+      const leftData = {
+        leftAt: new Date().toISOString(),
+        roomId: roomId,
+      };
+      localStorage.setItem(leftKey, JSON.stringify(leftData));
+      console.log("채팅방 나간 시점 저장:", leftData);
 
       // 매핑 제거
       removeChatMapping(parseInt(cafeId));
@@ -790,8 +1010,7 @@ export const useCafeChat = ({
       // STOMP 연결 해제
       disconnectStomp();
 
-      // 채팅방을 나가도 muted 상태는 유지 (다시 들어오면 같은 상태로)
-
+      // 상태 완전 초기화
       setRoomId(null);
       setIsJoined(false);
       setParticipants([]);
@@ -799,21 +1018,29 @@ export const useCafeChat = ({
       setChatHistory([]);
       setHasMoreHistory(true);
       setIsMuted(false);
-    } catch (err) {
-      console.error("채팅방 나가기 실패:", err);
 
-      // STOMP 연결 해제 (API 에러가 발생해도)
+      console.log("=== 채팅방 나가기 완료 (상태 초기화됨) ===");
+    } catch (err) {
+      console.error("=== 채팅방 나가기 API 실패 ===", err);
+
+      // ❌ API 실패 시 localStorage에 기록하지 않음
+      // 사용자에게 명확한 에러 메시지 표시
+      const errorMessage =
+        err instanceof Error ? err.message : "채팅방 나가기에 실패했습니다.";
+
+      setError(`나가기 실패: ${errorMessage}\n다시 시도해주세요.`);
+
+      alert(
+        `채팅방 나가기에 실패했습니다.\n\n${errorMessage}\n\n다시 시도해주세요.`
+      );
+
+      // 에러가 발생해도 STOMP는 해제
       disconnectStomp();
 
-      // API 에러가 발생해도 로컬 상태는 초기화 (사용자 경험 개선)
-      setRoomId(null);
-      setIsJoined(false);
-      setParticipants([]);
-      setMessages([]);
-      setChatHistory([]);
-      setHasMoreHistory(true);
-      setIsMuted(false);
-      console.log("API 에러로 인한 로컬 상태 초기화");
+      // ❌ API 실패 시 상태는 초기화하지 않음 (여전히 참여 중)
+      console.log("채팅방 나가기 실패 - 상태 유지 (여전히 참여 중)");
+
+      throw err; // 에러를 상위로 전파하여 UI에서 처리
     } finally {
       setIsLoading(false);
     }
@@ -987,14 +1214,14 @@ export const useCafeChat = ({
     if (!roomId) return;
 
     try {
-      // console.log("markAsRead 호출됨 - roomId:", roomId);
+      console.log("=== markAsRead 호출됨 - roomId:", roomId, "===");
 
       // 현재 메시지 목록에서 가장 최근 메시지의 ID를 찾음
       const allMessages = [...messages, ...chatHistory];
-      // console.log("전체 메시지 수:", allMessages.length);
+      console.log("전체 메시지 수:", allMessages.length);
 
       if (allMessages.length === 0) {
-        // console.log("읽을 메시지가 없습니다.");
+        console.log("읽을 메시지가 없습니다.");
         return;
       }
 
@@ -1005,46 +1232,95 @@ export const useCafeChat = ({
         return aId - bId;
       });
 
-      // console.log(
-      //   "정렬된 메시지들:",
-      //   sortedMessages.map((msg) => ({
-      //     id: "id" in msg ? msg.id : msg.chatId,
-      //     senderId: "senderId" in msg ? msg.senderId : msg.senderNickname,
-      //     isMyMessage: "isMyMessage" in msg ? msg.isMyMessage : msg.mine,
-      //     content: "content" in msg ? msg.content : msg.message,
-      //   }))
-      // );
+      console.log(
+        "정렬된 메시지들:",
+        sortedMessages.slice(-5).map((msg) => ({
+          id: "id" in msg ? msg.id : msg.chatId,
+          senderId: "senderId" in msg ? msg.senderId : msg.senderNickname,
+          isMyMessage: "isMyMessage" in msg ? msg.isMyMessage : msg.mine,
+          content: "content" in msg ? msg.content : msg.message,
+          othersUnreadUsers: (msg as any).othersUnreadUsers,
+        }))
+      );
 
-      // 내가 보낸 메시지가 아닌 가장 최근 메시지를 찾기
-      const lastUnreadMessage = [...sortedMessages]
-        .reverse()
-        .find((message) => {
-          const isMyMessage =
-            "isMyMessage" in message ? message.isMyMessage : message.mine;
-          // console.log("메시지 체크:", {
-          //   id: "id" in message ? message.id : message.chatId,
-          //   senderId:
-          //     "senderId" in message ? message.senderId : message.senderNickname,
-          //   isMyMessage,
-          //   content: "content" in message ? message.content : message.message,
-          // });
-          return !isMyMessage;
+      // 가장 최근 메시지를 찾기 (내 메시지 포함)
+      const lastMessage = sortedMessages[sortedMessages.length - 1];
+
+      console.log("=== 가장 최근 메시지 ===", {
+        id: "id" in lastMessage ? lastMessage.id : lastMessage.chatId,
+        isMyMessage:
+          "isMyMessage" in lastMessage
+            ? lastMessage.isMyMessage
+            : lastMessage.mine,
+        content:
+          "content" in lastMessage ? lastMessage.content : lastMessage.message,
+      });
+
+      if (lastMessage) {
+        const messageId =
+          "id" in lastMessage ? lastMessage.id : lastMessage.chatId.toString();
+
+        console.log("=== 읽음 처리할 메시지 ===", {
+          messageId,
+          roomId,
+          messageContent:
+            "content" in lastMessage
+              ? lastMessage.content
+              : lastMessage.message,
+          senderName:
+            "senderName" in lastMessage
+              ? lastMessage.senderName
+              : lastMessage.senderNickname,
         });
 
-      if (lastUnreadMessage) {
-        const messageId =
-          "id" in lastUnreadMessage
-            ? lastUnreadMessage.id
-            : lastUnreadMessage.chatId.toString();
         await markChatAsRead(roomId, messageId);
-        // console.log("채팅 읽음 처리 완료:", {
-        //   roomId,
-        //   lastReadChatId: messageId,
-        //   messageContent:
-        //     "content" in lastUnreadMessage
-        //       ? lastUnreadMessage.content
-        //       : lastUnreadMessage.message,
-        // });
+
+        console.log("=== 채팅 읽음 처리 API 호출 완료 ===", {
+          roomId,
+          lastReadChatId: messageId,
+        });
+
+        // ✅ 읽음 처리 즉시 로컬 상태에서 읽은 메시지들의 안읽음 수 감소
+        const readMessageId =
+          parseInt(messageId.replace("history-", "")) || parseInt(messageId);
+
+        setMessages((prevMessages) => {
+          return prevMessages.map((msg) => {
+            const msgId =
+              parseInt(msg.id.replace("history-", "")) || parseInt(msg.id);
+            // 읽은 메시지 ID 이하의 모든 메시지 안읽음 수 감소
+            if (msgId <= readMessageId && !msg.isMyMessage) {
+              const currentCount = msg.othersUnreadUsers || 0;
+              const newCount = Math.max(0, currentCount - 1);
+              console.log(
+                `즉시 감소: 메시지 ${msgId} 안읽음 수 ${currentCount} → ${newCount}`
+              );
+              return {
+                ...msg,
+                othersUnreadUsers: newCount,
+              };
+            }
+            return msg;
+          });
+        });
+
+        // ✅ chatHistory도 동일하게 업데이트
+        setChatHistory((prevHistory) => {
+          return prevHistory.map((msg) => {
+            const msgId = msg.chatId;
+            if (msgId <= readMessageId && !msg.mine) {
+              const currentCount = (msg as any).othersUnreadUsers || 0;
+              const newCount = Math.max(0, currentCount - 1);
+              return {
+                ...msg,
+                othersUnreadUsers: newCount,
+              } as any;
+            }
+            return msg;
+          });
+        });
+
+        console.log("=== 로컬 상태 즉시 업데이트: 안읽음 수 감소 완료 ===");
 
         // 읽음 처리 후 읽지 않은 사람 수 업데이트를 위한 이벤트 발생
         window.dispatchEvent(

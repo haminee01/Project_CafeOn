@@ -8,8 +8,12 @@ import {
   patchReadStatus,
   getChatRoomIdByCafeId,
   sendChatMessage,
+  readLatest,
 } from "@/api/chat";
 import { ChatHistoryMessage } from "@/api/chat";
+import ChatMessageList from "@/components/chat/ChatMessageList";
+import ChatMessageInput from "@/components/chat/ChatMessageInput";
+import { ChatMessage } from "@/types/chat";
 
 export default function ChatPage() {
   const params = useParams();
@@ -19,10 +23,13 @@ export default function ChatPage() {
   const jump = searchParams.get("jump"); // "33" 같은 문자열
 
   const [chatHistory, setChatHistory] = useState<ChatHistoryMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const chatRef = useRef<HTMLDivElement>(null);
   const latestIdRef = useRef<number>(0);
@@ -50,20 +57,21 @@ export default function ChatPage() {
       console.log("딥링크 채팅 페이지 - 히스토리 로드 시작:", { roomId, jump });
 
       const response = await getChatHistory(roomId, undefined, 50, true);
-      const messages = response.data.content || [];
+      const historyData = response.data.content || [];
 
       // chatId 순으로 정렬 (오래된 → 최신)
-      messages.sort(
+      historyData.sort(
         (a: ChatHistoryMessage, b: ChatHistoryMessage) => a.chatId - b.chatId
       );
 
-      setChatHistory(messages);
+      setChatHistory(historyData);
+      setHasMoreHistory(response.data.hasNext || false);
 
-      if (messages.length > 0) {
-        latestIdRef.current = messages[messages.length - 1].chatId;
+      if (historyData.length > 0) {
+        latestIdRef.current = historyData[historyData.length - 1].chatId;
       }
 
-      console.log(`히스토리 로드 완료: ${messages.length}개 메시지`);
+      console.log(`히스토리 로드 완료: ${historyData.length}개 메시지`);
 
       // jump가 있으면 해당 chatId로 스크롤
       if (jump) {
@@ -92,8 +100,8 @@ export default function ChatPage() {
 
       // 최신을 보고 있으면 읽음 처리
       if (latestIdRef.current) {
-        await patchReadStatus(roomId, latestIdRef.current);
-        console.log("읽음 처리 완료:", latestIdRef.current);
+        await readLatest(roomId);
+        console.log("최신 메시지 읽음 처리 완료:", latestIdRef.current);
       }
     } catch (err) {
       console.error("히스토리 로드 실패:", err);
@@ -129,7 +137,7 @@ export default function ChatPage() {
       console.log("WebSocket 연결 성공");
       setIsConnected(true);
 
-      // 방 구독
+      // 메시지 스트림 구독
       const roomSubscription = client.subscribe(
         `/sub/rooms/${roomId}`,
         (msg: IMessage) => {
@@ -137,40 +145,73 @@ export default function ChatPage() {
             const data = JSON.parse(msg.body) as ChatHistoryMessage;
             console.log("새 메시지 수신:", data);
 
-            setChatHistory((prev) => {
-              // 중복 메시지 방지
-              if (prev.find((x) => x.chatId === data.chatId)) return prev;
+            // ChatMessage 형태로 변환
+            const newMessage: ChatMessage = {
+              id: data.chatId.toString(),
+              senderName: data.senderNickname,
+              content: data.message,
+              isMyMessage: data.mine,
+              senderId: data.senderNickname,
+              messageType: data.messageType,
+              images: data.images?.map((img) => img.imageUrl) || undefined,
+              timeLabel: data.timeLabel,
+              othersUnreadUsers: data.othersUnreadUsers,
+              createdAt: data.createdAt,
+            };
 
-              const newHistory = [...prev, data].sort(
-                (a, b) => a.chatId - b.chatId
-              );
-              latestIdRef.current = Math.max(latestIdRef.current, data.chatId);
-              return newHistory;
+            setMessages((prev) => {
+              // 중복 메시지 방지
+              if (prev.find((x) => x.id === newMessage.id)) return prev;
+              return [...prev, newMessage];
             });
 
-            // 최신을 보고 있으면 읽음 처리 및 스크롤
-            if (chatRef.current) {
-              const nearBottom =
-                chatRef.current.scrollHeight -
-                  chatRef.current.scrollTop -
-                  chatRef.current.clientHeight <
-                20;
+            latestIdRef.current = Math.max(latestIdRef.current, data.chatId);
 
-              if (nearBottom && data.messageType === "TEXT") {
-                patchReadStatus(roomId, latestIdRef.current);
-              }
-
-              // 스크롤 따라가기
-              if (nearBottom) {
-                setTimeout(() => {
-                  if (chatRef.current) {
-                    chatRef.current.scrollTop = chatRef.current.scrollHeight;
-                  }
-                }, 100);
-              }
+            // 최신을 보고 있으면 읽음 처리
+            if (data.messageType === "TEXT") {
+              setTimeout(() => readLatest(roomId), 400);
             }
           } catch (err) {
             console.error("메시지 파싱 실패:", err);
+          }
+        }
+      );
+
+      // 읽음 영수증 구독
+      const readSubscription = client.subscribe(
+        `/sub/rooms/${roomId}/read`,
+        (msg: IMessage) => {
+          try {
+            const readReceipt = JSON.parse(msg.body);
+            console.log("읽음 영수증 수신:", readReceipt);
+
+            if (
+              !readReceipt ||
+              !readReceipt.readerId ||
+              typeof readReceipt.lastReadChatId !== "number"
+            ) {
+              return;
+            }
+
+            // 메시지의 안읽음 카운트 감소
+            setMessages((prevMessages) => {
+              return prevMessages.map((msg) => {
+                const chatId = parseInt(msg.id) || 0;
+                if (
+                  chatId <= readReceipt.lastReadChatId &&
+                  msg.senderId !== readReceipt.readerId
+                ) {
+                  const currentCount = msg.othersUnreadUsers || 0;
+                  return {
+                    ...msg,
+                    othersUnreadUsers: Math.max(0, currentCount - 1),
+                  };
+                }
+                return msg;
+              });
+            });
+          } catch (err) {
+            console.error("읽음 영수증 파싱 실패:", err);
           }
         }
       );
@@ -187,6 +228,7 @@ export default function ChatPage() {
       // 구독 정보 저장
       (client as any).__subscriptions = [
         roomSubscription,
+        readSubscription,
         notificationSubscription,
       ];
     };
@@ -224,18 +266,56 @@ export default function ChatPage() {
   }, [roomId, token, wsUrl]);
 
   // 메시지 전송
-  const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !roomId) return;
+  const handleSendMessage = useCallback(
+    async (message: string) => {
+      if (!message.trim() || !roomId || !stompClientRef.current?.connected)
+        return;
 
+      try {
+        console.log("메시지 전송:", { roomId, content: message });
+        stompClientRef.current.publish({
+          destination: `/pub/rooms/${roomId}`,
+          body: JSON.stringify({ message }),
+        });
+      } catch (err) {
+        console.error("메시지 전송 실패:", err);
+        setError("메시지 전송에 실패했습니다.");
+      }
+    },
+    [roomId]
+  );
+
+  // 더 많은 히스토리 로드
+  const loadMoreHistory = useCallback(async () => {
+    if (!roomId || isLoadingHistory || !hasMoreHistory) return;
+
+    setIsLoadingHistory(true);
     try {
-      console.log("메시지 전송:", { roomId, content: newMessage });
-      await sendChatMessage(roomId, newMessage);
-      setNewMessage("");
+      const beforeId =
+        chatHistory.length > 0
+          ? chatHistory[chatHistory.length - 1].chatId.toString()
+          : undefined;
+
+      const response = await getChatHistory(roomId, beforeId, 50, true);
+      const newHistory = response.data.content || [];
+
+      setChatHistory((prev) => [...prev, ...newHistory]);
+      setHasMoreHistory(response.data.hasNext || false);
     } catch (err) {
-      console.error("메시지 전송 실패:", err);
-      setError("메시지 전송에 실패했습니다.");
+      console.error("히스토리 추가 로드 실패:", err);
+    } finally {
+      setIsLoadingHistory(false);
     }
-  }, [newMessage, roomId]);
+  }, [roomId, chatHistory, isLoadingHistory, hasMoreHistory]);
+
+  // 읽음 처리
+  const handleMarkAsRead = useCallback(async () => {
+    if (!roomId) return;
+    await readLatest(roomId);
+  }, [roomId]);
+
+  // 프로필 클릭 핸들러 (빈 함수)
+  const handleProfileClick = () => {};
 
   // 초기화
   useEffect(() => {
@@ -254,7 +334,6 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="bg-white rounded-lg shadow-sm border">
           {/* 채팅 헤더 */}
@@ -282,85 +361,37 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* 채팅 메시지 영역 */}
-          <div ref={chatRef} className="h-96 overflow-y-auto p-4 space-y-3">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="text-gray-500">메시지를 불러오는 중...</div>
-              </div>
-            ) : (
-              chatHistory.map((message) => (
-                <div
-                  key={message.chatId}
-                  data-chat-id={message.chatId}
-                  className={`flex ${
-                    message.mine ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`max-w-xs px-4 py-2 rounded-lg ${
-                      message.messageType === "SYSTEM"
-                        ? "bg-gray-100 text-gray-700 text-center mx-auto"
-                        : message.mine
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-900"
-                    }`}
-                  >
-                    {message.messageType !== "SYSTEM" && (
-                      <div className="text-xs opacity-70 mb-1">
-                        {message.mine
-                          ? "나"
-                          : message.senderNickname || "알 수 없음"}
-                      </div>
-                    )}
-                    <div>{message.message}</div>
-                    {message.timeLabel && (
-                      <div className="text-xs opacity-70 mt-1 text-right">
-                        {message.timeLabel}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+          {/* 채팅 메시지 영역 - ChatMessageList 사용 */}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <ChatMessageList
+              messages={messages}
+              chatHistory={chatHistory}
+              hasMoreHistory={hasMoreHistory}
+              isLoadingHistory={isLoadingHistory}
+              onLoadMoreHistory={loadMoreHistory}
+              onProfileClick={handleProfileClick}
+              onListClick={() => {}}
+              onMarkAsRead={handleMarkAsRead}
+              roomId={roomId}
+            />
           </div>
 
-          {/* 메시지 입력 영역 */}
-          <div className="p-4 border-t">
-            {error && (
-              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {error}
-                <button
-                  onClick={() => setError(null)}
-                  className="ml-2 text-red-500 hover:text-red-700"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder="메시지를 입력하세요..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!isConnected}
-              />
+          {/* 메시지 입력 영역 - ChatMessageInput 사용 */}
+          {error && (
+            <div className="mx-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
               <button
-                onClick={handleSendMessage}
-                disabled={!newMessage.trim() || !isConnected}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                onClick={() => setError(null)}
+                className="ml-2 text-red-500 hover:text-red-700"
               >
-                전송
+                ✕
               </button>
             </div>
-          </div>
+          )}
+
+          <ChatMessageInput onSendMessage={handleSendMessage} roomId={roomId} />
         </div>
       </div>
-
     </div>
   );
 }

@@ -36,9 +36,27 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   const [readStatus, setReadStatus] = useState<{ [messageId: string]: number }>(
     {}
   );
+  const isUserScrollingRef = useRef(false); // 사용자가 스크롤 중인지 추적
 
+  // 자동 스크롤 - 사용자가 스크롤 중이 아닐 때만 실행
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // 사용자가 스크롤 중이면 자동 스크롤 안 함
+    if (isUserScrollingRef.current) {
+      console.log("사용자 스크롤 중 - 자동 스크롤 건너뜀");
+      return;
+    }
+
+    const container = containerRef.current;
+    if (container) {
+      // 이미 거의 맨 아래에 있을 때만 자동 스크롤
+      const isNearBottom =
+        container.scrollTop + container.clientHeight >=
+        container.scrollHeight - 200;
+
+      if (isNearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
   }, [messages]);
 
   // 스크롤 이벤트 핸들러 - 사용자가 메시지를 실제로 볼 때 읽음 처리
@@ -46,7 +64,19 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
     const container = containerRef.current;
     if (!container || !onMarkAsRead) return;
 
+    let scrollTimeout: NodeJS.Timeout;
+
     const handleScroll = () => {
+      // 사용자가 스크롤 중임을 표시
+      isUserScrollingRef.current = true;
+
+      // 스크롤이 멈춘 후 0.5초 뒤에 플래그 해제
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        isUserScrollingRef.current = false;
+        console.log("사용자 스크롤 종료");
+      }, 500);
+
       // 스크롤이 맨 아래에 가까우면 읽음 처리
       const isNearBottom =
         container.scrollTop + container.clientHeight >=
@@ -65,6 +95,7 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
 
     return () => {
       container.removeEventListener("scroll", handleScroll);
+      clearTimeout(scrollTimeout);
     };
   }, [onMarkAsRead]);
 
@@ -249,6 +280,9 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
         senderId: historyMsg.senderNickname, // 임시로 nickname을 ID로 사용
         messageType: historyMsg.messageType, // 메시지 타입 추가
         images: historyMsg.images?.map((img) => img.imageUrl) || undefined, // 이미지 URL 매핑
+        timeLabel: historyMsg.timeLabel, // 시간 레이블 추가
+        othersUnreadUsers: (historyMsg as any).othersUnreadUsers, // 안읽음 카운트 추가
+        createdAt: historyMsg.createdAt, // 생성 시간 추가
       };
 
       // console.log("히스토리 메시지 변환:", {
@@ -304,6 +338,63 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
 
   // 모든 메시지가 비어있는지 확인 (로딩 중이 아닐 때만)
   const hasNoMessages = allMessages.length === 0 && !isLoadingHistory;
+
+  // Run Grouping: 같은 senderId + 같은 분(minute) 단위로 그룹핑
+  const groupedMessages = React.useMemo(() => {
+    // 분(minute) 키 생성 함수
+    const minuteKeyOf = (createdAt: string): string | null => {
+      try {
+        const d = new Date(createdAt);
+        const yy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const HH = String(d.getHours()).padStart(2, "0");
+        const MM = String(d.getMinutes()).padStart(2, "0");
+        return `${yy}-${mm}-${dd} ${HH}:${MM}`;
+      } catch {
+        return null;
+      }
+    };
+
+    // 시스템 메시지 체크
+    const isSystemType = (messageType?: string): boolean => {
+      if (!messageType) return false;
+      const type = messageType.toUpperCase();
+      return type === "SYSTEM" || type.startsWith("SYSTEM_");
+    };
+
+    // Run 키 생성: senderId|minuteKey
+    const runKeyOf = (msg: ChatMessage): string | null => {
+      if (isSystemType(msg.messageType)) return null;
+      const sid = msg.senderId ? String(msg.senderId).trim() : "";
+      const mk = minuteKeyOf(msg.createdAt || "");
+      if (!sid || !mk) return null;
+      return `${sid}|${mk}`;
+    };
+
+    // 메시지에 Run Grouping 정보 추가
+    const messagesWithGrouping = allMessages.map((msg, index) => {
+      const currentRunKey = runKeyOf(msg);
+      const prevRunKey = index > 0 ? runKeyOf(allMessages[index - 1]) : null;
+      const nextRunKey =
+        index < allMessages.length - 1
+          ? runKeyOf(allMessages[index + 1])
+          : null;
+
+      // 그룹 내 첫 메시지인지 (이전 메시지와 runKey가 다름)
+      const isFirstInRun = currentRunKey !== prevRunKey;
+      // 그룹 내 마지막 메시지인지 (다음 메시지와 runKey가 다름)
+      const isLastInRun = currentRunKey !== nextRunKey;
+
+      return {
+        ...msg,
+        showNickname: isFirstInRun || !currentRunKey, // 첫 메시지이거나 시스템 메시지
+        showTimestamp: isLastInRun || !currentRunKey, // 마지막 메시지이거나 시스템 메시지
+      };
+    });
+
+    return messagesWithGrouping;
+  }, [allMessages]);
 
   return (
     <div
@@ -371,19 +462,12 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
         </div>
       )}
 
-      {/* 통합된 메시지 리스트 */}
-      {allMessages.map((message) => {
+      {/* 통합된 메시지 리스트 (Run Grouping 적용) */}
+      {groupedMessages.map((message) => {
         const messageId = message.id;
-        const unreadCount = readStatus[messageId] || 0;
-
-        // 읽지 않은 사람 수가 있을 때만 로그 출력 (디버깅용)
-        if (unreadCount > 0) {
-          // console.log("메시지 읽지 않은 사람 수:", {
-          //   messageId,
-          //   content: message.content,
-          //   unreadCount,
-          // });
-        }
+        // ✅ message.othersUnreadUsers를 우선 사용 (실시간 업데이트 반영)
+        const unreadCount =
+          message.othersUnreadUsers ?? readStatus[messageId] ?? 0;
 
         return (
           <ChatMessageItem
@@ -391,6 +475,8 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
             message={message}
             onProfileClick={onProfileClick}
             unreadCount={unreadCount}
+            showTimestamp={message.showTimestamp}
+            showNickname={message.showNickname}
           />
         );
       })}

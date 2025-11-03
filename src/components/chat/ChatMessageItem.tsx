@@ -7,71 +7,59 @@ interface ChatMessageItemProps {
   message: ChatMessage;
   onProfileClick: ProfileClickHandler;
   unreadCount?: number;
+  showTimestamp?: boolean; // Run Grouping: 마지막 메시지만 타임스탬프 표시
+  showNickname?: boolean; // Run Grouping: 첫 메시지만 닉네임 표시
 }
 
 const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   message,
   onProfileClick,
   unreadCount = 0,
+  showTimestamp = true,
+  showNickname = true,
 }) => {
   // useAuth에서 현재 사용자 정보 가져오기
   const { user } = useAuth();
   const currentUserNickname = user?.username || null;
 
-  // 디버깅을 위한 로그 추가 (주석 처리)
-  // console.log("ChatMessageItem 렌더링:", {
-  //   messageId: message.id,
-  //   senderName: message.senderName,
-  //   content: message.content,
-  //   isMyMessage: message.isMyMessage,
-  //   messageType: message.messageType,
-  //   currentUserNickname,
-  // });
-
   // 현재 사용자와 메시지 발신자가 같은지 판단
   const isMyMessage =
     message.isMyMessage ||
     (currentUserNickname && message.senderName === currentUserNickname);
-  const displayName = isMyMessage
-    ? `${message.senderName} (나)`
-    : message.senderName;
+  const displayName = isMyMessage ? message.senderName : message.senderName;
 
-  // console.log("메시지 소유자 최종 판단:", {
-  //   senderName: message.senderName,
-  //   currentUserNickname,
-  //   isMyMessage,
-  //   displayName,
-  // });
-
-  // 읽지 않은 사람 수가 있을 때만 로그 출력 (디버깅용)
-  useEffect(() => {
-    if (unreadCount > 0) {
-      // console.log("읽지 않은 메시지:", {
-      //   messageId: message.id,
-      //   content: message.content,
-      //   unreadCount,
-      //   isMyMessage,
-      // });
+  // 타임스탬프 포맷팅 함수
+  const formatTimestamp = (createdAt?: string): string => {
+    if (!createdAt) return "";
+    try {
+      const date = new Date(createdAt);
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const period = hours >= 12 ? "오후" : "오전";
+      const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+      const displayMinutes = minutes.toString().padStart(2, "0");
+      return `${period} ${displayHours}:${displayMinutes}`;
+    } catch {
+      return "";
     }
-  }, [message.id, message.content, unreadCount, isMyMessage]);
+  };
 
-  // 입장/퇴장 안내 메시지 처리 (messageType과 무관하게 content 패턴으로 처리)
-  const isJoinOrLeave =
+  // 실제 표시할 타임스탬프 (timeLabel 우선, 없으면 createdAt 포맷팅)
+  const displayTime = message.timeLabel || formatTimestamp(message.createdAt);
+
+  // 시스템 메시지 체크 (messageType이나 content 패턴으로)
+  const isSystemMessage =
+    (message.messageType &&
+      (message.messageType.toUpperCase() === "SYSTEM" ||
+        message.messageType.toUpperCase().startsWith("SYSTEM_"))) ||
     message.content.includes("님이 입장했습니다.") ||
     message.content.includes("님이 퇴장했습니다.");
-  if (isJoinOrLeave) {
-    if (isMyMessage) {
-      return (
-        <div className="flex justify-end my-2">
-          <div className="bg-[#6E4213] text-white text-sm px-3 py-2 rounded-lg max-w-xs rounded-br-none">
-            {message.content}
-          </div>
-        </div>
-      );
-    }
+
+  // 시스템 메시지는 중앙 정렬, 회색 타원형 배경
+  if (isSystemMessage) {
     return (
       <div className="flex justify-center my-2">
-        <div className="bg-gray-100 text-gray-600 text-sm px-3 py-2 rounded-lg max-w-xs text-center">
+        <div className="bg-gray-100 text-gray-600 text-sm px-4 py-2 rounded-full max-w-xs text-center">
           {message.content}
         </div>
       </div>
@@ -81,86 +69,143 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   return (
     <div
       key={message.id}
-      className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}
+      className={`flex items-end gap-2 my-1 ${
+        isMyMessage ? "justify-end" : "justify-start"
+      }`}
     >
-      <div
-        className={`flex items-start max-w-xs md:max-w-md ${
-          isMyMessage ? "flex-row-reverse space-x-reverse" : "space-x-3"
-        }`}
-      >
-        {/* 프로필 이미지/아이콘 */}
-        <div
-          className={`cursor-pointer transition duration-150 ${
-            isMyMessage ? "ml-2" : "mr-2"
-          }`}
-          onClick={(event) =>
-            onProfileClick(message.senderId, message.senderName, event)
-          }
-        >
-          <ProfileIcon variant={isMyMessage ? "default" : "amber"} />
-        </div>
-
-        <div className="flex flex-col">
-          {/* 이름 */}
-          <span
-            className={`text-xs text-gray-500 mb-1 ${
-              isMyMessage ? "text-right" : "text-left"
-            }`}
-          >
-            {displayName}
-          </span>
-
-          {/* 메시지 내용 */}
-          <div className="flex flex-col gap-2">
-            {/* 텍스트 메시지 */}
-            {message.content && (
-              <div
-                className={`p-3 rounded-xl shadow-sm ${
-                  isMyMessage
-                    ? "bg-[#6E4213] text-white rounded-br-none"
-                    : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
-                }`}
-              >
-                {message.content}
-              </div>
-            )}
-
-            {/* 이미지 표시 */}
-            {message.images && message.images.length > 0 && (
-              <div className="flex flex-col gap-2">
-                {message.images.map((imageUrl, index) => (
-                  <div
-                    key={index}
-                    className={`overflow-hidden rounded-xl shadow-sm ${
-                      isMyMessage ? "rounded-br-none" : "rounded-tl-none"
-                    }`}
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={`채팅 이미지 ${index + 1}`}
-                      className="max-w-xs w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => window.open(imageUrl, "_blank")}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 읽지 않은 사람 수 표시 (읽지 않은 사람이 있을 때만, 내 메시지에도 표시) */}
-          {unreadCount > 0 && (
+      {/* 왼쪽 정렬(상대방): 아바타 - 말풍선 - 메타 */}
+      {!isMyMessage && (
+        <>
+          {/* 아바타 (닉네임이 표시되는 메시지에만) */}
+          {showNickname ? (
             <div
-              className={`flex mt-1 items-center ${
-                isMyMessage ? "justify-start" : "justify-end"
-              }`}
+              className="cursor-pointer transition duration-150 flex-shrink-0"
+              onClick={(event) =>
+                onProfileClick(message.senderId, message.senderName, event)
+              }
             >
-              <span className="text-[#6E4213] text-xs font-semibold">
-                {unreadCount}
-              </span>
+              <ProfileIcon variant="amber" />
             </div>
+          ) : (
+            <div className="w-9 flex-shrink-0" />
           )}
-        </div>
-      </div>
+
+          <div className="flex flex-col max-w-xs">
+            {/* 닉네임 */}
+            {showNickname && (
+              <span className="text-xs text-gray-600 mb-1 ml-1">
+                {displayName}
+              </span>
+            )}
+
+            {/* 말풍선 + 메타 */}
+            <div className="flex items-end gap-2">
+              {/* 말풍선 */}
+              <div>
+                {/* 텍스트 메시지 */}
+                {message.content && (
+                  <div className="bg-white text-gray-800 px-3 py-2 rounded-2xl rounded-tl-none shadow-sm border border-gray-200">
+                    {message.content}
+                  </div>
+                )}
+
+                {/* 이미지 표시 */}
+                {message.images && message.images.length > 0 && (
+                  <div className="flex flex-col gap-2 mt-1">
+                    {message.images.map((imageUrl, index) => (
+                      <div
+                        key={index}
+                        className="overflow-hidden rounded-xl shadow-sm"
+                      >
+                        <img
+                          src={imageUrl}
+                          alt={`채팅 이미지 ${index + 1}`}
+                          className="max-w-xs w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(imageUrl, "_blank")}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 메타 (타임스탬프 + 안읽음 카운트) */}
+              {(displayTime || unreadCount > 0) && (
+                <div className="flex flex-col items-start gap-1 text-xs">
+                  {displayTime && (
+                    <span className="text-[#6E4213]">{displayTime}</span>
+                  )}
+                  {unreadCount > 0 && (
+                    <span className="text-[#6E4213] font-semibold">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 오른쪽 정렬(나): 메타 - 말풍선 - 아바타 */}
+      {isMyMessage && (
+        <>
+          <div className="flex flex-col max-w-xs items-end">
+            {/* 닉네임 (내 메시지에는 보통 표시 안 함, 하지만 구조상 포함) */}
+            {showNickname && (
+              <span className="text-xs text-gray-600 mb-1 mr-1 invisible">
+                {displayName}
+              </span>
+            )}
+
+            {/* 메타 + 말풍선 */}
+            <div className="flex items-end gap-2 flex-row-reverse">
+              {/* 말풍선 */}
+              <div>
+                {/* 텍스트 메시지 */}
+                {message.content && (
+                  <div className="bg-[#6E4213] text-white px-3 py-2 rounded-2xl rounded-br-none shadow-sm">
+                    {message.content}
+                  </div>
+                )}
+
+                {/* 이미지 표시 */}
+                {message.images && message.images.length > 0 && (
+                  <div className="flex flex-col gap-2 mt-1">
+                    {message.images.map((imageUrl, index) => (
+                      <div
+                        key={index}
+                        className="overflow-hidden rounded-xl shadow-sm"
+                      >
+                        <img
+                          src={imageUrl}
+                          alt={`채팅 이미지 ${index + 1}`}
+                          className="max-w-xs w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(imageUrl, "_blank")}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 메타 (타임스탬프 + 안읽음 카운트) */}
+              {(displayTime || unreadCount > 0) && (
+                <div className="flex flex-col items-end gap-1 text-xs">
+                  {unreadCount > 0 && (
+                    <span className="text-[#6E4213] font-semibold">
+                      {unreadCount}
+                    </span>
+                  )}
+                  {displayTime && (
+                    <span className="text-[#6E4213]">{displayTime}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

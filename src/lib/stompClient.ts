@@ -61,6 +61,7 @@ export interface ChatMessage {
   mine: boolean;
   messageType: "TEXT" | "SYSTEM" | "SYSTEM_JOIN" | string;
   createdAt: string;
+  othersUnreadUsers?: number; // 읽지 않은 사용자 수
   images?: Array<{
     imageId: number;
     originalFileName: string;

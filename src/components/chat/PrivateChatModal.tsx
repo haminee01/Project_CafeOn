@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ChatMessageList from "./ChatMessageList";
 import ChatMessageInput from "./ChatMessageInput";
 import ChatSidebar from "./ChatSidebar";
@@ -20,6 +20,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
   onClose,
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const hasJoinedOnce = useRef(false); // 한 번 입장했는지 추적
 
   // 현재 사용자 정보 가져오기
   const { user } = useAuth();
@@ -51,22 +52,30 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
     counterpartName: targetUser.name,
   });
 
-  // 컴포넌트 마운트 시 자동으로 채팅방 참여
+  // 컴포넌트 마운트 시 자동으로 채팅방 참여 (한 번만)
   useEffect(() => {
-    console.log("=== PrivateChatModal 마운트, joinChat 호출 ===", {
+    // 이미 한 번 입장 시도했으면 재입장 안 함
+    if (hasJoinedOnce.current) {
+      console.log("=== 이미 입장 시도함, 재입장 방지 ===");
+      return;
+    }
+
+    console.log("=== PrivateChatModal joinChat 확인 ===", {
       targetUserId: targetUser.id,
       targetUserName: targetUser.name,
       isJoined,
       isLoading,
       error,
+      roomId,
     });
 
-    // 이미 참여 중이거나, 로딩 중이거나, 에러가 있으면 재시도하지 않음
+    // 참여하지 않았고, 로딩 중이 아니고, 에러가 없으면 참여
     if (!isJoined && !isLoading && !error) {
+      console.log("=== PrivateChatModal joinChat 호출 ===");
+      hasJoinedOnce.current = true;
       joinChat();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 마운트 시 한 번만 실행
+  }, [isJoined, isLoading, error, joinChat, targetUser.id, roomId]);
 
   // 사이드바 닫기 핸들러
   const closeSidebar = () => {
@@ -266,9 +275,14 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
                 onToggleNotification={handleToggleNotification}
                 onClose={closeSidebar}
                 onProfileClick={() => {}} // 1:1 채팅에서는 별도 동작 없음
-                onLeave={() => {
-                  leaveChat();
-                  onClose();
+                onLeave={async () => {
+                  try {
+                    await leaveChat();
+                    onClose(); // 나가기 성공 시에만 모달 닫기
+                  } catch (err) {
+                    console.error("1:1 채팅방 나가기 실패:", err);
+                    // 에러는 useDmChat에서 이미 setError로 처리됨
+                  }
                 }}
                 title="참여자 목록"
                 subtitle="참여자"

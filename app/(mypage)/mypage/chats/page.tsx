@@ -140,6 +140,9 @@ const ChatRoomView: React.FC<{
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user } = useAuth();
   const currentUserId = user?.id || "user-me";
+  const lastActiveRoomIdRef = useRef<number | null>(null); // 채팅방 전환 추적
+  const hasJoinedOnceRef = useRef<Set<number>>(new Set()); // 입장한 채팅방 추적
+  const isLeavingRef = useRef(false); // 나가기 중인지 추적
 
   // 채팅방 타입에 따라 다른 훅 사용
   const isGroupChat = activeRoom?.type === "GROUP";
@@ -203,12 +206,42 @@ const ChatRoomView: React.FC<{
 
   // 채팅방 나가기 핸들러
   const handleLeaveChat = async () => {
-    if (currentChat && window.confirm("정말로 이 채팅방을 나가시겠습니까?")) {
+    if (
+      currentChat &&
+      activeRoom &&
+      window.confirm("정말로 이 채팅방을 나가시겠습니까?")
+    ) {
       try {
+        console.log("=== 마이페이지 채팅방 나가기 시작 ===", {
+          roomId: activeRoom.roomId,
+          type: activeRoom.type,
+        });
+
+        // 나가기 중 플래그 설정 (자동 재입장 방지)
+        isLeavingRef.current = true;
+
         await currentChat.leaveChat();
+
+        console.log("=== 마이페이지 채팅방 나가기 성공 ===");
+
+        // 나간 채팅방을 추적 목록에서 제거하여 다시 클릭 시 재입장 가능
+        hasJoinedOnceRef.current.delete(activeRoom.roomId);
+        lastActiveRoomIdRef.current = null; // 마지막 활성 채팅방 ID도 초기화
+
+        // 채팅방 목록으로 돌아가기
+        console.log("=== 채팅방 뷰 닫기, 목록으로 돌아감 ===");
         onLeaveRoom();
+
+        // 약간의 지연 후 플래그 해제
+        setTimeout(() => {
+          isLeavingRef.current = false;
+          console.log("=== 나가기 플래그 해제 ===");
+        }, 500);
       } catch (error) {
-        console.error("채팅방 나가기 실패:", error);
+        console.error("=== 마이페이지 채팅방 나가기 실패 ===", error);
+        // 에러 발생 시 플래그 해제
+        isLeavingRef.current = false;
+        // 채팅방 뷰는 그대로 유지
       }
     }
   };
@@ -232,15 +265,31 @@ const ChatRoomView: React.FC<{
     console.log("프로필 클릭:", { senderId, senderName });
   };
 
-  // 채팅방이 선택되면 자동으로 참여
+  // 채팅방이 선택되면 자동으로 참여 (채팅방이 바뀔 때만, 나간 후 재입장 방지)
   useEffect(() => {
-    if (
-      activeRoom &&
-      currentChat &&
-      !currentChat.isJoined &&
-      !currentChat.isLoading &&
-      !currentChat.error
-    ) {
+    if (!activeRoom || !currentChat) return;
+
+    const roomId = activeRoom.roomId;
+
+    // 나가기 중이면 자동 입장 안 함
+    if (isLeavingRef.current) {
+      console.log("=== 나가기 중, 자동 입장 차단 (마이페이지) ===", roomId);
+      return;
+    }
+
+    // 같은 채팅방이면 재입장 안 함
+    if (lastActiveRoomIdRef.current === roomId) {
+      console.log("=== 같은 채팅방, 재입장 방지 (마이페이지) ===", roomId);
+      return;
+    }
+
+    // 이 채팅방에 한 번 입장했고 나간 경우 재입장 안 함
+    if (hasJoinedOnceRef.current.has(roomId) && !currentChat.isJoined) {
+      console.log("=== 나간 채팅방, 재입장 방지 (마이페이지) ===", roomId);
+      return;
+    }
+
+    if (!currentChat.isJoined && !currentChat.isLoading && !currentChat.error) {
       console.log("채팅방 자동 참여 시도 (마이페이지):", {
         roomId: activeRoom.roomId,
         type: activeRoom.type,
@@ -254,10 +303,15 @@ const ChatRoomView: React.FC<{
         console.error("단체 채팅방인데 cafeId가 없습니다!");
       }
 
+      // 채팅방 ID 기록
+      lastActiveRoomIdRef.current = roomId;
+      hasJoinedOnceRef.current.add(roomId);
+
       // 약간의 지연을 두고 참여 (상태 안정화를 위해)
-      const timeoutId = setTimeout(() => {
+      const timeoutId = setTimeout(async () => {
         console.log("자동 참여 실행 중...");
-        currentChat.joinChat();
+        await currentChat.joinChat();
+        // readLatest는 useCafeChat과 useDmChat 내부에서 이미 호출됨
       }, 300);
 
       return () => clearTimeout(timeoutId);
@@ -544,8 +598,10 @@ const ChatListPage = () => {
             <ChatRoomView
               activeRoom={activeRoom}
               onLeaveRoom={() => {
-                setActiveRoom(null);
-                setActiveRoomId(null);
+                console.log("=== onLeaveRoom 호출됨, 페이지 전체 새로고침 ===");
+
+                // ✅ 페이지 전체 새로고침으로 완전 초기화
+                window.location.reload();
               }}
             />
           </main>

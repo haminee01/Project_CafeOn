@@ -25,6 +25,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
   useEscapeKey(onClose);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  const hasJoinedOnce = useRef(false); // 한 번 입장했는지 추적
 
   // 현재 사용자 정보 가져오기
   const { user } = useAuth();
@@ -108,10 +109,17 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     closeSidebar();
   };
 
-  // 채팅방이 열릴 때 자동으로 참여
+  // 채팅방이 열릴 때 자동으로 참여 (한 번만)
   useEffect(() => {
+    // 이미 한 번 입장 시도했으면 재입장 안 함
+    if (hasJoinedOnce.current) {
+      console.log("=== 이미 입장 시도함, 재입장 방지 (단체 채팅) ===");
+      return;
+    }
+
     if (roomId && !isJoined && !isLoading) {
       console.log("채팅방 자동 참여 시작:", roomId);
+      hasJoinedOnce.current = true;
       joinChat();
     }
   }, [roomId, isJoined, isLoading, joinChat]);
@@ -306,9 +314,14 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
                 onToggleNotification={handleToggleNotification}
                 onClose={closeSidebar}
                 onProfileClick={handleSidebarProfileClick}
-                onLeave={() => {
-                  leaveChat();
-                  onClose();
+                onLeave={async () => {
+                  try {
+                    await leaveChat();
+                    onClose(); // 나가기 성공 시에만 모달 닫기
+                  } catch (err) {
+                    console.error("채팅방 나가기 실패:", err);
+                    // 에러는 useCafeChat에서 이미 setError로 처리됨
+                  }
                 }}
                 title="참여자 목록"
                 subtitle="참여자"

@@ -6,6 +6,9 @@ export interface ChatMessage {
   senderId: string;
   messageType?: string; // 메시지 타입 추가 (TEXT, SYSTEM 등)
   images?: string[]; // 이미지 URL 배열
+  timeLabel?: string; // 시간 레이블 (예: "오후 2:19")
+  othersUnreadUsers?: number; // 읽지 않은 사용자 수
+  createdAt?: string; // 생성 시간 (Run Grouping용)
 }
 
 export interface UserProfile {

@@ -74,6 +74,7 @@ export interface ChatHistoryMessage {
   mine: boolean;
   messageType: "TEXT" | "SYSTEM" | string;
   createdAt: string;
+  othersUnreadUsers?: number; // 안읽음 카운트 추가
   images?: Array<{
     imageId: number;
     originalFileName: string;
@@ -625,21 +626,64 @@ export const getUnreadNotifications = async (): Promise<
     console.log("알림 목록 응답:", data);
 
     // 응답 구조 확인 및 데이터 추출
+    let notifications: NotificationResponse[] = [];
+
     if (data && typeof data === "object") {
       if (Array.isArray(data)) {
         // 배열로 직접 반환된 경우
-        return data;
+        notifications = data;
       } else if (data.data && Array.isArray(data.data)) {
         // { message: "...", data: [...] } 구조인 경우
         console.log("응답에서 data 배열 추출:", data.data);
-        return data.data;
+        notifications = data.data;
       } else {
         console.log("예상하지 못한 응답 구조:", data);
         return [];
       }
     }
 
-    return [];
+    // ✅ 나간 단체 채팅방 알림 필터링
+    const filteredNotifications = notifications.filter(
+      (notification: NotificationResponse) => {
+        // deeplink에서 roomId 추출 (예: /mypage/chats?roomId=9)
+        if (notification.deeplink && notification.deeplink.includes("/chats")) {
+          const match = notification.deeplink.match(/roomId=(\d+)/);
+          if (match) {
+            const notificationRoomId = match[1];
+
+            // localStorage에서 모든 chat_left_ 키 확인
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith("chat_left_")) {
+                try {
+                  const leftData = JSON.parse(
+                    localStorage.getItem(key) || "{}"
+                  );
+                  // roomId 비교 (문자열로 비교)
+                  if (
+                    leftData.roomId === notificationRoomId ||
+                    leftData.roomId === parseInt(notificationRoomId)
+                  ) {
+                    console.log(
+                      `🚫 나간 단체 채팅방 알림 필터링: roomId=${notificationRoomId}, title=${notification.title}`
+                    );
+                    return false; // 필터링 (알림 제외)
+                  }
+                } catch {}
+              }
+            }
+          }
+        }
+        return true; // 유지
+      }
+    );
+
+    console.log("필터링 후 알림:", {
+      원본개수: notifications.length,
+      필터링후: filteredNotifications.length,
+    });
+
+    return filteredNotifications;
   } catch (error) {
     console.error("알림 목록 조회 실패:", error);
     return [];
@@ -1021,8 +1065,14 @@ export const createDmChat = async (
       // 에러 응답 본문 파싱
       let errorMessage = `HTTP error! status: ${response.status}`;
       let isDuplicateEntry = false;
+      let extractedRoomId: string | null = null;
+
       try {
         const errorText = await response.text();
+        console.log("=== createDmChat 에러 응답 ===", {
+          status: response.status,
+          errorText,
+        });
 
         // JSON 파싱 시도
         try {
@@ -1031,11 +1081,20 @@ export const createDmChat = async (
 
           // Duplicate entry 에러 감지 (이미 참여 중인 경우)
           if (
-            response.status === 400 &&
+            (response.status === 400 || response.status === 500) &&
             (errorMessage.includes("Duplicate entry") ||
-              errorMessage.includes("uk_crm_room_user"))
+              errorMessage.includes("uk_crm_room_user") ||
+              errorMessage.includes("chat_room_members"))
           ) {
             isDuplicateEntry = true;
+            console.log("=== Duplicate entry 에러 감지 (JSON) ===");
+
+            // roomId 추출 시도: "Duplicate entry '7-d06eeb70-...' for key..."
+            const match = errorMessage.match(/Duplicate entry ['"](\d+)-/);
+            if (match && match[1]) {
+              extractedRoomId = match[1];
+              console.log("=== 에러에서 roomId 추출 성공 ===", extractedRoomId);
+            }
           }
         } catch {
           // JSON이 아닌 경우 텍스트 그대로 사용
@@ -1043,11 +1102,23 @@ export const createDmChat = async (
             errorMessage = errorText;
             // Duplicate entry 에러 감지 (이미 참여 중인 경우)
             if (
-              response.status === 400 &&
+              (response.status === 400 || response.status === 500) &&
               (errorText.includes("Duplicate entry") ||
-                errorText.includes("uk_crm_room_user"))
+                errorText.includes("uk_crm_room_user") ||
+                errorText.includes("chat_room_members"))
             ) {
               isDuplicateEntry = true;
+              console.log("=== Duplicate entry 에러 감지 (텍스트) ===");
+
+              // roomId 추출 시도
+              const match = errorText.match(/Duplicate entry ['"](\d+)-/);
+              if (match && match[1]) {
+                extractedRoomId = match[1];
+                console.log(
+                  "=== 에러에서 roomId 추출 성공 ===",
+                  extractedRoomId
+                );
+              }
             }
           }
         }
@@ -1068,21 +1139,16 @@ export const createDmChat = async (
 
       // Duplicate entry 에러인 경우 특별한 에러 타입으로 throw
       if (isDuplicateEntry) {
-        // 에러 메시지에서 roomId 추출 시도
-        // 에러 메시지 형식: "Duplicate entry '2-8fabfe1d-...' for key..."
-        let extractedRoomId: string | null = null;
-        try {
-          const match = errorMessage.match(/Duplicate entry ['"](\d+)-/);
-          if (match && match[1]) {
-            extractedRoomId = match[1];
-          }
-        } catch {}
+        console.log("=== Duplicate entry 에러로 처리 ===", {
+          extractedRoomId,
+          errorMessage,
+        });
 
         const duplicateError: any = new Error(
           "ALREADY_PARTICIPATING: 이미 채팅방에 참여 중입니다."
         );
         duplicateError.isDuplicateEntry = true;
-        duplicateError.status = 400;
+        duplicateError.status = response.status;
         duplicateError.roomId = extractedRoomId;
         throw duplicateError;
       }
@@ -1107,10 +1173,11 @@ export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
   try {
     const token = localStorage.getItem("accessToken");
 
-    console.log("채팅방 나가기 요청:", {
+    console.log("=== 채팅방 나가기 API 요청 ===", {
       url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/leave`,
       roomId,
-      token: token ? "토큰 존재" : "토큰 없음",
+      method: "DELETE",
+      token: token ? `토큰 존재 (${token.substring(0, 20)}...)` : "토큰 없음",
     });
 
     const response = await fetch(
@@ -1124,29 +1191,39 @@ export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
       }
     );
 
-    if (!response.ok) {
-      console.error(
-        "채팅방 나가기 API 에러:",
-        response.status,
-        response.statusText
-      );
+    console.log("=== 채팅방 나가기 API 응답 ===", {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
 
-      // 403, 404, 500 에러인 경우 무시 (이미 나간 것으로 처리)
-      if (
-        response.status === 403 ||
-        response.status === 404 ||
-        response.status === 500
-      ) {
-        console.log("채팅방 나가기 API 에러, 무시:", response.status);
+    // 204 No Content는 성공 (본문 없음)
+    if (response.status === 204) {
+      console.log("=== 채팅방 나가기 API 성공 (204 No Content) ===");
+      return;
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("=== 채팅방 나가기 API 에러 상세 ===", {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+        roomId,
+      });
+
+      // 404 (채팅방/멤버 없음)만 무시, 나머지는 에러 처리
+      if (response.status === 404) {
+        console.log("채팅방/멤버가 이미 삭제됨, 정상 처리:", response.status);
         return;
       }
 
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`채팅방 나가기 실패 (${response.status}): ${errorText}`);
     }
 
-    console.log("채팅방 나가기 성공");
+    console.log("=== 채팅방 나가기 API 성공 ===");
   } catch (error) {
-    console.error("채팅방 나가기 실패:", error);
+    console.error("=== 채팅방 나가기 최종 에러 ===", error);
     throw error;
   }
 };
@@ -1212,5 +1289,58 @@ export const toggleChatMute = async (
   } catch (error) {
     console.error("채팅방 알림 설정 실패:", error);
     throw error;
+  }
+};
+
+/**
+ * 채팅방 최신 메시지 읽음 처리
+ * POST /api/chat/rooms/{roomId}/members/me/read-latest
+ */
+export const readLatest = async (roomId: string): Promise<void> => {
+  try {
+    const token = localStorage.getItem("accessToken");
+
+    console.log("최신 메시지 읽음 처리 요청:", {
+      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,
+      roomId,
+      token: token ? "토큰 존재" : "토큰 없음",
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok && response.status !== 204) {
+      const errorText = await response.text();
+      console.error(
+        "최신 메시지 읽음 처리 API 에러:",
+        response.status,
+        response.statusText,
+        errorText
+      );
+
+      // 403, 404, 500 에러인 경우 무시
+      if (
+        response.status === 403 ||
+        response.status === 404 ||
+        response.status === 500
+      ) {
+        console.log("최신 메시지 읽음 처리 API 에러, 무시:", response.status);
+        return;
+      }
+
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    console.log("최신 메시지 읽음 처리 성공");
+  } catch (error) {
+    console.error("최신 메시지 읽음 처리 실패:", error);
+    // 읽음 처리 실패는 치명적이지 않으므로 에러를 던지지 않음
   }
 };

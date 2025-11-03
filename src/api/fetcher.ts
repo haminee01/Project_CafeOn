@@ -89,8 +89,12 @@ export const fetcher = async <T>(
       errorDetail = response.statusText || "응답을 파싱할 수 없습니다.";
     }
 
+    // HTTP 401 (인증 필요) 에러 발생 시 구체적인 메시지 출력
+    if (response.status === 401) {
+      errorMessage = `인증 필요 (401): 로그인이 필요한 서비스입니다.`;
+    }
     // HTTP 403 (권한 없음) 에러 발생 시 구체적인 메시지 출력
-    if (response.status === 403) {
+    else if (response.status === 403) {
       errorMessage = `권한 없음 (403): ${fullUrl} 요청에 실패했습니다. 이 API는 인증이 필요할 수 있습니다.`;
     } else {
       errorMessage = `API 요청 실패 (${response.status}): ${errorDetail}`;
