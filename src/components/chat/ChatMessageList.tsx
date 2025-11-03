@@ -38,6 +38,37 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   );
   const isUserScrollingRef = useRef(false); // 사용자가 스크롤 중인지 추적
 
+  // ===== Run Grouping 유틸 함수들 =====
+  // 분 단위 시간 키 생성 (YYYY-MM-DD HH:MM)
+  const minuteKeyOf = (createdAt: string): string | null => {
+    try {
+      const d = new Date(createdAt);
+      const yy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const HH = String(d.getHours()).padStart(2, "0");
+      const MM = String(d.getMinutes()).padStart(2, "0");
+      return `${yy}-${mm}-${dd} ${HH}:${MM}`;
+    } catch {
+      return null;
+    }
+  };
+
+  // 시스템 메시지 타입 체크
+  const isSystemType = (messageType: string): boolean => {
+    const type = (messageType || "").toString().toUpperCase();
+    return type === "SYSTEM" || type.startsWith("SYSTEM_");
+  };
+
+  // Run 키 생성 (senderId|minuteKey)
+  const runKeyOf = (msg: any): string | null => {
+    if (isSystemType(msg.messageType || "")) return null;
+    const sid = msg.senderId ? String(msg.senderId).trim() : "";
+    const mk = minuteKeyOf(msg.createdAt);
+    if (!sid || !mk) return null;
+    return `${sid}|${mk}`;
+  };
+
   // 자동 스크롤 - 사용자가 스크롤 중이 아닐 때만 실행
   useEffect(() => {
     // 사용자가 스크롤 중이면 자동 스크롤 안 함
@@ -236,15 +267,8 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   };
 
   // 채팅 히스토리를 ChatMessage 형태로 변환
-  const historyMessages: ChatMessage[] = chatHistory
-    .filter((historyMsg) => {
-      // 날짜 메시지는 필터링하여 제외
-      if (isDateMessage(historyMsg.message)) {
-        return false;
-      }
-      return true;
-    })
-    .map((historyMsg, index) => {
+  const historyMessages: ChatMessage[] = chatHistory.map(
+    (historyMsg, index) => {
       // 내 닉네임 후보들 수집
       const myNickname = getMyNickname();
 
@@ -294,39 +318,63 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
       // });
 
       return convertedMessage;
-    });
+    }
+  );
 
   // 히스토리와 실시간 메시지를 합치되 중복 제거
   const allMessages = React.useMemo(() => {
     const messageMap = new Map<string, ChatMessage>();
 
-    // 날짜 메시지인지 확인하는 함수
-    const isDateMessage = (content: string): boolean => {
-      // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
-      const datePattern =
-        /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
-      return datePattern.test(content.trim());
+    // ✅ ID 정규화 함수: history- 접두사 제거하여 실제 chatId만 추출
+    const normalizeId = (id: string): string => {
+      return id.replace("history-", "").replace("temp-", "");
     };
 
-    // 히스토리 메시지 먼저 추가 (날짜 메시지 제외)
+    console.log("=== 메시지 중복 제거 시작 ===");
+    console.log("히스토리 메시지 수:", historyMessages.length);
+    console.log("실시간 메시지 수:", messages.length);
+
+    // 히스토리 메시지 먼저 추가 (날짜 메시지 포함)
     historyMessages.forEach((msg) => {
-      if (!isDateMessage(msg.content)) {
-        messageMap.set(msg.id, msg);
+      const normalizedId = normalizeId(msg.id);
+      if (!messageMap.has(normalizedId)) {
+        messageMap.set(normalizedId, msg);
+        console.log(
+          "히스토리 추가:",
+          normalizedId,
+          msg.content.substring(0, 20)
+        );
+      } else {
+        console.log(
+          "히스토리 중복 무시:",
+          normalizedId,
+          msg.content.substring(0, 20)
+        );
       }
     });
 
-    // 실시간 메시지 추가 (중복되지 않는 것만, 날짜 메시지 제외)
+    // 실시간 메시지 추가 (중복되지 않는 것만, 날짜 메시지 포함)
     messages.forEach((msg) => {
-      if (!messageMap.has(msg.id) && !isDateMessage(msg.content)) {
-        messageMap.set(msg.id, msg);
+      const normalizedId = normalizeId(msg.id);
+      if (!messageMap.has(normalizedId)) {
+        messageMap.set(normalizedId, msg);
+        console.log("실시간 추가:", normalizedId, msg.content.substring(0, 20));
+      } else {
+        console.log(
+          "실시간 중복 무시:",
+          normalizedId,
+          msg.content.substring(0, 20)
+        );
       }
     });
+
+    console.log("최종 메시지 수:", messageMap.size);
 
     // 시간순으로 정렬 (오래된 메시지부터 최신 메시지 순)
     return Array.from(messageMap.values()).sort((a, b) => {
       // 메시지 ID에서 시간 정보 추출 (chatId는 시간순으로 증가)
-      const aId = a.id.replace("history-", "");
-      const bId = b.id.replace("history-", "");
+      const aId = normalizeId(a.id);
+      const bId = normalizeId(b.id);
 
       // 숫자로 변환하여 비교 (오래된 메시지가 먼저)
       const aNum = parseInt(aId) || 0;
@@ -465,9 +513,14 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
       {/* 통합된 메시지 리스트 (Run Grouping 적용) */}
       {groupedMessages.map((message) => {
         const messageId = message.id;
+        // ✅ ID 정규화하여 readStatus 조회 (history- 접두사 제거)
+        const normalizedId = messageId.replace("history-", "");
         // ✅ message.othersUnreadUsers를 우선 사용 (실시간 업데이트 반영)
         const unreadCount =
-          message.othersUnreadUsers ?? readStatus[messageId] ?? 0;
+          message.othersUnreadUsers ??
+          readStatus[normalizedId] ??
+          readStatus[messageId] ??
+          0;
 
         return (
           <ChatMessageItem

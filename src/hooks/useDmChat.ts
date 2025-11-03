@@ -100,10 +100,72 @@ export const useDmChat = ({
 
   // 읽음 영수증: readerId별 마지막으로 적용된 lastReadChatId 저장 (중복 차감 방지)
   const lastReadSeenRef = useRef<Map<string, number>>(new Map());
+  // 자동 read-latest 호출을 위한 타이머
+  const readLatestTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // joinChat 중복 호출 방지를 위한 ref (React Strict Mode 대응)
+  const joinedCounterpartRef = useRef<string | null>(null);
 
   // 인증 관련
   const { user, currentUserId } = useAuth();
   const currentUserNickname = user?.username || null;
+
+  // ===== Run Grouping 유틸 함수들 =====
+  // 분 단위 시간 키 생성 (YYYY-MM-DD HH:MM)
+  const minuteKeyOf = (createdAt: string): string | null => {
+    try {
+      const d = new Date(createdAt);
+      const yy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const HH = String(d.getHours()).padStart(2, "0");
+      const MM = String(d.getMinutes()).padStart(2, "0");
+      return `${yy}-${mm}-${dd} ${HH}:${MM}`;
+    } catch {
+      return null;
+    }
+  };
+
+  // 시스템 메시지 타입 체크
+  const isSystemType = (messageType: string): boolean => {
+    const type = (messageType || "").toString().toUpperCase();
+    return type === "SYSTEM" || type.startsWith("SYSTEM_");
+  };
+
+  // Run 키 생성 (senderId|minuteKey)
+  const runKeyOf = (msg: any): string | null => {
+    if (isSystemType(msg.messageType)) return null;
+    const sid = msg.senderId ? String(msg.senderId).trim() : "";
+    const mk = minuteKeyOf(msg.createdAt);
+    if (!sid || !mk) return null;
+    return `${sid}|${mk}`;
+  };
+
+  // 자동 read-latest 호출 (400ms 디바운스)
+  const scheduleReadLatest = useCallback((targetRoomId: string) => {
+    if (readLatestTimerRef.current) {
+      clearTimeout(readLatestTimerRef.current);
+    }
+    readLatestTimerRef.current = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+
+        const res = await fetch(
+          `/api/chat/rooms/${targetRoomId}/members/me/read-latest`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (res.ok || res.status === 204) {
+          console.log("1:1 채팅 자동 read-latest 완료:", targetRoomId);
+        }
+      } catch (error) {
+        console.error("1:1 채팅 자동 read-latest 실패:", error);
+      }
+    }, 400);
+  }, []);
 
   // STOMP 클라이언트 연결
   const connectStomp = useCallback(async () => {
@@ -268,18 +330,7 @@ export const useDmChat = ({
                 }
               }
 
-              // 날짜 메시지인지 확인하는 함수
-              const isDateMessage = (content: string): boolean => {
-                // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
-                const datePattern =
-                  /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
-                return datePattern.test(content.trim());
-              };
-
-              // 날짜 메시지는 필터링하여 제외
-              if (isDateMessage(data.message || "")) {
-                return;
-              }
+              // 날짜 메시지와 입장/퇴장 메시지는 시스템 메시지로 표시됨
 
               // ChatMessage 형태로 변환
               const newMessage: ChatMessage = {
@@ -306,36 +357,12 @@ export const useDmChat = ({
                 return [...prev, newMessage];
               });
 
-              // 시스템 메시지가 아닌 경우 400ms 후 readLatest 호출
+              // 시스템 메시지가 아닌 경우 자동 read-latest 호출 (400ms 디바운스)
               const isSystem = data.messageType
                 ?.toUpperCase()
                 .startsWith("SYSTEM");
               if (!isSystem && targetRoomId) {
-                setTimeout(() => {
-                  readLatest(targetRoomId)
-                    .then(() => {
-                      // ✅ 실시간 메시지 수신 후 즉시 로컬 상태 업데이트
-                      setMessages((prevMessages) => {
-                        return prevMessages.map((msg) => {
-                          if (!msg.isMyMessage) {
-                            const currentCount = msg.othersUnreadUsers || 0;
-                            const newCount = Math.max(0, currentCount - 1);
-                            return {
-                              ...msg,
-                              othersUnreadUsers: newCount,
-                            };
-                          }
-                          return msg;
-                        });
-                      });
-                      console.log(
-                        "=== DM 실시간 메시지 수신 후 안읽음 수 즉시 감소 ==="
-                      );
-                    })
-                    .catch((err) =>
-                      console.error("1:1 메시지 수신 후 읽음 처리 실패:", err)
-                    );
-                }, 400);
+                scheduleReadLatest(targetRoomId);
               }
             } catch (error) {
               console.error("1:1 채팅 메시지 파싱 오류:", error);
@@ -429,6 +456,12 @@ export const useDmChat = ({
       stompClientRef.current = null;
     }
 
+    // 자동 read-latest 타이머 정리
+    if (readLatestTimerRef.current) {
+      clearTimeout(readLatestTimerRef.current);
+      readLatestTimerRef.current = null;
+    }
+
     setStompConnected(false);
     lastReadSeenRef.current.clear();
     console.log("1:1 채팅 STOMP 연결 해제");
@@ -517,24 +550,18 @@ export const useDmChat = ({
             console.log("1:1 채팅 히스토리 응답:", response);
 
             if (response.data.content.length > 0) {
-              // 날짜 메시지인지 확인하는 함수
-              const isDateMessage = (content: string): boolean => {
-                // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
-                const datePattern =
-                  /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
-                return datePattern.test(content.trim());
-              };
-
-              // 날짜 메시지만 필터링
-              const filteredContent = response.data.content.filter(
-                (msg: ChatHistoryMessage) => !isDateMessage(msg.message)
-              );
-
-              setChatHistory((prev) => [...prev, ...filteredContent]);
+              // 중복 제거하여 히스토리 추가
+              setChatHistory((prev) => {
+                const existingIds = new Set(prev.map((msg) => msg.chatId));
+                const newItems = response.data.content.filter(
+                  (msg: ChatHistoryMessage) => !existingIds.has(msg.chatId)
+                );
+                return [...prev, ...newItems];
+              });
               setHasMoreHistory(response.data.hasNext);
 
-              // 히스토리 메시지를 ChatMessage 형태로 변환 (날짜 메시지 제외)
-              const historyMessages: ChatMessage[] = filteredContent.map(
+              // 히스토리 메시지를 ChatMessage 형태로 변환 (날짜 메시지 포함)
+              const historyMessages: ChatMessage[] = response.data.content.map(
                 (msg: ChatHistoryMessage) => ({
                   id: msg.chatId.toString(),
                   senderName: msg.senderNickname,
@@ -663,19 +690,7 @@ export const useDmChat = ({
           // 채팅 히스토리 로드
           const historyResponse = await getChatHistory(existingRoomId);
           if (historyResponse.data.content.length > 0) {
-            // 날짜 메시지인지 확인하는 함수
-            const isDateMessage = (content: string): boolean => {
-              const datePattern =
-                /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
-              return datePattern.test(content.trim());
-            };
-
-            // 날짜 메시지만 필터링
-            const filteredContent = historyResponse.data.content.filter(
-              (msg: ChatHistoryMessage) => !isDateMessage(msg.message)
-            );
-
-            setChatHistory(filteredContent);
+            setChatHistory(historyResponse.data.content);
             setHasMoreHistory(historyResponse.data.hasNext);
           } else {
             // 히스토리가 없는 경우에도 초기화
@@ -747,6 +762,14 @@ export const useDmChat = ({
     setIsLoading(true);
     setError(null);
 
+    // ✅ joinChat 시작 시 항상 메시지/히스토리 초기화 (중복 방지) - existingRoomId가 없는 경우만
+    if (!existingRoomId) {
+      console.log("🔄 1:1 joinChat 시작 - 메시지/히스토리 초기화");
+      setChatHistory([]);
+      setMessages([]);
+      setHasMoreHistory(true);
+    }
+
     try {
       console.log("=== 1:1 채팅방 참여 시작 ===", {
         counterpartId,
@@ -809,30 +832,18 @@ export const useDmChat = ({
               existingRoomIdFromMapping.toString()
             );
             if (historyResponse.data.content.length > 0) {
-              // 날짜 메시지인지 확인하는 함수
-              const isDateMessage = (content: string): boolean => {
-                const datePattern =
-                  /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
-                return datePattern.test(content.trim());
-              };
-
-              // 날짜 메시지만 필터링
-              const filteredContent = historyResponse.data.content.filter(
-                (msg: ChatHistoryMessage) => !isDateMessage(msg.message)
-              );
-
               // 입장 메시지가 있는지 확인
-              hasJoinMessage = filteredContent.some((msg) =>
+              hasJoinMessage = historyResponse.data.content.some((msg) =>
                 msg.message.includes("님이 입장했습니다.")
               );
 
-              setChatHistory(filteredContent);
+              setChatHistory(historyResponse.data.content);
               setHasMoreHistory(historyResponse.data.hasNext);
 
               // PrivateChatModal에서는 messages에 히스토리를 넣어야 표시됨
-              // 입장/퇴장 메시지를 포함하여 변환
-              const historyMessages: ChatMessage[] = filteredContent.map(
-                (msg: ChatHistoryMessage) => ({
+              // 날짜, 입장/퇴장 메시지 모두 포함하여 변환
+              const historyMessages: ChatMessage[] =
+                historyResponse.data.content.map((msg: ChatHistoryMessage) => ({
                   id: msg.chatId.toString(),
                   senderName: msg.senderNickname,
                   content: msg.message,
@@ -843,8 +854,7 @@ export const useDmChat = ({
                   timeLabel: msg.timeLabel,
                   othersUnreadUsers: msg.othersUnreadUsers,
                   createdAt: msg.createdAt,
-                })
-              );
+                }));
               setMessages(historyMessages);
             } else {
               setMessages([]);
@@ -1090,30 +1100,18 @@ export const useDmChat = ({
         try {
           const historyResponse = await getChatHistory(newRoomIdStr || "");
           if (historyResponse.data.content.length > 0) {
-            // 날짜 메시지인지 확인하는 함수
-            const isDateMessage = (content: string): boolean => {
-              const datePattern =
-                /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
-              return datePattern.test(content.trim());
-            };
-
-            // 날짜 메시지만 필터링
-            const filteredContent = historyResponse.data.content.filter(
-              (msg: ChatHistoryMessage) => !isDateMessage(msg.message)
-            );
-
             // 입장 메시지가 있는지 확인
-            hasJoinMessage = filteredContent.some((msg) =>
+            hasJoinMessage = historyResponse.data.content.some((msg) =>
               msg.message.includes("님이 입장했습니다.")
             );
 
-            setChatHistory(filteredContent);
+            setChatHistory(historyResponse.data.content);
             setHasMoreHistory(historyResponse.data.hasNext);
 
             // PrivateChatModal에서는 messages에 히스토리를 넣어야 표시됨
-            // 입장/퇴장 메시지를 포함하여 변환
-            const historyMessages: ChatMessage[] = filteredContent.map(
-              (msg: ChatHistoryMessage) => ({
+            // 날짜, 입장/퇴장 메시지 모두 포함하여 변환
+            const historyMessages: ChatMessage[] =
+              historyResponse.data.content.map((msg: ChatHistoryMessage) => ({
                 id: msg.chatId.toString(),
                 senderName: msg.senderNickname,
                 content: msg.message,
@@ -1124,8 +1122,7 @@ export const useDmChat = ({
                 timeLabel: msg.timeLabel,
                 othersUnreadUsers: msg.othersUnreadUsers,
                 createdAt: msg.createdAt,
-              })
-            );
+              }));
             setMessages(historyMessages);
           } else {
             setChatHistory([]);
@@ -1210,6 +1207,9 @@ export const useDmChat = ({
       setChatHistory([]);
       setIsMuted(false);
       setError(null);
+
+      // joinChat 재호출 가능하도록 초기화
+      joinedCounterpartRef.current = null;
 
       console.log("=== 1:1 채팅방 나가기 완료 (상태 초기화됨) ===");
     } catch (err) {

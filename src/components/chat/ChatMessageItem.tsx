@@ -47,13 +47,21 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   // 실제 표시할 타임스탬프 (timeLabel 우선, 없으면 createdAt 포맷팅)
   const displayTime = message.timeLabel || formatTimestamp(message.createdAt);
 
-  // 시스템 메시지 체크 (messageType이나 content 패턴으로)
+  // 날짜 메시지인지 확인하는 함수
+  const isDateMessage = (content: string): boolean => {
+    // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
+    const datePattern = /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
+    return datePattern.test(content.trim());
+  };
+
+  // 시스템 메시지 체크 (messageType, content 패턴, 날짜 메시지)
   const isSystemMessage =
     (message.messageType &&
       (message.messageType.toUpperCase() === "SYSTEM" ||
         message.messageType.toUpperCase().startsWith("SYSTEM_"))) ||
     message.content.includes("님이 입장했습니다.") ||
-    message.content.includes("님이 퇴장했습니다.");
+    message.content.includes("님이 퇴장했습니다.") ||
+    isDateMessage(message.content);
 
   // 시스템 메시지는 중앙 정렬, 회색 타원형 배경
   if (isSystemMessage) {
@@ -130,9 +138,9 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
 
               {/* 메타 (타임스탬프 + 안읽음 카운트) */}
-              {(displayTime || unreadCount > 0) && (
-                <div className="flex flex-col items-start gap-1 text-xs">
-                  {displayTime && (
+              {((showTimestamp && displayTime) || unreadCount > 0) && (
+                <div className="flex items-center gap-1 text-xs whitespace-nowrap">
+                  {showTimestamp && displayTime && (
                     <span className="text-[#6E4213]">{displayTime}</span>
                   )}
                   {unreadCount > 0 && (
@@ -190,14 +198,14 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
 
               {/* 메타 (타임스탬프 + 안읽음 카운트) */}
-              {(displayTime || unreadCount > 0) && (
-                <div className="flex flex-col items-end gap-1 text-xs">
+              {((showTimestamp && displayTime) || unreadCount > 0) && (
+                <div className="flex items-center gap-1 text-xs whitespace-nowrap">
                   {unreadCount > 0 && (
                     <span className="text-[#6E4213] font-semibold">
                       {unreadCount}
                     </span>
                   )}
-                  {displayTime && (
+                  {showTimestamp && displayTime && (
                     <span className="text-[#6E4213]">{displayTime}</span>
                   )}
                 </div>

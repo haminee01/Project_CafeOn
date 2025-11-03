@@ -107,6 +107,68 @@ export const useCafeChat = ({
   const myNicknameRef = useRef<string | null>(null);
   // 읽음 영수증: readerId별 마지막으로 적용된 lastReadChatId 저장 (중복 차감 방지)
   const lastReadSeenRef = useRef<Map<string, number>>(new Map());
+  // 자동 read-latest 호출을 위한 타이머
+  const readLatestTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // joinChat 중복 호출 방지를 위한 ref (React Strict Mode 대응)
+  const joinedCafeIdRef = useRef<string | null>(null);
+
+  // ===== Run Grouping 유틸 함수들 =====
+  // 분 단위 시간 키 생성 (YYYY-MM-DD HH:MM)
+  const minuteKeyOf = (createdAt: string): string | null => {
+    try {
+      const d = new Date(createdAt);
+      const yy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const HH = String(d.getHours()).padStart(2, "0");
+      const MM = String(d.getMinutes()).padStart(2, "0");
+      return `${yy}-${mm}-${dd} ${HH}:${MM}`;
+    } catch {
+      return null;
+    }
+  };
+
+  // 시스템 메시지 타입 체크
+  const isSystemType = (messageType: string): boolean => {
+    const type = (messageType || "").toString().toUpperCase();
+    return type === "SYSTEM" || type.startsWith("SYSTEM_");
+  };
+
+  // Run 키 생성 (senderId|minuteKey)
+  const runKeyOf = (msg: any): string | null => {
+    if (isSystemType(msg.messageType)) return null;
+    const sid = msg.senderId ? String(msg.senderId).trim() : "";
+    const mk = minuteKeyOf(msg.createdAt);
+    if (!sid || !mk) return null;
+    return `${sid}|${mk}`;
+  };
+
+  // 자동 read-latest 호출 (400ms 디바운스)
+  const scheduleReadLatest = useCallback((targetRoomId: string) => {
+    if (readLatestTimerRef.current) {
+      clearTimeout(readLatestTimerRef.current);
+    }
+    readLatestTimerRef.current = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+
+        const res = await fetch(
+          `/api/chat/rooms/${targetRoomId}/members/me/read-latest`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (res.ok || res.status === 204) {
+          console.log("자동 read-latest 완료:", targetRoomId);
+        }
+      } catch (error) {
+        console.error("자동 read-latest 실패:", error);
+      }
+    }, 400);
+  }, []);
 
   // STOMP 클라이언트 연결
   const connectStomp = useCallback(async () => {
@@ -197,19 +259,7 @@ export const useCafeChat = ({
             const data: StompChatMessage = JSON.parse(message.body);
             console.log("받은 메시지:", data);
 
-            // 날짜 메시지인지 확인하는 함수
-            const isDateMessage = (content: string): boolean => {
-              // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
-              const datePattern =
-                /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
-              return datePattern.test(content.trim());
-            };
-
-            // 날짜 메시지는 필터링하여 제외
-            if (isDateMessage(data.message || "")) {
-              console.log("날짜 메시지 필터링:", data.message);
-              return;
-            }
+            // 날짜 메시지와 입장/퇴장 메시지는 시스템 메시지로 표시됨
 
             // 내 닉네임 추출 (토큰 payload의 sub 또는 userId)
             const getMyNicknameFromToken = (): string | null => {
@@ -313,52 +363,12 @@ export const useCafeChat = ({
               })
             );
 
-            // 시스템 메시지가 아닌 경우 400ms 후 readLatest 호출
+            // 시스템 메시지가 아닌 경우 자동 read-latest 호출 (400ms 디바운스)
             const isSystem = data.messageType
               ?.toUpperCase()
               .startsWith("SYSTEM");
             if (!isSystem && roomId) {
-              setTimeout(() => {
-                readLatest(roomId)
-                  .then(() => {
-                    // ✅ 실시간 메시지 수신 후 즉시 로컬 상태 업데이트
-                    setMessages((prevMessages) => {
-                      return prevMessages.map((msg) => {
-                        if (!msg.isMyMessage) {
-                          const currentCount = msg.othersUnreadUsers || 0;
-                          const newCount = Math.max(0, currentCount - 1);
-                          return {
-                            ...msg,
-                            othersUnreadUsers: newCount,
-                          };
-                        }
-                        return msg;
-                      });
-                    });
-
-                    setChatHistory((prevHistory) => {
-                      return prevHistory.map((msg) => {
-                        if (!msg.mine) {
-                          const currentCount =
-                            (msg as any).othersUnreadUsers || 0;
-                          const newCount = Math.max(0, currentCount - 1);
-                          return {
-                            ...msg,
-                            othersUnreadUsers: newCount,
-                          } as any;
-                        }
-                        return msg;
-                      });
-                    });
-
-                    console.log(
-                      "=== 실시간 메시지 수신 후 안읽음 수 즉시 감소 ==="
-                    );
-                  })
-                  .catch((err) =>
-                    console.error("메시지 수신 후 읽음 처리 실패:", err)
-                  );
-              }, 400);
+              scheduleReadLatest(roomId);
             }
           } catch (error) {
             console.error("메시지 파싱 오류:", error);
@@ -466,6 +476,12 @@ export const useCafeChat = ({
     if (stompClientRef.current) {
       stompClientRef.current.deactivate();
       stompClientRef.current = null;
+    }
+
+    // 자동 read-latest 타이머 정리
+    if (readLatestTimerRef.current) {
+      clearTimeout(readLatestTimerRef.current);
+      readLatestTimerRef.current = null;
     }
 
     setStompConnected(false);
@@ -645,21 +661,8 @@ export const useCafeChat = ({
         const items = response.data?.content || [];
         const hasNext = response.data?.hasNext || false;
 
-        // 날짜 메시지인지 확인하는 함수
-        const isDateMessage = (content: string): boolean => {
-          // 한국어 날짜 형식 패턴: "YYYY년 MM월 DD일" 또는 "YYYY-MM-DD"
-          const datePattern =
-            /^\d{4}년\s?\d{1,2}월\s?\d{1,2}일$|^\d{4}-\d{2}-\d{2}$/;
-          return datePattern.test(content.trim());
-        };
-
-        // 날짜 메시지만 필터링
-        const filteredItems = items.filter((msg: ChatHistoryMessage) => {
-          return !isDateMessage(msg.message);
-        });
-
-        // 새로운 히스토리를 기존 히스토리 뒤에 추가 (필터링 후)
-        setChatHistory((prev) => [...prev, ...filteredItems]);
+        // 새로운 히스토리를 기존 히스토리 뒤에 추가 (날짜 메시지 포함)
+        setChatHistory((prev) => [...prev, ...items]);
         setHasMoreHistory(hasNext);
       } catch (err) {
         console.error("채팅 히스토리 조회 실패:", err);
@@ -704,6 +707,12 @@ export const useCafeChat = ({
       setIsJoining(true);
       setIsLoading(true);
       setError(null);
+
+      // ✅ joinChat 시작 시 항상 메시지/히스토리 초기화 (중복 방지)
+      console.log("🔄 joinChat 시작 - 메시지/히스토리 초기화");
+      setChatHistory([]);
+      setMessages([]);
+      setHasMoreHistory(true);
 
       try {
         // 기존 매핑이 있어도 API를 호출하여 정확한 roomId 확인
@@ -782,10 +791,6 @@ export const useCafeChat = ({
           );
           // 나간 기록 삭제
           localStorage.removeItem(leftKey);
-
-          // 상태 완전 초기화 (빈 채팅방으로 시작)
-          setChatHistory([]);
-          setMessages([]);
           setHasMoreHistory(false);
 
           // 참여자 목록만 로드 (히스토리는 로드하지 않음)
@@ -1018,6 +1023,9 @@ export const useCafeChat = ({
       setChatHistory([]);
       setHasMoreHistory(true);
       setIsMuted(false);
+
+      // joinChat 재호출 가능하도록 초기화
+      joinedCafeIdRef.current = null;
 
       console.log("=== 채팅방 나가기 완료 (상태 초기화됨) ===");
     } catch (err) {
@@ -1345,8 +1353,14 @@ export const useCafeChat = ({
 
   // 초기 채팅방 참여 - cafeId가 변경될 때만 실행
   useEffect(() => {
+    // React Strict Mode 대응: 같은 cafeId로 이미 joinChat을 시도했으면 무시
     if (cafeId && !isJoined && !isLoading && !isJoining) {
+      if (joinedCafeIdRef.current === cafeId) {
+        console.log("⏭️ 이미 joinChat 시도한 cafeId - 스킵:", cafeId);
+        return;
+      }
       console.log("초기 채팅방 참여 시도 (useCafeChat):", cafeId);
+      joinedCafeIdRef.current = cafeId;
       joinChat();
     }
     // joinChat을 의존성에서 제거하여 무한 루프 방지
