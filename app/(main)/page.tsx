@@ -57,23 +57,23 @@ export default function HomePage() {
 
       <Map className="mb-10" cafes={randomCafes} />
 
-      {hotCafes.length > 0 && (
+      {wishlistTopCafes.length > 0 && (
         <div>
           <CafeCarousel
-            cafes={hotCafes}
-            title="요즘 뜨고 있는 카페"
-            description="최근 사람들이 많이 찾는 카페를 엄선했어요."
+            cafes={wishlistTopCafes}
+            title="찜 많은 카페"
+            description="찜이 많은 카페를 만나보세요."
             showAllButton={true}
           />
         </div>
       )}
 
-      {wishlistTopCafes.length > 0 && (
+      {hotCafes.length > 0 && (
         <div className="mt-10">
           <CafeCarousel
-            cafes={wishlistTopCafes}
-            title="찜 많은 카페"
-            description="찜이 많은 카페를 만나보세요."
+            cafes={hotCafes}
+            title="요즘 뜨고 있는 카페"
+            description="최근 사람들이 많이 찾는 카페를 엄선했어요."
             showAllButton={true}
           />
         </div>
