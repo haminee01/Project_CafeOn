@@ -33,7 +33,7 @@ export default function SimilarCafesSection({ similarCafes }: SimilarCafesSectio
         </div>
 
         <div className="relative overflow-hidden">
-          <div className="grid grid-cols-4 gap-4 transition-transform duration-300 ease-in-out px-12">
+          <div className="grid grid-cols-4 gap-5 transition-transform duration-300 ease-in-out px-12">
             {similarCafes.slice(currentIndex, currentIndex + itemsPerPage).map((cafe) => (
               <CafeCard key={cafe.cafe_id} cafe={cafe} />
             ))}
