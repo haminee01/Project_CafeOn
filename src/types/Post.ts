@@ -82,7 +82,11 @@ export interface PostDeleteResponse {
 // 게시글 좋아요 응답 타입
 export interface PostLikeResponse {
   message: string;
-  liked: boolean;
+  data: {
+    postId: number;
+    liked: boolean;
+    likes: number;
+  };
 }
 
 // 댓글 생성 요청 타입
@@ -110,7 +114,11 @@ export interface CommentDeleteResponse {
 // 댓글 좋아요 응답 타입
 export interface CommentLikeResponse {
   message: string;
-  liked: boolean;
+  data: {
+    commentId: number;
+    liked: boolean;
+    likes: number;
+  };
 }
 
 // 신고 요청 타입

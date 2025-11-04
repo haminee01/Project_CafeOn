@@ -34,10 +34,20 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
   const { showToast } = useToastContext();
 
   // 좋아요 상태 관리를 위한 state
-  const [currentLikes, setCurrentLikes] = useState(post.likes || 0);
-  const [isLiked, setIsLiked] = useState(post.likedByMe || false);
+  const [currentLikes, setCurrentLikes] = useState(
+    Math.max(post.likes || 0, 0)
+  );
+  const [isLiked, setIsLiked] = useState(post.likedByMe === true);
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+
+  console.log("PostDetail 초기 상태:", {
+    postId: post.id,
+    initialLikes: post.likes,
+    initialLikedByMe: post.likedByMe,
+    currentLikes,
+    isLiked,
+  });
 
   // 작성자 여부 확인 (userId로 비교)
   const isAuthor = useMemo(() => {
@@ -58,23 +68,59 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
 
   // 실제 좋아요/취소 핸들러
   const handleLike = async () => {
-    if (isLikeLoading) return;
+    console.log("=== 게시글 좋아요 버튼 클릭 ===", {
+      postId: post.id,
+      isLoggedIn,
+      isLikeLoading,
+      currentIsLiked: isLiked,
+      currentLikes,
+    });
+
+    // 로그인 체크
+    if (!isLoggedIn) {
+      showToast("로그인이 필요합니다.", "error");
+      return;
+    }
+
+    if (isLikeLoading) {
+      console.log("이미 처리 중입니다.");
+      return;
+    }
 
     setIsLikeLoading(true);
-    try {
-      const response = await togglePostLike(post.id);
+    const prevLiked = isLiked; // 이전 상태 저장
 
-      // 응답 타입: { message, liked }
-      if (response) {
-        setIsLiked(response.liked);
-        // likes는 응답에 없으므로 로컬에서 계산
-        setCurrentLikes(response.liked ? currentLikes + 1 : currentLikes - 1);
+    try {
+      console.log("API 호출 시작:", `/api/posts/${post.id}/like`);
+      const response = await togglePostLike(post.id);
+      console.log("API 응답:", response);
+
+      // 응답 타입: { message, data: { postId, liked, likes } }
+      if (response && response.data) {
+        const { liked, likes } = response.data;
+
+        console.log("좋아요 상태 변경:", {
+          before: prevLiked,
+          after: liked,
+          likesFromServer: likes,
+        });
+
+        setIsLiked(liked);
+        // 서버에서 직접 likes 값을 받으므로 그대로 사용
+        setCurrentLikes(likes);
+
+        console.log(
+          `좋아요 ${liked ? "추가" : "취소"} 완료 - 현재 좋아요 수: ${likes}`
+        );
+      } else {
+        console.error("응답 구조가 올바르지 않습니다:", response);
       }
     } catch (error) {
       console.error("좋아요 처리 실패:", error);
       showToast("좋아요 처리에 실패했습니다.", "error");
     } finally {
       setIsLikeLoading(false);
+      console.log("=== 좋아요 처리 완료 ===");
     }
   };
 
@@ -180,25 +226,34 @@ export default function PostDetail({ post, commentCount }: PostDetailProps) {
         {/* 좋아요 버튼 (POST /api/posts/{id}/like) */}
         <button
           onClick={handleLike}
-          disabled={isLikeLoading}
-          className={`flex items-center space-x-2 p-3 rounded-full transition-colors ${
+          disabled={isLikeLoading || !isLoggedIn}
+          title={!isLoggedIn ? "로그인이 필요합니다" : ""}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 ${
             isLiked
-              ? "bg-red-100 text-red-600"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          } ${isLikeLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+              ? "bg-red-50 hover:bg-red-100"
+              : "bg-gray-100 hover:bg-gray-200"
+          } ${
+            isLikeLoading || !isLoggedIn
+              ? "opacity-50 cursor-not-allowed"
+              : "cursor-pointer"
+          }`}
         >
           {/* 하트 아이콘 */}
-          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-            <path
-              d={
-                isLiked
-                  ? "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                  : "M12 4.248c-3.148-5.4-8-5.4-8 0 0 3.109 3.993 6.903 8 10.5 4.007-3.597 8-7.391 8-10.5 0-5.4-4.852-5.4-8 0z"
-              }
-            />
+          <svg
+            className="w-5 h-5 transition-colors"
+            viewBox="0 0 24 24"
+            fill={isLiked ? "#EF4444" : "none"}
+            stroke={isLiked ? "#EF4444" : "#6B7280"}
+            strokeWidth="2"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
-          <span className="font-semibold">
-            {(currentLikes || 0).toLocaleString()}
+          <span
+            className={`font-semibold ${
+              isLiked ? "text-red-500" : "text-gray-700"
+            }`}
+          >
+            {Math.max(currentLikes || 0, 0).toLocaleString()}
           </span>
         </button>
 

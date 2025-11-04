@@ -6,12 +6,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // 회원가입
 export async function signup(userData: {
+  name: string;
   email: string;
   password: string;
   nickname: string;
+  phone: string;
 }) {
   try {
+    console.log("signup API 호출 - 전송 데이터:", userData);
     const response = await apiClient.post("/api/auth/signup", userData);
+    console.log("signup API 응답:", response.data);
     return response.data;
   } catch (error: any) {
     console.error("회원가입 API 호출 실패:", error);
@@ -93,13 +97,13 @@ export async function searchCafes(query?: string, tags?: string | string[]) {
       // 단일 문자열이면 그대로 전달
       params.tags = Array.isArray(tags) ? tags : tags;
     }
-    
+
     const response = await apiClient.get("/api/cafes/search", {
       params,
     });
-    
+
     const cafes = response.data;
-    
+
     // 배열인지 확인하고 변환
     if (Array.isArray(cafes)) {
       return cafes.map(convertCafeResponseToCafe);
@@ -155,7 +159,7 @@ export async function getNearbyCafes(params: {
       console.warn("근처 카페 조회 타임아웃 (30초 초과), 빈 배열 반환");
       return [];
     }
-    
+
     console.error("근처 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
     console.warn("근처 카페 API 실패, 빈 배열 반환");
@@ -167,12 +171,16 @@ export async function getNearbyCafes(params: {
 function convertCafeResponseToCafe(cafe: any): any {
   // 평점 처리: avgRating이 우선, 없으면 avg_rating 사용
   let avgRating = null;
-  
+
   // avgRating 필드 확인 (백엔드에서 보내는 필드)
-  if (cafe.avgRating != null && cafe.avgRating !== undefined && cafe.avgRating !== '') {
-    if (typeof cafe.avgRating === 'number') {
+  if (
+    cafe.avgRating != null &&
+    cafe.avgRating !== undefined &&
+    cafe.avgRating !== ""
+  ) {
+    if (typeof cafe.avgRating === "number") {
       avgRating = cafe.avgRating;
-    } else if (typeof cafe.avgRating === 'string') {
+    } else if (typeof cafe.avgRating === "string") {
       const parsed = parseFloat(cafe.avgRating);
       avgRating = !isNaN(parsed) ? parsed : null;
     } else {
@@ -182,25 +190,36 @@ function convertCafeResponseToCafe(cafe: any): any {
       avgRating = !isNaN(parsed) ? parsed : null;
     }
   }
-  
+
   // avg_rating 필드 확인 (fallback)
-  if (avgRating == null && cafe.avg_rating != null && cafe.avg_rating !== undefined && cafe.avg_rating !== '') {
-    if (typeof cafe.avg_rating === 'number') {
+  if (
+    avgRating == null &&
+    cafe.avg_rating != null &&
+    cafe.avg_rating !== undefined &&
+    cafe.avg_rating !== ""
+  ) {
+    if (typeof cafe.avg_rating === "number") {
       avgRating = cafe.avg_rating;
     } else {
       const parsed = parseFloat(String(cafe.avg_rating));
       avgRating = !isNaN(parsed) ? parsed : null;
     }
   }
-  
+
   // 최종적으로 null이면 0으로 설정 (백엔드 기본값과 동일)
   const finalRating = avgRating != null ? avgRating : 0;
-  
+
   // 디버깅용 로그 (개발 중에만)
-  if (process.env.NODE_ENV === 'development' && cafe.cafeId) {
-    console.log(`[Cafe ${cafe.cafeId}] 원본 avgRating:`, cafe.avgRating, typeof cafe.avgRating, '-> 변환된 값:', finalRating);
+  if (process.env.NODE_ENV === "development" && cafe.cafeId) {
+    console.log(
+      `[Cafe ${cafe.cafeId}] 원본 avgRating:`,
+      cafe.avgRating,
+      typeof cafe.avgRating,
+      "-> 변환된 값:",
+      finalRating
+    );
   }
-  
+
   return {
     cafe_id: String(cafe.cafeId || cafe.id || cafe.cafe_id || ""),
     cafeId: cafe.cafeId || cafe.id || cafe.cafe_id,
@@ -214,7 +233,12 @@ function convertCafeResponseToCafe(cafe: any): any {
     created_at: cafe.createdAt || cafe.created_at || "",
     description: cafe.description || cafe.reviewsSummary || "",
     tags: Array.isArray(cafe.tags) ? cafe.tags : [],
-    photoUrl: cafe.photoUrl || cafe.photo_url || cafe.imageUrl || cafe.image_url || null,
+    photoUrl:
+      cafe.photoUrl ||
+      cafe.photo_url ||
+      cafe.imageUrl ||
+      cafe.image_url ||
+      null,
     images: cafe.images || (cafe.photoUrl ? [cafe.photoUrl] : []) || [],
   };
 }
@@ -228,8 +252,15 @@ export async function getRandomCafes() {
     const data = response.data?.data || response.data;
 
     // 디버깅: 첫 번째 카페의 원본 응답 확인
-    if (process.env.NODE_ENV === 'development' && Array.isArray(data) && data.length > 0) {
-      console.log('[getRandomCafes] 첫 번째 카페 원본 응답:', JSON.stringify(data[0], null, 2));
+    if (
+      process.env.NODE_ENV === "development" &&
+      Array.isArray(data) &&
+      data.length > 0
+    ) {
+      console.log(
+        "[getRandomCafes] 첫 번째 카페 원본 응답:",
+        JSON.stringify(data[0], null, 2)
+      );
     }
 
     // 배열인지 확인하고 변환
@@ -254,8 +285,15 @@ export async function getHotCafes() {
     const data = response.data?.data || response.data;
 
     // 디버깅: 첫 번째 카페의 원본 응답 확인
-    if (process.env.NODE_ENV === 'development' && Array.isArray(data) && data.length > 0) {
-      console.log('[getHotCafes] 첫 번째 카페 원본 응답:', JSON.stringify(data[0], null, 2));
+    if (
+      process.env.NODE_ENV === "development" &&
+      Array.isArray(data) &&
+      data.length > 0
+    ) {
+      console.log(
+        "[getHotCafes] 첫 번째 카페 원본 응답:",
+        JSON.stringify(data[0], null, 2)
+      );
     }
 
     // 배열인지 확인하고 변환
@@ -303,7 +341,8 @@ export async function getRelatedCafes(cafeId: string) {
     });
 
     // 백엔드 응답 형식에 따라 처리
-    const cafesData = response.data?.cafes || response.data?.data || response.data;
+    const cafesData =
+      response.data?.cafes || response.data?.data || response.data;
 
     // 배열인지 확인하고 변환
     if (Array.isArray(cafesData)) {
@@ -314,12 +353,17 @@ export async function getRelatedCafes(cafeId: string) {
     // 백엔드 API가 아직 구현되지 않은 경우 404/500 에러가 발생할 수 있음
     // 에러를 조용히 처리하고 빈 배열 반환 (또는 임시로 랜덤 카페 사용 가능)
     if (error.response?.status === 404 || error.response?.status === 500) {
-      console.log("관련 카페 API가 아직 구현되지 않았습니다. 빈 배열을 반환합니다.");
+      console.log(
+        "관련 카페 API가 아직 구현되지 않았습니다. 빈 배열을 반환합니다."
+      );
       return [];
     }
-    
+
     // 기타 에러의 경우에도 빈 배열 반환
-    console.warn("관련 카페 조회 실패:", error.response?.status || error.message);
+    console.warn(
+      "관련 카페 조회 실패:",
+      error.response?.status || error.message
+    );
     return [];
   }
 }
@@ -493,7 +537,10 @@ export async function getWishlist(params?: {
 
     // 500 에러 등 기타 에러인 경우 빈 결과 반환
     if (error.response?.status === 500 || error.response?.status === 400) {
-      console.warn("위시리스트 조회 실패:", error.response?.status || error.message);
+      console.warn(
+        "위시리스트 조회 실패:",
+        error.response?.status || error.message
+      );
       return {
         data: {
           content: [],

@@ -337,10 +337,14 @@ export default function SignupPage() {
   const handleSignup = async () => {
     try {
       const signupData = {
+        name: formData.name,
         email: formData.email,
         password: formData.password,
         nickname: formData.nickname,
+        phone: formData.phone,
       };
+
+      console.log("회원가입 데이터:", signupData);
 
       // 회원가입 API 호출
       const signupResponse = await signup(signupData);
@@ -355,14 +359,16 @@ export default function SignupPage() {
       // 로그인 성공 시 토큰 저장 및 홈으로 리다이렉트
       if (loginResponse?.data && loginResponse.data.token) {
         const { token, refreshToken } = loginResponse.data;
-        
+
         // 프로필 이미지가 있으면 업로드
         if (profileImage) {
           try {
             console.log("[Signup] 프로필 이미지 업로드 시도:", profileImage);
             const imageResponse = await updateProfileImage(profileImage);
             console.log("[Signup] 프로필 이미지 업로드 응답:", imageResponse);
-            const imageUrl = imageResponse.data?.profileImageUrl || imageResponse.data?.profileImageUrl;
+            const imageUrl =
+              imageResponse.data?.profileImageUrl ||
+              imageResponse.data?.profileImageUrl;
             console.log("[Signup] 프로필 이미지 URL:", imageUrl);
             const userData = {
               userId: signupResponse.data?.userId || "",

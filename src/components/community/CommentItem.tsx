@@ -42,8 +42,10 @@ export default function CommentItem({
   const { user, isLoggedIn } = useAuth();
   const { showToast } = useToastContext();
   const [showReplyForm, setShowReplyForm] = useState(false);
-  const [isLiked, setIsLiked] = useState(comment.likedByMe || false);
-  const [currentLikes, setCurrentLikes] = useState(comment.likes || 0);
+  const [isLiked, setIsLiked] = useState(comment.likedByMe === true);
+  const [currentLikes, setCurrentLikes] = useState(
+    Math.max(comment.likes || 0, 0)
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [replyContent, setReplyContent] = useState("");
@@ -64,15 +66,31 @@ export default function CommentItem({
     if (isLikeLoading) return;
 
     setIsLikeLoading(true);
+    const prevLiked = isLiked; // 이전 상태 저장
+
     try {
       const response = await toggleCommentLike(comment.id);
       console.log("댓글 좋아요 응답:", response);
 
-      // 응답 타입: { message, data: { liked, likes } }
-      if (response?.data) {
+      // 응답 타입: { message, data: { commentId, liked, likes } }
+      if (response && response.data) {
         const { liked, likes } = response.data;
+
+        console.log("댓글 좋아요 상태 변경:", {
+          before: prevLiked,
+          after: liked,
+          likesFromServer: likes,
+        });
+
         setIsLiked(liked);
+        // 서버에서 직접 likes 값을 받으므로 그대로 사용
         setCurrentLikes(likes);
+
+        console.log(
+          `댓글 좋아요 ${
+            liked ? "추가" : "취소"
+          } 완료 - 현재 좋아요 수: ${likes}`
+        );
       }
 
       // 댓글 목록 새로고침
@@ -81,6 +99,7 @@ export default function CommentItem({
       }
     } catch (error) {
       console.error("댓글 좋아요 실패:", error);
+      showToast("좋아요 처리에 실패했습니다.", "error");
     } finally {
       setIsLikeLoading(false);
     }
@@ -231,9 +250,13 @@ export default function CommentItem({
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-3">
-            <ProfileIcon 
-              size="sm" 
-              imageUrl={isMyComment && user?.profileImageUrl ? user.profileImageUrl : undefined}
+            <ProfileIcon
+              size="sm"
+              imageUrl={
+                isMyComment && user?.profileImageUrl
+                  ? user.profileImageUrl
+                  : undefined
+              }
             />
             <span
               className={`font-semibold ${
@@ -248,7 +271,9 @@ export default function CommentItem({
               )}
             </span>
             <span className="text-sm text-gray-500">
-              {comment.created_at ? formatDateTime(comment.created_at) : "날짜 없음"}
+              {comment.created_at
+                ? formatDateTime(comment.created_at)
+                : "날짜 없음"}
             </span>
           </div>
           <div className="flex space-x-2 text-sm text-gray-500">
@@ -331,20 +356,20 @@ export default function CommentItem({
           <button
             onClick={handleLike}
             disabled={isLikeLoading}
-            className={`flex items-center text-sm space-x-1 ${
-              isLiked ? "text-red-500" : "text-gray-500 hover:text-red-500"
+            className={`flex items-center text-sm space-x-1 transition-colors ${
+              isLiked ? "text-red-500" : "text-gray-500 hover:text-red-400"
             } ${isLikeLoading ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-              <path
-                d={
-                  isLiked
-                    ? "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                    : "M12 4.248c-3.148-5.4-8-5.4-8 0 0 3.109 3.993 6.903 8 10.5 4.007-3.597 8-7.391 8-10.5 0-5.4-4.852-5.4-8 0z"
-                }
-              />
+            <svg
+              className="w-4 h-4 transition-colors"
+              viewBox="0 0 24 24"
+              fill={isLiked ? "#EF4444" : "none"}
+              stroke={isLiked ? "#EF4444" : "#6B7280"}
+              strokeWidth="2"
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
-            <span>{currentLikes}</span>
+            <span className="font-medium">{Math.max(currentLikes, 0)}</span>
           </button>
         </div>
 

@@ -326,33 +326,18 @@ export const useCafeChat = ({
               createdAt: data.createdAt,
             };
 
-            // 낙관적 메시지 교체 및 중복 방지
+            // 중복 방지
             setMessages((prev) => {
-              let working = prev;
-
-              // 내 메시지라면 직전에 추가한 낙관적 메시지를 제거
-              if (isMine && pendingMessagesRef.current.length > 0) {
-                const now = Date.now();
-                const idx = pendingMessagesRef.current.findIndex(
-                  (p) => p.content === newMessage.content && now - p.ts < 5000
-                );
-                if (idx !== -1) {
-                  const tempId = pendingMessagesRef.current[idx].id;
-                  working = working.filter((m) => m.id !== tempId);
-                  pendingMessagesRef.current.splice(idx, 1);
-                }
-              }
-
               // 같은 ID가 이미 있으면 추가하지 않음
-              const messageExists = working.some(
+              const messageExists = prev.some(
                 (msg) => msg.id === newMessage.id
               );
               if (messageExists) {
                 console.log("중복 메시지 무시:", newMessage.id);
-                return working;
+                return prev;
               }
 
-              return [...working, newMessage];
+              return [...prev, newMessage];
             });
 
             // 새 메시지가 추가되면 읽지 않은 사람 수 업데이트를 위한 이벤트 발생
@@ -1102,22 +1087,7 @@ export const useCafeChat = ({
           console.log("메시지 전송 실패: STOMP 클라이언트가 없음");
           return;
         }
-        // 낙관적(임시) 메시지 추가: 서버 에코 전에도 우측 정렬로 보이도록
-        const optimisticId = `temp-${Date.now()}`;
-        const optimisticMessage: ChatMessage = {
-          id: optimisticId,
-          senderName: user?.username || "나",
-          content,
-          isMyMessage: true,
-          senderId: user?.username || "me",
-          messageType: "TEXT",
-        } as unknown as ChatMessage;
-        pendingMessagesRef.current.push({
-          id: optimisticId,
-          content,
-          ts: Date.now(),
-        });
-        setMessages((prev) => [...prev, optimisticMessage]);
+
         client.publish({
           destination: `/pub/rooms/${roomId}`,
           body: JSON.stringify({
