@@ -4,6 +4,7 @@ import Footer from "@/components/common/Footer";
 import GoogleMapsLoader from "@/components/map/GoogleMapsLoader";
 import ToastProvider from "@/components/common/ToastProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ReactQueryProvider from "@/providers/ReactQueryProvider";
 import "./globals.css";
 
 export default function RootLayout({
@@ -16,11 +17,13 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="min-h-screen" suppressHydrationWarning={true}>
-        <AuthProvider>
-          <ToastProvider>
-            <main>{children}</main>
-          </ToastProvider>
-        </AuthProvider>
+        <ReactQueryProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <main>{children}</main>
+            </ToastProvider>
+          </AuthProvider>
+        </ReactQueryProvider>
 
         {/* Kakao SDK for sharing */}
         <Script

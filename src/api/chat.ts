@@ -1,4 +1,11 @@
 // 채팅 관련 API 함수들
+import {
+  getAccessToken,
+  getRefreshToken,
+  useAuthStore,
+} from "@/stores/authStore";
+import { useChatPreferencesStore } from "@/stores/chatPreferencesStore";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // 채팅방 참여 응답 타입
@@ -108,7 +115,7 @@ export const getChatRoomIdByCafeId = async (
   cafeId: string
 ): Promise<{ roomId: string }> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/cafe/${cafeId}`,
@@ -159,7 +166,7 @@ const pendingRequests = new Map<string, Promise<ChatRoomJoinResponse>>();
 // 사용자 인증 상태 확인
 async function checkAuthStatus(): Promise<boolean> {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     if (!token) {
       console.error("토큰이 없습니다");
       return false;
@@ -197,7 +204,7 @@ export const joinCafeGroupChat = async (
   // Promise 생성 및 Map에 저장
   const requestPromise = (async () => {
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
 
       // 카페 ID 유효성 검사
       const parsedCafeId = parseInt(cafeId);
@@ -284,7 +291,7 @@ export const joinCafeGroupChat = async (
               // 토큰이 있는데도 가입 상태 조회가 실패하면 토큰 갱신 시도
               if (token && retryCount === 0) {
                 try {
-                  const refreshToken = localStorage.getItem("refreshToken");
+                  const refreshToken = getRefreshToken();
 
                   if (refreshToken) {
                     const refreshResponse = await fetch(
@@ -306,7 +313,14 @@ export const joinCafeGroupChat = async (
                         refreshData.accessToken ||
                         refreshData.data?.accessToken;
                       if (newAccessToken) {
-                        localStorage.setItem("accessToken", newAccessToken);
+                        useAuthStore.getState().login({
+                          accessToken: newAccessToken,
+                          refreshToken:
+                            refreshData.refreshToken ||
+                            refreshData.data?.refreshToken ||
+                            refreshToken,
+                          user: useAuthStore.getState().user,
+                        });
                         return joinCafeGroupChat(cafeId, retryCount + 1);
                       } else {
                         console.error(
@@ -446,10 +460,7 @@ export const getChatParticipants = async (
   roomId: string
 ): Promise<ChatParticipant[]> => {
   try {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("accessToken")
-        : null;
+    const token = typeof window !== "undefined" ? getAccessToken() : null;
     if (!token) {
       console.warn("참여자 목록 조회: 인증 토큰이 없습니다.");
       return [];
@@ -502,7 +513,7 @@ export const getUnreadNotifications = async (): Promise<
   NotificationResponse[]
 > => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     // 토큰이 없으면 빈 배열 반환 (인증되지 않은 사용자)
     if (!token) {
@@ -568,23 +579,18 @@ export const getUnreadNotifications = async (): Promise<
           if (match) {
             const notificationRoomId = match[1];
 
-            // localStorage에서 모든 chat_left_ 키 확인
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith("chat_left_")) {
-                try {
-                  const leftData = JSON.parse(
-                    localStorage.getItem(key) || "{}"
-                  );
-                  // roomId 비교 (문자열로 비교)
-                  if (
-                    leftData.roomId === notificationRoomId ||
-                    leftData.roomId === parseInt(notificationRoomId)
-                  ) {
-                    return false; // 필터링 (알림 제외)
-                  }
-                } catch {}
+            const leftRooms = useChatPreferencesStore.getState().leftRooms;
+            const hasLeft = Object.values(leftRooms).some((info) => {
+              if (!info || !info.roomId) {
+                return false;
               }
+              return (
+                String(info.roomId) === notificationRoomId ||
+                Number(info.roomId) === Number(notificationRoomId)
+              );
+            });
+            if (hasLeft) {
+              return false;
             }
           }
         }
@@ -608,7 +614,7 @@ export const patchReadStatus = async (
   lastReadChatId: number
 ): Promise<void> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read`,
@@ -656,7 +662,7 @@ export const sendChatMessage = async (
   retryCount = 0
 ): Promise<ChatMessageResponse> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/messages`,
@@ -720,7 +726,7 @@ export const getChatMessages = async (
   roomId: string
 ): Promise<ChatMessageResponse[]> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/messages`,
@@ -750,7 +756,7 @@ export const getChatMessages = async (
  */
 export const leaveChatRoom = async (roomId: string): Promise<void> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/leave`,
@@ -782,7 +788,7 @@ export const getChatHistory = async (
   includeSystem: boolean = true
 ): Promise<ChatHistoryResponse> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     // 토큰이 없으면 빈 히스토리 반환 (무한 재시도 방지)
     if (!token) {
@@ -875,7 +881,7 @@ export const patchRead = async (
   lastReadChatId: number
 ): Promise<void> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read`,
@@ -906,7 +912,7 @@ export const createDmChat = async (
   counterpartId: string
 ): Promise<DmChatJoinResponse> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const url = `${API_BASE_URL}/api/chat/rooms/dm/join?counterpartId=${encodeURIComponent(
       counterpartId
@@ -1013,7 +1019,7 @@ export const createDmChat = async (
  */
 export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/leave`,
@@ -1056,7 +1062,7 @@ export const toggleChatMute = async (
   muted: boolean
 ): Promise<void> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const requestBody = { muted };
 
@@ -1104,7 +1110,7 @@ export const toggleChatMute = async (
  */
 export const readLatest = async (roomId: string): Promise<void> => {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,

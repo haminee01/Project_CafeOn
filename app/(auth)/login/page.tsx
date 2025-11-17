@@ -52,7 +52,6 @@ export default function LoginPage() {
         let accessToken = null;
         if (data?.data?.token) {
           accessToken = data.data.token;
-          localStorage.setItem("accessToken", data.data.token);
         }
 
         // JWT 토큰에서 사용자 정보 추출
@@ -103,9 +102,6 @@ export default function LoginPage() {
           showToast("로그인 응답에서 사용자 정보를 찾을 수 없습니다.", "error");
           return;
         }
-
-        // 사용자 정보 저장 및 컨텍스트 갱신
-        localStorage.setItem("userInfo", JSON.stringify(userInfo));
 
         // AuthContext에도 로그인 반영 (헤더 업데이트용)
         const refreshToken = data?.data?.refreshToken || "";

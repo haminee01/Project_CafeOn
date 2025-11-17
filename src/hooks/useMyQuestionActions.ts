@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAccessToken } from "@/stores/authStore";
 
 // 문의 수정 요청 타입
 export interface UpdateQuestionRequest {
@@ -27,7 +28,7 @@ export const useMyQuestionActions = () => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
 
       if (!token || token === "null" || token === "undefined") {
         throw new Error("로그인이 필요합니다.");
@@ -105,7 +106,7 @@ export const useMyQuestionActions = () => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
 
       if (!token || token === "null" || token === "undefined") {
         throw new Error("로그인이 필요합니다.");

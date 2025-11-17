@@ -4,6 +4,7 @@ import {
   MyLikedPostsResponse,
   MyLikedPostsParams,
 } from "@/types/Post";
+import { getAccessToken } from "@/stores/authStore";
 
 export const useMyLikedPosts = (params: MyLikedPostsParams = {}) => {
   const [likedPosts, setLikedPosts] = useState<MyLikedPost[]>([]);
@@ -17,7 +18,7 @@ export const useMyLikedPosts = (params: MyLikedPostsParams = {}) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
 
       if (!token || token === "null" || token === "undefined") {
         throw new Error("로그인이 필요합니다.");

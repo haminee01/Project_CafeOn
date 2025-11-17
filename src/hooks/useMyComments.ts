@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { MyComment, MyCommentsResponse, MyCommentsParams } from "@/types/Post";
+import { getAccessToken } from "@/stores/authStore";
 
 export const useMyComments = (params: MyCommentsParams = {}) => {
   const [comments, setComments] = useState<MyComment[]>([]);
@@ -13,7 +14,7 @@ export const useMyComments = (params: MyCommentsParams = {}) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
 
       if (!token || token === "null" || token === "undefined") {
         throw new Error("로그인이 필요합니다.");

@@ -8,6 +8,7 @@ import { QuestionVisibility } from "@/types/qna";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import { formatSimpleDate } from "@/utils/dateFormat";
+import { getAccessToken } from "@/stores/authStore";
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -41,7 +42,7 @@ const QuestionList = ({
   // 각 문의의 상태를 조회하는 함수
   const fetchQuestionStatus = async (questionId: number) => {
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
       const response = await fetch(
         `http://localhost:8080/api/qna/questions/${questionId}`,
         {

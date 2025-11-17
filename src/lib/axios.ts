@@ -3,6 +3,11 @@ import axios, {
   InternalAxiosRequestConfig,
   AxiosResponse,
 } from "axios";
+import {
+  getAccessToken,
+  getRefreshToken,
+  useAuthStore,
+} from "@/stores/authStore";
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -17,18 +22,13 @@ const apiClient: AxiosInstance = axios.create({
 });
 
 // 요청 인터셉터 - 토큰 자동 추가
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = getAccessToken();
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 
 // 응답 인터셉터 - 에러 처리
 apiClient.interceptors.response.use(
@@ -46,7 +46,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem("refreshToken");
+        const refreshToken = getRefreshToken();
         if (refreshToken) {
           const response = await axios.post(
             `${API_BASE_URL}/api/auth/refresh`,
@@ -59,8 +59,11 @@ apiClient.interceptors.response.use(
           const { accessToken, refreshToken: newRefreshToken } = data;
 
           // 새 토큰들 저장
-          localStorage.setItem("accessToken", accessToken);
-          localStorage.setItem("refreshToken", newRefreshToken);
+          useAuthStore.getState().login({
+            accessToken,
+            refreshToken: newRefreshToken,
+            user: useAuthStore.getState().user,
+          });
 
           // 원래 요청 재시도
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -68,9 +71,7 @@ apiClient.interceptors.response.use(
         }
       } catch (refreshError) {
         // 토큰 갱신 실패 시 로그아웃
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("user");
+        useAuthStore.getState().logout();
         window.location.href = "/login";
         return Promise.reject(refreshError);
       }

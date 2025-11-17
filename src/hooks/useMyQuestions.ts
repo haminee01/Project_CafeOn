@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getAccessToken } from "@/stores/authStore";
 
 // 문의 상태 enum
 export enum QuestionStatus {
@@ -62,7 +63,7 @@ export const useMyQuestions = (params: MyQuestionsParams = {}) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
 
       if (!token) {
         throw new Error("로그인이 필요합니다.");

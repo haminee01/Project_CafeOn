@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAccessToken } from "@/stores/authStore";
 
 // 가시성 enum
 export enum QuestionVisibility {
@@ -41,7 +42,7 @@ export const useCreateQuestion = () => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
 
       if (!token) {
         throw new Error("로그인이 필요합니다.");

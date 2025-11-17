@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getAccessToken } from "@/stores/authStore";
 
 // 문의 상세 응답 타입
 export interface MyQuestionDetailResponse {
@@ -36,7 +37,7 @@ export const useMyQuestionDetail = (questionId: number | null) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
 
       if (!token || token === "null" || token === "undefined") {
         throw new Error("로그인이 필요합니다.");

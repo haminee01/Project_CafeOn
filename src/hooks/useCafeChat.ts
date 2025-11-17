@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import {
   joinCafeGroupChat,
   getChatParticipants,
@@ -31,6 +31,13 @@ import {
   getCafeIdByRoom,
   removeChatMapping,
 } from "@/utils/chatMapping";
+import {
+  useChatStore,
+  createCafeChatSessionState,
+  CafeSessionUpdater,
+} from "@/stores/chatStore";
+import { useChatPreferencesStore } from "@/stores/chatPreferencesStore";
+import { getAccessToken, useAuthStore } from "@/stores/authStore";
 
 interface UseCafeChatProps {
   cafeId: string;
@@ -80,19 +87,144 @@ export const useCafeChat = ({
 }: UseCafeChatProps): UseCafeChatReturn => {
   // 현재 로그인 사용자
   const { user } = useAuth();
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatHistory, setChatHistory] = useState<ChatHistoryMessage[]>([]);
-  const [hasMoreHistory, setHasMoreHistory] = useState(true);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [isJoining, setIsJoining] = useState(false); // 중복 참여 방지
-  const [isRetrying, setIsRetrying] = useState(false); // 재시도 중 상태
-  const [isMuted, setIsMuted] = useState(false); // 알림 상태
-  const [stompConnected, setStompConnected] = useState(false); // STOMP 연결 상태
+  const getCafeMutePref = useChatPreferencesStore((state) => state.getCafeMute);
+  const setCafeMutePref = useChatPreferencesStore((state) => state.setCafeMute);
+  const getRoomLeftPref = useChatPreferencesStore((state) => state.getRoomLeft);
+  const markRoomLeftPref = useChatPreferencesStore(
+    (state) => state.markRoomLeft
+  );
+  const clearRoomLeftPref = useChatPreferencesStore(
+    (state) => state.clearRoomLeft
+  );
+  const session = useChatStore(
+    useCallback(
+      (state) => state.cafeSessions[cafeId] ?? createCafeChatSessionState(),
+      [cafeId]
+    )
+  );
+  const initCafeSession = useChatStore((state) => state.initCafeSession);
+  const patchCafeSession = useChatStore((state) => state.patchCafeSession);
+  const resetCafeSession = useChatStore((state) => state.resetCafeSession);
+
+  useEffect(() => {
+    initCafeSession(cafeId);
+    return () => resetCafeSession(cafeId);
+  }, [cafeId, initCafeSession, resetCafeSession]);
+
+  const updateSession = useCallback(
+    (updater: CafeSessionUpdater) => patchCafeSession(cafeId, updater),
+    [cafeId, patchCafeSession]
+  );
+
+  const setRoomId = useCallback(
+    (value: string | null) => updateSession({ roomId: value }),
+    [updateSession]
+  );
+
+  const setIsJoined = useCallback(
+    (value: boolean) => updateSession({ isJoined: value }),
+    [updateSession]
+  );
+
+  const setIsLoading = useCallback(
+    (value: boolean) => updateSession({ isLoading: value }),
+    [updateSession]
+  );
+
+  const setError = useCallback(
+    (value: string | null) => updateSession({ error: value }),
+    [updateSession]
+  );
+
+  const setParticipants = useCallback(
+    (updater: Participant[] | ((prev: Participant[]) => Participant[])) =>
+      updateSession((prev) => ({
+        ...prev,
+        participants:
+          typeof updater === "function"
+            ? (updater as (prev: Participant[]) => Participant[])(
+                prev.participants
+              )
+            : updater,
+      })),
+    [updateSession]
+  );
+
+  const setMessages = useCallback(
+    (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) =>
+      updateSession((prev) => ({
+        ...prev,
+        messages:
+          typeof updater === "function"
+            ? (updater as (prev: ChatMessage[]) => ChatMessage[])(prev.messages)
+            : updater,
+      })),
+    [updateSession]
+  );
+
+  const setChatHistory = useCallback(
+    (
+      updater:
+        | ChatHistoryMessage[]
+        | ((prev: ChatHistoryMessage[]) => ChatHistoryMessage[])
+    ) =>
+      updateSession((prev) => ({
+        ...prev,
+        chatHistory:
+          typeof updater === "function"
+            ? (updater as (prev: ChatHistoryMessage[]) => ChatHistoryMessage[])(
+                prev.chatHistory
+              )
+            : updater,
+      })),
+    [updateSession]
+  );
+
+  const setHasMoreHistory = useCallback(
+    (value: boolean) => updateSession({ hasMoreHistory: value }),
+    [updateSession]
+  );
+
+  const setIsLoadingHistory = useCallback(
+    (value: boolean) => updateSession({ isLoadingHistory: value }),
+    [updateSession]
+  );
+
+  const setIsJoining = useCallback(
+    (value: boolean) => updateSession({ isJoining: value }),
+    [updateSession]
+  );
+
+  const setIsRetrying = useCallback(
+    (value: boolean) => updateSession({ isRetrying: value }),
+    [updateSession]
+  );
+
+  const setIsMuted = useCallback(
+    (value: boolean) => updateSession({ isMuted: value }),
+    [updateSession]
+  );
+
+  const setStompConnected = useCallback(
+    (value: boolean) => updateSession({ stompConnected: value }),
+    [updateSession]
+  );
+
+  const {
+    roomId,
+    isJoined,
+    isLoading,
+    error,
+    participants,
+    messages,
+    chatHistory,
+    hasMoreHistory,
+    isLoadingHistory,
+    isJoining,
+    isRetrying,
+    isMuted,
+    stompConnected,
+  } = session;
 
   // STOMP 관련 상태
   const stompClientRef = useRef<Client | null>(null);
@@ -149,7 +281,7 @@ export const useCafeChat = ({
     }
     readLatestTimerRef.current = setTimeout(async () => {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = getAccessToken();
         if (!token) return;
 
         const res = await fetch(
@@ -175,7 +307,7 @@ export const useCafeChat = ({
     }
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
       if (!token) {
         throw new Error("인증 토큰이 없습니다.");
       }
@@ -254,7 +386,7 @@ export const useCafeChat = ({
             // 내 닉네임 추출 (토큰 payload의 sub 또는 userId)
             const getMyNicknameFromToken = (): string | null => {
               try {
-                const token = localStorage.getItem("accessToken");
+                const token = getAccessToken();
                 if (!token) return null;
                 const payload = JSON.parse(atob(token.split(".")[1]));
                 return (
@@ -266,14 +398,10 @@ export const useCafeChat = ({
             };
 
             // 가능한 모든 소스에서 내 닉네임을 확보 (지연 로딩 대비)
-            let storedUsername: string | null = null;
-            try {
-              const stored = localStorage.getItem("userInfo");
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                storedUsername = parsed?.username || null;
-              }
-            } catch {}
+            const storedUsername =
+              useAuthStore.getState().user?.nickname ||
+              useAuthStore.getState().user?.username ||
+              null;
 
             const myNickname =
               user?.username ||
@@ -449,29 +577,6 @@ export const useCafeChat = ({
     lastReadSeenRef.current.clear();
   }, []);
 
-  // 채팅방별 muted 상태를 로컬 스토리지에서 가져오기
-  const getMutedStateFromStorage = useCallback(
-    (targetRoomId: string): boolean => {
-      const key = `chat_muted_${targetRoomId}`;
-      const stored = localStorage.getItem(key);
-      if (stored !== null) {
-        const muted = stored === "true";
-        return muted;
-      }
-      return false;
-    },
-    []
-  );
-
-  // 채팅방별 muted 상태를 로컬 스토리지에 저장
-  const saveMutedStateToStorage = useCallback(
-    (targetRoomId: string, muted: boolean): void => {
-      const key = `chat_muted_${targetRoomId}`;
-      localStorage.setItem(key, String(muted));
-    },
-    []
-  );
-
   // 참여자 목록 새로고침
   const refreshParticipants = useCallback(
     async (targetRoomId?: string) => {
@@ -485,14 +590,10 @@ export const useCafeChat = ({
           useRoomId
         );
         // 현재 사용자 username 가져오기
-        let storedUsername: string | null = null;
-        try {
-          const stored = localStorage.getItem("userInfo");
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            storedUsername = parsed?.username || null;
-          }
-        } catch {}
+        const storedUsername =
+          useAuthStore.getState().user?.nickname ||
+          useAuthStore.getState().user?.username ||
+          null;
 
         const currentUsername = user?.username || storedUsername;
 
@@ -542,8 +643,7 @@ export const useCafeChat = ({
               .replace(")", "");
           }
           myNicknameRef.current = myCleanNickname;
-          // 로컬 스토리지에서 muted 상태 가져오기 (서버가 반환하지 않으므로)
-          const mutedState = getMutedStateFromStorage(useRoomId);
+          const mutedState = getCafeMutePref(useRoomId);
           setIsMuted(mutedState);
         } else {
         }
@@ -552,7 +652,7 @@ export const useCafeChat = ({
         setParticipants([]);
       }
     },
-    [roomId, getMutedStateFromStorage]
+    [roomId, user?.username, setParticipants, setIsMuted, getCafeMutePref]
   );
 
   // 채팅 히스토리 로드 (커서 페이징)
@@ -648,12 +748,11 @@ export const useCafeChat = ({
         setChatMapping(responseCafeId, parseInt(newRoomId));
 
         // 나간 채팅방인지 확인
-        const leftKey = `chat_left_${cafeId}`;
-        const hasLeft = localStorage.getItem(leftKey);
+        const leftKey = `cafe_${cafeId}`;
+        const leftInfo = getRoomLeftPref(leftKey);
 
-        if (hasLeft) {
-          // 나간 기록 삭제
-          localStorage.removeItem(leftKey);
+        if (leftInfo) {
+          clearRoomLeftPref(leftKey);
           setHasMoreHistory(false);
 
           // 참여자 목록만 로드 (히스토리는 로드하지 않음)
@@ -832,6 +931,8 @@ export const useCafeChat = ({
       subscribeToRoom,
       refreshParticipants,
       loadMoreHistory,
+      getRoomLeftPref,
+      clearRoomLeftPref,
     ]
   );
 
@@ -847,12 +948,12 @@ export const useCafeChat = ({
       await leaveChatRoomNew(roomId);
 
       // API 성공 후에만 로컬 스토리지에 기록
-      const leftKey = `chat_left_${cafeId}`;
-      const leftData = {
-        leftAt: new Date().toISOString(),
-        roomId: roomId,
-      };
-      localStorage.setItem(leftKey, JSON.stringify(leftData));
+      const leftKey = `cafe_${cafeId}`;
+      markRoomLeftPref(leftKey, {
+        timestamp: Date.now(),
+        cafeId,
+        roomId,
+      });
 
       // 매핑 제거
       removeChatMapping(parseInt(cafeId));
@@ -874,7 +975,7 @@ export const useCafeChat = ({
     } catch (err) {
       console.error("=== 채팅방 나가기 API 실패 ===", err);
 
-      // API 실패 시 localStorage에 기록하지 않음
+      // API 실패 시 로컬 저장소에 기록하지 않음
       // 사용자에게 명확한 에러 메시지 표시
       const errorMessage =
         err instanceof Error ? err.message : "채팅방 나가기에 실패했습니다.";
@@ -892,7 +993,7 @@ export const useCafeChat = ({
     } finally {
       setIsLoading(false);
     }
-  }, [roomId, cafeId, disconnectStomp]);
+  }, [roomId, cafeId, disconnectStomp, markRoomLeftPref]);
 
   // 메시지 전송 (STOMP 발행)
   const sendMessage = useCallback(
@@ -1009,17 +1110,14 @@ export const useCafeChat = ({
 
       // 로컬 상태 업데이트
       setIsMuted(newMutedState);
-
-      // 로컬 스토리지에 저장 (새로고침 시 유지)
-      saveMutedStateToStorage(roomId, newMutedState);
+      setCafeMutePref(roomId, newMutedState);
     } catch (err) {
       console.error("채팅방 알림 설정 실패:", err);
-      // 에러가 발생해도 UI 상태는 변경 (사용자 경험 개선)
       const newMutedState = !isMuted;
       setIsMuted(newMutedState);
-      saveMutedStateToStorage(roomId, newMutedState);
+      setCafeMutePref(roomId, newMutedState);
     }
-  }, [roomId, isMuted, saveMutedStateToStorage]);
+  }, [roomId, isMuted, setCafeMutePref]);
 
   // 채팅 읽음 처리
   const markAsRead = useCallback(async () => {

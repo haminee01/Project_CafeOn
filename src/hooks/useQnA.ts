@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getAccessToken } from "@/stores/authStore";
 import {
   QuestionListItem,
   QuestionDetail,
@@ -14,12 +15,7 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-const getAuthToken = () => {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("accessToken");
-  }
-  return null;
-};
+const getAuthToken = () => getAccessToken();
 
 // 문의 목록 조회 훅
 export const useQuestionList = (params: QuestionListParams) => {

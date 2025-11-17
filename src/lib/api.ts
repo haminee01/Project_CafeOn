@@ -1,4 +1,5 @@
 import { isAxiosError } from "axios";
+import { getAccessToken } from "@/stores/authStore";
 import apiClient from "./axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -993,7 +994,7 @@ export interface WishlistResponse {
 // 위시리스트 제거 (DELETE)
 export async function deleteWishlist(cafeId: number, category: string) {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     const queryParams = new URLSearchParams({ category });
 
     const response = await fetch(
@@ -1041,7 +1042,7 @@ export async function deleteWishlist(cafeId: number, category: string) {
 // 내 채팅방 목록 조회
 export async function getMyChatRooms() {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     const response = await fetch(`${API_BASE_URL}/api/my/chat/rooms`, {
       method: "GET",
       headers: {
@@ -1071,7 +1072,7 @@ export async function getMyChatRooms() {
 // 채팅 읽음 처리
 export async function markChatAsRead(roomId: string, lastReadChatId: string) {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,
       {
@@ -1107,7 +1108,7 @@ export async function markChatAsRead(roomId: string, lastReadChatId: string) {
 // 사용자의 읽지 않은 채팅 목록 조회
 export async function getNotificationsUnread() {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     const response = await fetch(`${API_BASE_URL}/api/notifications/unread`, {
       method: "GET",
       headers: {
@@ -1141,7 +1142,7 @@ export async function getChatMessagesWithUnreadCount(roomId: string) {
       throw new Error("유효하지 않은 roomId입니다.");
     }
 
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/messages`,
       {
@@ -1196,7 +1197,7 @@ export async function sendChatImage(
   caption?: string
 ): Promise<SendChatImageResponse> {
   try {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     if (!token) {
       throw new Error("로그인이 필요합니다.");
@@ -1348,7 +1349,7 @@ export async function getMyReviews(params?: {
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
 
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     const response = await fetch(url, {
       method: "GET",
       headers: {

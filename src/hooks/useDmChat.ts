@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import {
   createDmChat,
   getChatParticipants,
@@ -28,6 +28,13 @@ import {
 } from "@/lib/stompClient";
 import { Client } from "@stomp/stompjs";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  useChatStore,
+  createDmChatSessionState,
+  DmSessionUpdater,
+} from "@/stores/chatStore";
+import { useChatPreferencesStore } from "@/stores/chatPreferencesStore";
+import { getAccessToken, useAuthStore } from "@/stores/authStore";
 
 interface UseDmChatProps {
   counterpartId: string;
@@ -74,29 +81,108 @@ export const useDmChat = ({
   existingRoomId,
 }: UseDmChatProps): UseDmChatReturn => {
   // 기본 상태
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const sessionKey = existingRoomId || counterpartId || "dm-default";
+  const session = useChatStore(
+    useCallback(
+      (state) => state.dmSessions[sessionKey] ?? createDmChatSessionState(),
+      [sessionKey]
+    )
+  );
+  const initDmSession = useChatStore((state) => state.initDmSession);
+  const patchDmSession = useChatStore((state) => state.patchDmSession);
+  const resetDmSession = useChatStore((state) => state.resetDmSession);
+  const updateSession = useCallback(
+    (updater: DmSessionUpdater) => patchDmSession(sessionKey, updater),
+    [sessionKey, patchDmSession]
+  );
 
-  // 참여자 관련
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [participantCount, setParticipantCount] = useState(0);
+  useEffect(() => {
+    initDmSession(sessionKey);
+    return () => resetDmSession(sessionKey);
+  }, [sessionKey, initDmSession, resetDmSession]);
 
-  // 메시지 관련
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatHistory, setChatHistory] = useState<ChatHistoryMessage[]>([]);
-  const [hasMoreHistory, setHasMoreHistory] = useState(true);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-
-  // 알림 관련
-  const [isMuted, setIsMuted] = useState(false);
+  const setRoomId = useCallback(
+    (value: string | null) => updateSession({ roomId: value }),
+    [updateSession]
+  );
+  const setIsJoined = useCallback(
+    (value: boolean) => updateSession({ isJoined: value }),
+    [updateSession]
+  );
+  const setIsLoading = useCallback(
+    (value: boolean) => updateSession({ isLoading: value }),
+    [updateSession]
+  );
+  const setError = useCallback(
+    (value: string | null) => updateSession({ error: value }),
+    [updateSession]
+  );
+  const setParticipants = useCallback(
+    (updater: Participant[] | ((prev: Participant[]) => Participant[])) =>
+      updateSession((prev) => ({
+        ...prev,
+        participants:
+          typeof updater === "function"
+            ? (updater as (prev: Participant[]) => Participant[])(
+                prev.participants
+              )
+            : updater,
+      })),
+    [updateSession]
+  );
+  const setParticipantCount = useCallback(
+    (value: number) => updateSession({ participantCount: value }),
+    [updateSession]
+  );
+  const setMessages = useCallback(
+    (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) =>
+      updateSession((prev) => ({
+        ...prev,
+        messages:
+          typeof updater === "function"
+            ? (updater as (prev: ChatMessage[]) => ChatMessage[])(prev.messages)
+            : updater,
+      })),
+    [updateSession]
+  );
+  const setChatHistory = useCallback(
+    (
+      updater:
+        | ChatHistoryMessage[]
+        | ((prev: ChatHistoryMessage[]) => ChatHistoryMessage[])
+    ) =>
+      updateSession((prev) => ({
+        ...prev,
+        chatHistory:
+          typeof updater === "function"
+            ? (updater as (prev: ChatHistoryMessage[]) => ChatHistoryMessage[])(
+                prev.chatHistory
+              )
+            : updater,
+      })),
+    [updateSession]
+  );
+  const setHasMoreHistory = useCallback(
+    (value: boolean) => updateSession({ hasMoreHistory: value }),
+    [updateSession]
+  );
+  const setIsLoadingHistory = useCallback(
+    (value: boolean) => updateSession({ isLoadingHistory: value }),
+    [updateSession]
+  );
+  const setIsMuted = useCallback(
+    (value: boolean) => updateSession({ isMuted: value }),
+    [updateSession]
+  );
 
   // STOMP 관련
   const stompClientRef = useRef<Client | null>(null);
   const messageSubscriptionRef = useRef<StompSubscription | null>(null);
   const readSubscriptionRef = useRef<StompSubscription | null>(null);
-  const [stompConnected, setStompConnected] = useState(false);
+  const setStompConnected = useCallback(
+    (value: boolean) => updateSession({ stompConnected: value }),
+    [updateSession]
+  );
 
   // 읽음 영수증: readerId별 마지막으로 적용된 lastReadChatId 저장 (중복 차감 방지)
   const lastReadSeenRef = useRef<Map<string, number>>(new Map());
@@ -107,7 +193,31 @@ export const useDmChat = ({
 
   // 인증 관련
   const { user, currentUserId } = useAuth();
+  const getDmMutePref = useChatPreferencesStore((state) => state.getDmMute);
+  const setDmMutePref = useChatPreferencesStore((state) => state.setDmMute);
+  const getRoomLeftPref = useChatPreferencesStore((state) => state.getRoomLeft);
+  const markRoomLeftPref = useChatPreferencesStore(
+    (state) => state.markRoomLeft
+  );
+  const clearRoomLeftPref = useChatPreferencesStore(
+    (state) => state.clearRoomLeft
+  );
   const currentUserNickname = user?.username || null;
+
+  const {
+    roomId,
+    isJoined,
+    isLoading,
+    error,
+    participants,
+    participantCount,
+    messages,
+    chatHistory,
+    hasMoreHistory,
+    isLoadingHistory,
+    isMuted,
+    stompConnected,
+  } = session;
 
   // ===== Run Grouping 유틸 함수들 =====
   // 분 단위 시간 키 생성 (YYYY-MM-DD HH:MM)
@@ -147,7 +257,7 @@ export const useDmChat = ({
     }
     readLatestTimerRef.current = setTimeout(async () => {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = getAccessToken();
         if (!token) return;
 
         const res = await fetch(
@@ -173,10 +283,7 @@ export const useDmChat = ({
     }
 
     try {
-      const token =
-        typeof window !== "undefined"
-          ? localStorage.getItem("accessToken")
-          : null;
+      const token = typeof window !== "undefined" ? getAccessToken() : null;
       if (!token) {
         throw new Error("인증 토큰이 없습니다.");
       }
@@ -256,23 +363,17 @@ export const useDmChat = ({
 
               if (!isMyMessage) {
                 // 1) 사용자 ID 비교 (가장 확실) - 메시지를 받을 때마다 최신 정보 가져오기
-                let myId: string | null = null;
-                // 먼저 useAuth의 user 객체 확인 (가장 신뢰 가능)
-                try {
-                  const token = localStorage.getItem("accessToken");
-                  if (token) {
-                    const payload = JSON.parse(atob(token.split(".")[1]));
-                    myId =
-                      payload?.sub || payload?.userId || payload?.id || null;
-                  }
-                } catch {}
-                // 로컬 스토리지에서도 확인
+                let myId: string | null =
+                  useAuthStore.getState().user?.userId ||
+                  useAuthStore.getState().user?.id ||
+                  null;
                 if (!myId) {
                   try {
-                    const stored = localStorage.getItem("userInfo");
-                    if (stored) {
-                      const parsed = JSON.parse(stored);
-                      myId = parsed?.id || null;
+                    const token = getAccessToken();
+                    if (token) {
+                      const payload = JSON.parse(atob(token.split(".")[1]));
+                      myId =
+                        payload?.sub || payload?.userId || payload?.id || null;
                     }
                   } catch {}
                 }
@@ -290,15 +391,13 @@ export const useDmChat = ({
                 }
 
                 // 2) 닉네임 후보 수집: useAuth, 로컬스토리지, 토큰 - 메시지를 받을 때마다 최신 정보 가져오기
-                let storedUsername: string | null = null;
-                try {
-                  const stored = localStorage.getItem("userInfo");
-                  if (stored)
-                    storedUsername = JSON.parse(stored)?.username || null;
-                } catch {}
+                const storedUsername =
+                  useAuthStore.getState().user?.nickname ||
+                  useAuthStore.getState().user?.username ||
+                  null;
                 let tokenName: string | null = null;
                 try {
-                  const token = localStorage.getItem("accessToken");
+                  const token = getAccessToken();
                   if (token) {
                     const payload = JSON.parse(atob(token.split(".")[1]));
                     tokenName = payload?.nickname || payload?.username || null;
@@ -446,29 +545,6 @@ export const useDmChat = ({
     lastReadSeenRef.current.clear();
   }, []);
 
-  // 채팅방별 muted 상태를 로컬 스토리지에서 가져오기
-  const getMutedStateFromStorage = useCallback(
-    (targetRoomId: string): boolean => {
-      const key = `chat_muted_${targetRoomId}`;
-      const stored = localStorage.getItem(key);
-      if (stored !== null) {
-        const muted = stored === "true";
-        return muted;
-      }
-      return false;
-    },
-    []
-  );
-
-  // 채팅방별 muted 상태를 로컬 스토리지에 저장
-  const saveMutedStateToStorage = useCallback(
-    (targetRoomId: string, muted: boolean): void => {
-      const key = `chat_muted_${targetRoomId}`;
-      localStorage.setItem(key, String(muted));
-    },
-    []
-  );
-
   // 참여자 목록 새로고침
   const refreshParticipants = useCallback(async () => {
     if (!roomId) {
@@ -492,12 +568,19 @@ export const useDmChat = ({
       const currentUser = response.find((p) => p.me === true);
 
       if (currentUser) {
-        // 로컬 스토리지에서 muted 상태 가져오기 (서버가 반환하지 않으므로)
-        const mutedState = getMutedStateFromStorage(roomId);
+        const mutedState = getDmMutePref(roomId);
         setIsMuted(mutedState);
       }
     } catch (err) {}
-  }, [roomId, getMutedStateFromStorage, user, currentUserId]);
+  }, [
+    roomId,
+    getDmMutePref,
+    user,
+    currentUserId,
+    setIsMuted,
+    setParticipants,
+    setParticipantCount,
+  ]);
 
   // 채팅 히스토리 로딩
   const loadMoreHistory = useCallback(async () => {
@@ -624,12 +707,11 @@ export const useDmChat = ({
         }, 100);
 
         // 나간 채팅방인지 확인
-        const leftKey = `dm_left_${counterpartId}`;
-        const hasLeft = localStorage.getItem(leftKey);
+        const leftKey = `dm_${counterpartId || existingRoomId || "default"}`;
+        const leftInfo = getRoomLeftPref(leftKey);
 
-        if (hasLeft) {
-          // 나간 기록 삭제
-          localStorage.removeItem(leftKey);
+        if (leftInfo) {
+          clearRoomLeftPref(leftKey);
           // 빈 채팅방으로 시작
           setChatHistory([]);
           setHasMoreHistory(false);
@@ -739,14 +821,13 @@ export const useDmChat = ({
           }, 100);
 
           // 나간 채팅방인지 확인
-          const leftKey = `dm_left_${counterpartId}`;
-          const hasLeft = localStorage.getItem(leftKey);
+          const leftKey = `dm_${counterpartId}`;
+          const leftInfo = getRoomLeftPref(leftKey);
 
           let hasJoinMessage = false;
 
-          if (hasLeft) {
-            // 나간 기록 삭제
-            localStorage.removeItem(leftKey);
+          if (leftInfo) {
+            clearRoomLeftPref(leftKey);
             // 빈 채팅방으로 시작
             setChatHistory([]);
             setHasMoreHistory(false);
@@ -965,15 +1046,13 @@ export const useDmChat = ({
       }
 
       // 나간 채팅방인지 확인
-      const leftKey = `dm_left_${counterpartId}`;
-      const hasLeft = localStorage.getItem(leftKey);
+      const leftKey = `dm_${counterpartId || newRoomIdStr || "default"}`;
+      const leftInfo = getRoomLeftPref(leftKey);
 
       let hasJoinMessage = false;
 
-      if (hasLeft) {
-        // 나간 기록 삭제
-        localStorage.removeItem(leftKey);
-        // 빈 채팅방으로 시작
+      if (leftInfo) {
+        clearRoomLeftPref(leftKey);
         setChatHistory([]);
         setHasMoreHistory(false);
         setMessages([]);
@@ -1061,13 +1140,12 @@ export const useDmChat = ({
       // 나가기 API 호출 - 반드시 성공해야 함
       await leaveChatRoomNew(roomId);
 
-      // API 성공 후에만 로컬 스토리지에 기록
-      const leftKey = `dm_left_${counterpartId}`;
-      const leftData = {
-        leftAt: new Date().toISOString(),
-        roomId: roomId,
-      };
-      localStorage.setItem(leftKey, JSON.stringify(leftData));
+      // API 성공 후에만 로컬 저장소에 기록
+      const leftKey = `dm_${counterpartId || roomId}`;
+      markRoomLeftPref(leftKey, {
+        timestamp: Date.now(),
+        roomId,
+      });
 
       // 매핑 제거
       removeDmChatMapping(counterpartId);
@@ -1087,7 +1165,7 @@ export const useDmChat = ({
       // joinChat 재호출 가능하도록 초기화
       joinedCounterpartRef.current = null;
     } catch (err) {
-      // API 실패 시 localStorage에 기록하지 않음
+      // API 실패 시 로컬 저장소에 기록하지 않음
       // 사용자에게 명확한 에러 메시지 표시
       const errorMessage =
         err instanceof Error ? err.message : "채팅방 나가기에 실패했습니다.";
@@ -1102,7 +1180,7 @@ export const useDmChat = ({
       disconnectStomp();
       throw err; // 에러를 상위로 전파하여 UI에서 처리
     }
-  }, [roomId, counterpartId, disconnectStomp]);
+  }, [roomId, counterpartId, disconnectStomp, markRoomLeftPref]);
 
   // 메시지 전송
   const sendMessage = useCallback(
@@ -1138,22 +1216,15 @@ export const useDmChat = ({
 
     try {
       const newMutedState = !isMuted;
-
-      // 서버에 muted 값 업데이트
       await toggleChatMute(roomId, newMutedState);
-
-      // 로컬 상태 업데이트
       setIsMuted(newMutedState);
-
-      // 로컬 스토리지에 저장 (새로고침 시 유지)
-      saveMutedStateToStorage(roomId, newMutedState);
+      setDmMutePref(roomId, newMutedState);
     } catch (err) {
-      // 에러가 발생해도 UI 상태는 변경 (사용자 경험 개선)
       const newMutedState = !isMuted;
       setIsMuted(newMutedState);
-      saveMutedStateToStorage(roomId, newMutedState);
+      setDmMutePref(roomId, newMutedState);
     }
-  }, [roomId, isMuted, saveMutedStateToStorage]);
+  }, [roomId, isMuted, setDmMutePref]);
 
   // 이전 existingRoomId 추적
   const previousExistingRoomIdRef = useRef<string | undefined>(undefined);

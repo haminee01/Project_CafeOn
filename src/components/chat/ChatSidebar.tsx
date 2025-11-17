@@ -2,6 +2,7 @@ import React from "react";
 import ProfileIcon from "./ProfileIcon";
 import { ChatSidebarProps } from "@/types/chat";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAccessToken } from "@/stores/authStore";
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   participants,
@@ -16,57 +17,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 }) => {
   // 현재 사용자 정보 가져오기 (username으로 비교)
   const { user } = useAuth();
-  const currentUserNickname = user?.username || null;
-  const effectiveCurrentUserId = currentUserId || (user as any)?.id || null;
+  const currentUserNickname = user?.username || user?.nickname || null;
+  const effectiveCurrentUserId =
+    currentUserId || (user as any)?.id || user?.userId || null;
 
-  // 로컬 스토리지에 저장된 사용자명도 후보로 사용 (브랜치/새로고침 간 불일치 대비)
-  let storedUsername: string | null = null;
-  try {
-    const stored =
-      typeof window !== "undefined" ? localStorage.getItem("userInfo") : null;
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      storedUsername = parsed?.username || null;
-    }
-  } catch {}
-
-  // 토큰에서도 닉네임 추출
   let tokenNickname: string | null = null;
+  let currentUserIdFromToken: string | null = null;
   try {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("accessToken")
-        : null;
+    const token = getAccessToken();
     if (token) {
       const payload = JSON.parse(atob(token.split(".")[1]));
       tokenNickname = payload?.nickname || payload?.username || null;
-    }
-  } catch {}
-
-  const candidateMyNames = [
-    currentUserNickname,
-    storedUsername,
-    tokenNickname,
-  ].filter(Boolean) as string[];
-
-  // 현재 사용자 ID 후보 (토큰에서도 추출)
-  let currentUserIdFromToken: string | null = null;
-  try {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("accessToken")
-        : null;
-    if (token) {
-      const payload = JSON.parse(atob(token.split(".")[1]));
       currentUserIdFromToken =
         payload?.sub || payload?.userId || payload?.id || null;
     }
   } catch {}
 
+  const candidateMyNames = [
+    currentUserNickname,
+    user?.nickname,
+    tokenNickname,
+  ].filter(Boolean) as string[];
+
   const candidateMyIds = [
     effectiveCurrentUserId,
     currentUserIdFromToken,
     (user as any)?.id,
+    user?.userId,
   ].filter(Boolean) as string[];
   return (
     <>

@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import MapComponent from "@/components/map/Map";
 import { getWishlist, getNearbyCafes, getHotCafes } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
+import { getAccessToken } from "@/stores/authStore";
 
 type TabType = "home" | "saved" | "popular";
 type SavedCategoryType =
@@ -48,7 +50,7 @@ export default function MapPage() {
 
   // 로그인 상태 확인
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     setIsLoggedIn(!!token);
   }, []);
 
@@ -88,7 +90,7 @@ export default function MapPage() {
 
   // 위시리스트 조회
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     // 로그인된 경우에만 위시리스트 조회
     if (activeTab === "saved" && token) {
       fetchWishlist();
@@ -110,8 +112,8 @@ export default function MapPage() {
 
       // API가 배열을 반환하면 그대로 사용, 이미지 있는 카페만 필터링
       if (Array.isArray(cafes) && cafes.length > 0) {
-        const cafesWithImages = cafes.filter(cafe => 
-          cafe.photoUrl || (cafe.images && cafe.images.length > 0)
+        const cafesWithImages = cafes.filter(
+          (cafe) => cafe.photoUrl || (cafe.images && cafe.images.length > 0)
         );
         setNearbyCafes(cafesWithImages);
       } else {
@@ -129,11 +131,11 @@ export default function MapPage() {
     setLoading(true);
     try {
       const cafes = await getHotCafes();
-      
+
       // API가 배열을 반환하면 그대로 사용, 이미지 있는 카페만 필터링
       if (Array.isArray(cafes) && cafes.length > 0) {
-        const cafesWithImages = cafes.filter(cafe => 
-          cafe.photoUrl || (cafe.images && cafe.images.length > 0)
+        const cafesWithImages = cafes.filter(
+          (cafe) => cafe.photoUrl || (cafe.images && cafe.images.length > 0)
         );
         setPopularCafes(cafesWithImages);
       } else {
@@ -154,13 +156,20 @@ export default function MapPage() {
     try {
       // "all"인 경우 모든 카테고리를 개별적으로 조회하고 합치기
       if (savedCategory === "all") {
-        const allCategories = ["HIDEOUT", "WORK", "ATMOSPHERE", "TASTE", "PLANNED"];
-        const allPromises = allCategories.map((category) =>
-          getWishlist({
-            page: 0,
-            size: 20,
-            category,
-          }).catch(() => ({ data: { content: [] } })) // 개별 카테고리 실패 시 빈 배열
+        const allCategories = [
+          "HIDEOUT",
+          "WORK",
+          "ATMOSPHERE",
+          "TASTE",
+          "PLANNED",
+        ];
+        const allPromises = allCategories.map(
+          (category) =>
+            getWishlist({
+              page: 0,
+              size: 20,
+              category,
+            }).catch(() => ({ data: { content: [] } })) // 개별 카테고리 실패 시 빈 배열
         );
 
         const allResponses = await Promise.all(allPromises);
@@ -170,7 +179,9 @@ export default function MapPage() {
 
         // 중복 제거 (같은 cafeId가 여러 카테고리에 있을 수 있음)
         // JavaScript 네이티브 Map 객체 사용 (React 컴포넌트 Map과 구분)
-        const itemsMap = new Map(allItems.map((item) => [item.cafeId || item.wishlistId, item]));
+        const itemsMap = new Map(
+          allItems.map((item) => [item.cafeId || item.wishlistId, item])
+        );
         const uniqueItems = Array.from(itemsMap.values());
 
         setWishlistItems(uniqueItems);
@@ -192,9 +203,7 @@ export default function MapPage() {
       // 403 또는 401 에러인 경우 (권한 없음)
       if (error.response?.status === 403 || error.response?.status === 401) {
         console.log("로그인이 필요합니다.");
-        // 토큰 제거
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+        useAuthStore.getState().logout();
       }
 
       setWishlistItems([]);
@@ -446,16 +455,16 @@ export default function MapPage() {
               currentCafes.length > 0 &&
               currentCafes.map((cafe) => {
                 if (!cafe) return null;
-                
+
                 // 카페 ID 확인 (API 데이터의 경우 cafeId, mock 데이터의 경우 cafe_id)
                 const cafeId = cafe.cafeId || cafe.cafe_id;
-                
+
                 const handleCardClick = () => {
                   if (cafeId) {
                     router.push(`/cafes/${cafeId}`);
                   }
                 };
-                
+
                 return (
                   <div
                     key={cafe.cafe_id}
@@ -470,8 +479,15 @@ export default function MapPage() {
                       {/* 카페 이미지 */}
                       <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative">
                         {(() => {
-                          const imageUrl = cafe.photoUrl || cafe.photo_url || (cafe.images && Array.isArray(cafe.images) && cafe.images.length > 0 ? cafe.images[0] : null);
-                          
+                          const imageUrl =
+                            cafe.photoUrl ||
+                            cafe.photo_url ||
+                            (cafe.images &&
+                            Array.isArray(cafe.images) &&
+                            cafe.images.length > 0
+                              ? cafe.images[0]
+                              : null);
+
                           if (imageUrl) {
                             return (
                               <>
@@ -486,7 +502,9 @@ export default function MapPage() {
                                 />
                                 {/* 플레이스홀더 (이미지 로드 실패 시에만 보임) */}
                                 <div className="absolute inset-0 flex items-center justify-center bg-gray-200 -z-10">
-                                  <span className="text-gray-400 text-xs">이미지</span>
+                                  <span className="text-gray-400 text-xs">
+                                    이미지
+                                  </span>
                                 </div>
                               </>
                             );
@@ -494,7 +512,9 @@ export default function MapPage() {
                           // 이미지가 없을 때 플레이스홀더
                           return (
                             <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-                              <span className="text-gray-400 text-xs">이미지</span>
+                              <span className="text-gray-400 text-xs">
+                                이미지
+                              </span>
                             </div>
                           );
                         })()}

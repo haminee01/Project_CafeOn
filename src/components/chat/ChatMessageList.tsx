@@ -1,11 +1,18 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import ChatMessageItem from "./ChatMessageItem";
 import { ChatMessage, ProfileClickHandler } from "@/types/chat";
 import { ChatHistoryMessage } from "@/api/chat";
 import { useAuth } from "@/contexts/AuthContext";
 import { getChatMessagesWithUnreadCount } from "@/lib/api";
+import { getAccessToken } from "@/stores/authStore";
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -228,32 +235,22 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
 
   // useAuth 훅 사용
   const { user } = useAuth();
-  const currentUserNickname = user?.username || null;
+  const currentUserNickname = user?.username || user?.nickname || null;
 
-  // 로컬스토리지와 토큰에서도 닉네임 가져오기 (더 정확한 판단을 위해)
-  const getMyNickname = () => {
-    // 1. useAuth의 username
-    if (currentUserNickname) return currentUserNickname;
-
-    // 2. 로컬스토리지의 userInfo
+  const tokenNickname = useMemo(() => {
     try {
-      const stored = localStorage.getItem("userInfo");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.username) return parsed.username;
-      }
-    } catch {}
-
-    // 3. 토큰에서 추출
-    try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
       if (token) {
         const payload = JSON.parse(atob(token.split(".")[1]));
         return payload?.nickname || payload?.username || null;
       }
     } catch {}
-
     return null;
+  }, []);
+
+  const getMyNickname = () => {
+    if (currentUserNickname) return currentUserNickname;
+    return tokenNickname;
   };
 
   // 날짜 메시지인지 확인하는 함수

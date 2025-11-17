@@ -1,3 +1,5 @@
+import { getAccessToken } from "@/stores/authStore";
+
 interface ApiErrorResponse {
   message: string;
   statusCode: number;
@@ -31,7 +33,7 @@ export const fetcher = async <T>(
 ): Promise<T> => {
   const fullUrl = buildFullUrl(url);
 
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const method = options?.method || "GET";
 
   const headers: Record<string, string> = {

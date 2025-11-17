@@ -17,6 +17,7 @@ import {
   ReportRequest,
   ReportResponse,
 } from "@/types/Post";
+import { getAccessToken } from "@/stores/authStore";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
@@ -311,7 +312,7 @@ export async function createPostMutator(
   }
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
 
   const headers: Record<string, string> = {};
 
@@ -390,7 +391,7 @@ export async function updatePostMutator(
   const correctUrl = `${API_BASE_URL}/api/posts/${postId}`;
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -456,7 +457,7 @@ export async function deletePostMutator(
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {};
 
   if (authToken) {
@@ -507,7 +508,7 @@ export async function createCommentMutator(
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -548,7 +549,7 @@ export const updateCommentMutator = async (
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -588,7 +589,7 @@ export const deleteCommentMutator = async (
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {};
 
   if (authToken) {
@@ -629,7 +630,7 @@ export const toggleCommentLike = async (
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {};
 
   if (authToken) {
@@ -666,7 +667,7 @@ export const togglePostLike = async (
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {};
 
   if (authToken) {
@@ -705,7 +706,7 @@ export const createPostReport = async (
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -746,7 +747,7 @@ export const createReport = async (
   const fullUrl = buildFullUrl(url);
 
   // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -784,7 +785,7 @@ export const createCommentReport = async (
   const url = `/api/comments/${commentId}/reports`;
   const fullUrl = buildFullUrl(url);
 
-  const authToken = localStorage.getItem("accessToken");
+  const authToken = getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };

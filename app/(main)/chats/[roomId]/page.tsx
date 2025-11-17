@@ -14,6 +14,7 @@ import { ChatHistoryMessage } from "@/api/chat";
 import ChatMessageList from "@/components/chat/ChatMessageList";
 import ChatMessageInput from "@/components/chat/ChatMessageInput";
 import { ChatMessage } from "@/types/chat";
+import { getAccessToken } from "@/stores/authStore";
 
 export default function ChatPage() {
   const params = useParams();
@@ -35,12 +36,12 @@ export default function ChatPage() {
   const latestIdRef = useRef<number>(0);
   const stompClientRef = useRef<Client | null>(null);
 
-  const token = localStorage.getItem("accessToken") || "";
+  const token = getAccessToken() || "";
   const wsUrl = useMemo(() => "ws://localhost:8080/stomp/chats", []);
 
   // 인증 상태 확인
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     if (!token) {
       console.log("인증 토큰이 없어서 로그인 페이지로 리다이렉트");
       router.push("/login");

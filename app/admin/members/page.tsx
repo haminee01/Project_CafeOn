@@ -7,6 +7,7 @@ import Pagination from "@/components/common/Pagination";
 import SearchBar from "@/components/common/SearchBar";
 import { useEscapeKey } from "../../../src/hooks/useEscapeKey";
 import { getAdminMembers, addAdminPenalty, suspendAdminUser } from "@/lib/api";
+import { getAccessToken } from "@/stores/authStore";
 
 interface Member {
   id: string;
@@ -34,7 +35,7 @@ export default function AdminMembersPage() {
   const fetchMembers = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
       if (!token) {
         setMembers([]);
         setAllMembers([]);

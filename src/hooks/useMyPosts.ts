@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { MyPost, MyPostsResponse, MyPostsParams } from "@/types/Post";
+import { getAccessToken } from "@/stores/authStore";
 
 export const useMyPosts = (params: MyPostsParams = {}) => {
   const [posts, setPosts] = useState<MyPost[]>([]);
@@ -13,7 +14,7 @@ export const useMyPosts = (params: MyPostsParams = {}) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = getAccessToken();
       if (!token || token === "null" || token === "undefined") {
         throw new Error("로그인이 필요합니다.");
       }

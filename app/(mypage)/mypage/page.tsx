@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { FaUser } from "react-icons/fa";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 const WithdrawalModal = ({
   onConfirm,
@@ -44,7 +45,8 @@ const PasswordAlert = () => (
 );
 
 export default function MypageMainPage() {
-  const { user, updateUser } = useAuth();
+  const router = useRouter();
+  const { user, updateUser, logout } = useAuth();
   const [profile, setProfile] = useState({
     nickname: "",
     name: "",
@@ -163,11 +165,8 @@ export default function MypageMainPage() {
     try {
       await deleteUser();
       alert("회원탈퇴가 완료되었습니다.");
-      // 로컬 스토리지 정리 및 로그인 페이지로 이동
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      logout();
+      router.push("/login");
     } catch (error) {
       alert(
         error instanceof Error ? error.message : "회원 탈퇴에 실패했습니다."

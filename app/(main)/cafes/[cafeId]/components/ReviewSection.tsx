@@ -15,6 +15,7 @@ import ReportReviewModal from "@/components/modals/ReportReviewModal";
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
 import ProfileIcon from "@/components/chat/ProfileIcon";
 import { formatRelativeTime } from "@/utils/dateFormat";
+import { getAccessToken } from "@/stores/authStore";
 
 interface ReviewSectionProps {
   cafeId: string;
@@ -247,7 +248,7 @@ export default function ReviewSection({
       let currentUserId = user.userId;
       if (!currentUserId) {
         try {
-          const token = localStorage.getItem("accessToken");
+          const token = getAccessToken();
           if (token) {
             const payload = JSON.parse(atob(token.split(".")[1]));
             currentUserId = payload.sub || "";
@@ -316,7 +317,7 @@ export default function ReviewSection({
     // user.userId가 비어 있으면 JWT에서 추출 시도
     if (!currentUserId) {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = getAccessToken();
         if (token) {
           const payload = JSON.parse(atob(token.split(".")[1]));
           currentUserId = payload.sub || "";
