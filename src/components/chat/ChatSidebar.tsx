@@ -153,17 +153,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                           (participant.name || "").trim()
                       ));
 
-                  // 디버깅 로그
-                  if (isCurrentUser) {
-                    console.log("ChatSidebar: 현재 사용자 확인", {
-                      participantName: participant.name,
-                      participantId: participant.id,
-                      candidateMyIds,
-                      candidateMyNames,
-                      isCurrentUser,
-                    });
-                  }
-
                   return (
                     <div
                       key={participant.id}

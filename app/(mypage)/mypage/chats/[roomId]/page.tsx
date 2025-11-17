@@ -199,7 +199,6 @@ const ChatDetailIntegratedPage: React.FC<ChatDetailIntegratedProps> = ({
   // --- 핸들러 수정/추가 ---
   const handleRoomClick = useCallback((roomId: string) => {
     setActiveChatId(roomId);
-    console.log(`채팅방 이동: /mypage/chats/${roomId} (Active ID 변경)`);
   }, []);
 
   // 사이드바 닫기
@@ -253,7 +252,6 @@ const ChatDetailIntegratedPage: React.FC<ChatDetailIntegratedProps> = ({
   // 채팅방이 열릴 때 자동으로 참여
   useEffect(() => {
     if (activeChatId && !isJoined && !isLoading && !error) {
-      console.log("DM 채팅방 자동 참여 시작:", activeChatId);
       joinChat();
     }
   }, [activeChatId, isJoined, isLoading, error, joinChat]);

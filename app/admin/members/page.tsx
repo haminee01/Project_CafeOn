@@ -50,30 +50,39 @@ export default function AdminMembersPage() {
           search: searchTerm,
           status: undefined, // 전체
         });
-        
+
         const pageData = response?.data || response;
         const memberList = pageData?.content || [];
-        
+
         // 페널티 3회 이상만 필터링
-        const filteredMembers = memberList.filter((member: Member) => member.penaltyCount >= 3);
-        
+        const filteredMembers = memberList.filter(
+          (member: Member) => member.penaltyCount >= 3
+        );
+
         setAllMembers(memberList);
-        
+
         // 클라이언트 페이지네이션
         const itemsPerPage = 10;
-        const totalPagesCount = Math.ceil(filteredMembers.length / itemsPerPage);
+        const totalPagesCount = Math.ceil(
+          filteredMembers.length / itemsPerPage
+        );
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
         const pagedMembers = filteredMembers.slice(startIndex, endIndex);
-        
+
         setMembers(pagedMembers);
         setTotalPages(totalPagesCount);
-        
+
         return;
       }
 
       // 백엔드가 기대하는 status 값: "normal", "suspended", 또는 undefined (all)
-      const status = activeTab === "all" ? undefined : activeTab === "active" ? "normal" : activeTab;
+      const status =
+        activeTab === "all"
+          ? undefined
+          : activeTab === "active"
+          ? "normal"
+          : activeTab;
       const response = await getAdminMembers({
         page: currentPage - 1,
         size: 10,
@@ -86,16 +95,9 @@ export default function AdminMembersPage() {
       const pageData = response?.data || response;
       const memberList = pageData?.content || [];
       const totalPagesCount = pageData?.totalPages || 1;
-      
+
       setMembers(memberList);
       setTotalPages(totalPagesCount);
-      
-      console.log("API 응답:", {
-        members: memberList.length,
-        totalPages: totalPagesCount,
-        currentPage,
-        response
-      });
     } catch (error) {
       console.error("회원 목록 조회 실패:", error);
       setMembers([]);
@@ -120,7 +122,6 @@ export default function AdminMembersPage() {
       setShowSuspensionConfirmModal(false);
     }
   });
-
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -148,7 +149,7 @@ export default function AdminMembersPage() {
 
         // API에서 최신 데이터 다시 가져오기
         await fetchMembers();
-        
+
         setShowPenaltyModal(false);
         setSelectedMember(null);
         setPenaltyReason("");
@@ -187,7 +188,7 @@ export default function AdminMembersPage() {
 
         // API에서 최신 데이터 다시 가져오기
         await fetchMembers();
-        
+
         setShowSuspensionModal(false);
         setSelectedMember(null);
         setSuspensionReason("");
@@ -247,7 +248,10 @@ export default function AdminMembersPage() {
       {/* 탭 */}
       <div className="flex border-b border-gray-200">
         <button
-          onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
+          onClick={() => {
+            setActiveTab("all");
+            setCurrentPage(1);
+          }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "all"
               ? "border-b-2 border-primary text-primary"
@@ -257,7 +261,10 @@ export default function AdminMembersPage() {
           전체 회원
         </button>
         <button
-          onClick={() => { setActiveTab("active"); setCurrentPage(1); }}
+          onClick={() => {
+            setActiveTab("active");
+            setCurrentPage(1);
+          }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "active"
               ? "border-b-2 border-primary text-primary"
@@ -267,7 +274,10 @@ export default function AdminMembersPage() {
           정상 회원
         </button>
         <button
-          onClick={() => { setActiveTab("suspended"); setCurrentPage(1); }}
+          onClick={() => {
+            setActiveTab("suspended");
+            setCurrentPage(1);
+          }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "suspended"
               ? "border-b-2 border-primary text-primary"
@@ -277,7 +287,10 @@ export default function AdminMembersPage() {
           정지 회원
         </button>
         <button
-          onClick={() => { setActiveTab("penalty"); setCurrentPage(1); }}
+          onClick={() => {
+            setActiveTab("penalty");
+            setCurrentPage(1);
+          }}
           className={`px-4 py-2 text-base font-medium ${
             activeTab === "penalty"
               ? "border-b-2 border-primary text-primary"
@@ -288,9 +301,7 @@ export default function AdminMembersPage() {
         </button>
       </div>
 
-      <div className="text-sm text-gray-500">
-        총 {members.length}명 회원
-      </div>
+      <div className="text-sm text-gray-500">총 {members.length}명 회원</div>
 
       {/* 회원 목록 */}
       {loading ? (
@@ -298,42 +309,53 @@ export default function AdminMembersPage() {
           <p className="text-gray-600">회원 데이터를 불러오는 중...</p>
         </div>
       ) : (
-      <div className="space-y-4">
-        {members.map((member) => (
-          <div
-            key={member.id}
-            className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => router.push(`/admin/members/${member.id}`)}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-gray-900 font-medium">{member.name}</p>
-                <p className="text-sm text-gray-500">{member.email}</p>
-                <p className="text-sm text-gray-500">
-                  페널티: {member.penaltyCount}회 | 상태:{" "}
-                  {member.status?.toUpperCase() === "ACTIVE" ? "정상" : "정지"}
-                </p>
-              </div>
-              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                <Button
-                  color="warning"
-                  size="sm"
-                  onClick={() => handlePenaltyClick(member)}
+        <div className="space-y-4">
+          {members.map((member) => (
+            <div
+              key={member.id}
+              className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => router.push(`/admin/members/${member.id}`)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-gray-900 font-medium">{member.name}</p>
+                  <p className="text-sm text-gray-500">{member.email}</p>
+                  <p className="text-sm text-gray-500">
+                    페널티: {member.penaltyCount}회 | 상태:{" "}
+                    {member.status?.toUpperCase() === "ACTIVE"
+                      ? "정상"
+                      : "정지"}
+                  </p>
+                </div>
+                <div
+                  className="flex gap-2"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  페널티
-                </Button>
-                <Button
-                  color={member.status?.toUpperCase() === "ACTIVE" ? "warning" : "gray"}
-                  size="sm"
-                  onClick={() => handleSuspensionClick(member)}
-                >
-                  {member.status?.toUpperCase() === "ACTIVE" ? "정지" : "정지 해제"}
-                </Button>
+                  <Button
+                    color="warning"
+                    size="sm"
+                    onClick={() => handlePenaltyClick(member)}
+                  >
+                    페널티
+                  </Button>
+                  <Button
+                    color={
+                      member.status?.toUpperCase() === "ACTIVE"
+                        ? "warning"
+                        : "gray"
+                    }
+                    size="sm"
+                    onClick={() => handleSuspensionClick(member)}
+                  >
+                    {member.status?.toUpperCase() === "ACTIVE"
+                      ? "정지"
+                      : "정지 해제"}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
 
       {/* 페이지네이션 */}
@@ -430,7 +452,9 @@ export default function AdminMembersPage() {
                 onClick={handleSuspensionConfirm}
                 disabled={!suspensionReason.trim()}
               >
-                {selectedMember?.status?.toUpperCase() === "ACTIVE" ? "정지하기" : "정지 해제"}
+                {selectedMember?.status?.toUpperCase() === "ACTIVE"
+                  ? "정지하기"
+                  : "정지 해제"}
               </Button>
             </div>
           </div>

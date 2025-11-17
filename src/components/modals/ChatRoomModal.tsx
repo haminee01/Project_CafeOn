@@ -15,8 +15,6 @@ export default function ChatRoomModal({ onClose, cafe }: ChatRoomModalProps) {
   const [nickname, setNickname] = useState("Sunwon903");
 
   const handleJoin = () => {
-    console.log('채팅방 참여:', nickname);
-    // 실제 구현에서는 채팅방 입장 로직
     onClose();
   };
 
@@ -24,13 +22,25 @@ export default function ChatRoomModal({ onClose, cafe }: ChatRoomModalProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">{cafe.name} 채팅방</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            {cafe.name} 채팅방
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>

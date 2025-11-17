@@ -30,7 +30,6 @@ import {
   getRoomIdByCafe,
   getCafeIdByRoom,
   removeChatMapping,
-  debugMappings,
 } from "@/utils/chatMapping";
 
 interface UseCafeChatProps {
@@ -162,7 +161,6 @@ export const useCafeChat = ({
         );
 
         if (res.ok || res.status === 204) {
-          console.log("자동 read-latest 완료:", targetRoomId);
         }
       } catch (error) {
         console.error("자동 read-latest 실패:", error);
@@ -173,7 +171,6 @@ export const useCafeChat = ({
   // STOMP 클라이언트 연결
   const connectStomp = useCallback(async () => {
     if (stompClientRef.current?.connected) {
-      console.log("STOMP 이미 연결됨");
       return;
     }
 
@@ -185,13 +182,11 @@ export const useCafeChat = ({
 
       const serverUrl =
         process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/stomp/chats";
-      console.log("STOMP 연결 시도:", serverUrl);
 
       const client = createStompClient(serverUrl, token);
       stompClientRef.current = client;
 
       client.onConnect = (frame) => {
-        console.log("STOMP 연결 성공:", frame);
         setStompConnected(true);
       };
 
@@ -206,7 +201,6 @@ export const useCafeChat = ({
       };
 
       client.onDisconnect = () => {
-        console.log("STOMP 연결 해제");
         setStompConnected(false);
       };
 
@@ -257,10 +251,6 @@ export const useCafeChat = ({
         (message) => {
           try {
             const data: StompChatMessage = JSON.parse(message.body);
-            console.log("받은 메시지:", data);
-
-            // 날짜 메시지와 입장/퇴장 메시지는 시스템 메시지로 표시됨
-
             // 내 닉네임 추출 (토큰 payload의 sub 또는 userId)
             const getMyNicknameFromToken = (): string | null => {
               try {
@@ -333,7 +323,6 @@ export const useCafeChat = ({
                 (msg) => msg.id === newMessage.id
               );
               if (messageExists) {
-                console.log("중복 메시지 무시:", newMessage.id);
                 return prev;
               }
 
@@ -362,7 +351,6 @@ export const useCafeChat = ({
       );
 
       messageSubscriptionRef.current = messageSubscription;
-      console.log(`STOMP 메시지 구독 성공: /sub/rooms/${roomId}`);
 
       // 읽음 영수증 스트림 구독
       const readSubscription = stompClientRef.current.subscribe(
@@ -370,7 +358,6 @@ export const useCafeChat = ({
         (message) => {
           try {
             const readReceipt = JSON.parse(message.body);
-            console.log("읽음 영수증 수신:", readReceipt);
 
             // { roomId, readerId, lastReadChatId }
             if (
@@ -386,9 +373,6 @@ export const useCafeChat = ({
 
             // 이미 처리한 읽음 영수증은 무시
             if (cur <= prev) {
-              console.log(
-                `읽음 영수증 중복 - 무시: readerId=${readReceipt.readerId}, prev=${prev}, cur=${cur}`
-              );
               return;
             }
 
@@ -402,9 +386,6 @@ export const useCafeChat = ({
                 if (chatId > prev && chatId <= cur) {
                   const currentCount = msg.othersUnreadUsers || 0;
                   const newCount = Math.max(0, currentCount - 1);
-                  console.log(
-                    `메시지 ${chatId} 안읽음 수: ${currentCount} → ${newCount}`
-                  );
                   return {
                     ...msg,
                     othersUnreadUsers: newCount,
@@ -429,10 +410,6 @@ export const useCafeChat = ({
                 return msg;
               });
             });
-
-            console.log(
-              `읽음 영수증 처리 완료: readerId=${readReceipt.readerId}, prev=${prev}, cur=${cur}`
-            );
           } catch (error) {
             console.error("읽음 영수증 파싱 오류:", error);
           }
@@ -440,7 +417,6 @@ export const useCafeChat = ({
       );
 
       readSubscriptionRef.current = readSubscription;
-      console.log(`STOMP 읽음 영수증 구독 성공: /sub/rooms/${roomId}/read`);
     } catch (error) {
       console.error("STOMP 구독 실패:", error);
     }
@@ -471,7 +447,6 @@ export const useCafeChat = ({
 
     setStompConnected(false);
     lastReadSeenRef.current.clear();
-    console.log("STOMP 연결 해제");
   }, []);
 
   // 채팅방별 muted 상태를 로컬 스토리지에서 가져오기
@@ -481,14 +456,8 @@ export const useCafeChat = ({
       const stored = localStorage.getItem(key);
       if (stored !== null) {
         const muted = stored === "true";
-        console.log(
-          `🔔 로컬 스토리지에서 muted 상태 로드: ${muted} (${targetRoomId})`
-        );
         return muted;
       }
-      console.log(
-        `🔔 로컬 스토리지에 muted 상태 없음 - 기본값 false (${targetRoomId})`
-      );
       return false;
     },
     []
@@ -499,9 +468,6 @@ export const useCafeChat = ({
     (targetRoomId: string, muted: boolean): void => {
       const key = `chat_muted_${targetRoomId}`;
       localStorage.setItem(key, String(muted));
-      console.log(
-        `🔔 로컬 스토리지에 muted 상태 저장: ${muted} (${targetRoomId})`
-      );
     },
     []
   );
@@ -511,30 +477,13 @@ export const useCafeChat = ({
     async (targetRoomId?: string) => {
       const useRoomId = targetRoomId || roomId;
       if (!useRoomId) {
-        console.log("refreshParticipants: roomId가 없음");
         return;
       }
-
-      console.log("refreshParticipants 호출됨:", useRoomId);
-
-      console.log("참여자 목록 새로고침 시작:", useRoomId);
 
       try {
         const response: ChatParticipant[] = await getChatParticipants(
           useRoomId
         );
-        console.log("참여자 목록 조회 성공:", response.length, "명");
-        // console.log("참여자 목록 상세:", response);
-        // response.forEach((p, index) => {
-        //   console.log(`참여자 ${index + 1}:`, {
-        //     nickname: p.nickname,
-        //     muted: p.muted,
-        //     me: p.me,
-        //     userId: p.userId,
-        //   });
-        // });
-
-        // ChatParticipant를 Participant로 변환하고 현재 사용자를 맨 위로 정렬
         // 현재 사용자 username 가져오기
         let storedUsername: string | null = null;
         try {
@@ -596,11 +545,7 @@ export const useCafeChat = ({
           // 로컬 스토리지에서 muted 상태 가져오기 (서버가 반환하지 않으므로)
           const mutedState = getMutedStateFromStorage(useRoomId);
           setIsMuted(mutedState);
-          console.log(
-            `🔔 알림 상태 설정 완료: ${mutedState ? "끄기" : "켜기"}`
-          );
         } else {
-          console.log("현재 사용자를 찾을 수 없음");
         }
       } catch (err) {
         console.error("참여자 목록 조회 실패:", err);
@@ -615,11 +560,9 @@ export const useCafeChat = ({
     async (targetRoomId?: string) => {
       const useRoomId = targetRoomId || roomId;
       if (!useRoomId || isLoadingHistory) {
-        console.log("loadMoreHistory: roomId가 없거나 로딩 중");
         return;
       }
 
-      console.log("채팅 히스토리 로드 시작:", useRoomId);
       setIsLoadingHistory(true);
 
       try {
@@ -635,12 +578,6 @@ export const useCafeChat = ({
           50,
           true
         );
-
-        console.log("채팅 히스토리 조회 성공:", {
-          roomId: useRoomId,
-          itemsCount: response.data?.content?.length || 0,
-          hasNext: response.data?.hasNext || false,
-        });
 
         // 응답 데이터 안전하게 처리
         const items = response.data?.content || [];
@@ -663,15 +600,6 @@ export const useCafeChat = ({
   // 채팅방 참여 (재시도 로직 포함)
   const joinChat = useCallback(
     async (retryCount = 0) => {
-      console.log("=== joinChat 함수 호출됨 (useCafeChat) ===", {
-        cafeId,
-        cafeName,
-        isJoining,
-        isJoined,
-        retryCount,
-        currentRoomId: roomId,
-      });
-
       // cafeId가 비어있거나 0이면 에러
       if (!cafeId || cafeId === "" || cafeId === "0") {
         console.error("joinChat: cafeId가 유효하지 않습니다:", cafeId);
@@ -680,12 +608,6 @@ export const useCafeChat = ({
       }
 
       if (isJoining || isJoined || isRetrying) {
-        console.log("joinChat 조건 불만족:", {
-          cafeId: !!cafeId,
-          isJoining,
-          isJoined,
-          isRetrying,
-        });
         return;
       }
 
@@ -693,8 +615,7 @@ export const useCafeChat = ({
       setIsLoading(true);
       setError(null);
 
-      // ✅ joinChat 시작 시 항상 메시지/히스토리 초기화 (중복 방지)
-      console.log("🔄 joinChat 시작 - 메시지/히스토리 초기화");
+      // joinChat 시작 시 항상 메시지/히스토리 초기화 (중복 방지)
       setChatHistory([]);
       setMessages([]);
       setHasMoreHistory(true);
@@ -704,20 +625,11 @@ export const useCafeChat = ({
         // 이전에 잘못된 매핑이 있을 수 있으므로 항상 API로 검증
         const existingRoomId = getRoomIdByCafe(parseInt(cafeId));
         if (existingRoomId) {
-          console.log("=== 로컬 매핑 발견 (검증 필요) ===", {
-            cafeId,
-            localMappedRoomId: existingRoomId,
-          });
         }
 
         // 채팅방 참여 시도 (신규 생성 또는 기존 참여)
         // API가 이미 참여 중인 경우 alreadyJoined: true와 함께 기존 roomId 반환
         const response: ChatRoomJoinResponse = await joinCafeGroupChat(cafeId);
-        console.log("채팅방 참여 응답:", response, {
-          alreadyJoined: response?.data?.alreadyJoined,
-          roomId: response?.data?.roomId,
-          cafeId: response?.data?.cafeId,
-        });
 
         // 응답 데이터 안전하게 처리
         if (!response || !response.data || !response.data.roomId) {
@@ -729,79 +641,40 @@ export const useCafeChat = ({
         const responseCafeId = response.data.cafeId || parseInt(cafeId);
         const newRoomId = response.data.roomId.toString();
 
-        console.log("API 응답 데이터:", {
-          responseCafeId,
-          responseRoomId: response.data.roomId,
-          alreadyJoined: response.data.alreadyJoined,
-          originalCafeId: cafeId,
-        });
-
         setRoomId(newRoomId);
         setIsJoined(true);
 
         // 매핑 저장 - API 응답의 cafeId 사용
-        console.log("=== 매핑 저장 시작 ===", {
-          responseCafeId,
-          newRoomId: parseInt(newRoomId),
-          매핑키: responseCafeId,
-          매핑값: parseInt(newRoomId),
-        });
         setChatMapping(responseCafeId, parseInt(newRoomId));
-
-        const savedRoomId = getRoomIdByCafe(responseCafeId);
-        console.log("매핑 저장 후 확인:", {
-          responseCafeId,
-          savedRoomId,
-          expectedRoomId: parseInt(newRoomId),
-          매핑성공: savedRoomId === parseInt(newRoomId),
-        });
-        debugMappings();
-
-        // 원래 cafeId로도 한번 더 확인
-        const savedByOriginalId = getRoomIdByCafe(parseInt(cafeId));
-        console.log("원래 cafeId로 조회:", {
-          originalCafeId: parseInt(cafeId),
-          savedByOriginalId,
-          매핑존재: savedByOriginalId !== undefined,
-        });
 
         // 나간 채팅방인지 확인
         const leftKey = `chat_left_${cafeId}`;
         const hasLeft = localStorage.getItem(leftKey);
 
         if (hasLeft) {
-          console.log(
-            "=== 이전에 나간 채팅방 재입장 - 히스토리 로드 안 함 ===",
-            cafeId
-          );
           // 나간 기록 삭제
           localStorage.removeItem(leftKey);
           setHasMoreHistory(false);
 
           // 참여자 목록만 로드 (히스토리는 로드하지 않음)
           await refreshParticipants(newRoomId);
-          console.log("참여자 목록만 로드 완료 (재입장)");
         } else {
           // 처음 입장하는 채팅방 - 히스토리 로드
-          console.log("참여자 목록 및 채팅 히스토리 로드 시작:", newRoomId);
           await Promise.all([
             refreshParticipants(newRoomId),
             loadMoreHistory(newRoomId),
           ]);
-          console.log("참여자 목록 및 채팅 히스토리 로드 완료");
         }
 
         // STOMP 연결 및 구독
-        console.log("STOMP 연결 시작 (useCafeChat)");
         await connectStomp();
 
         // 방 입장 시 최신 메시지 읽음 처리
         setTimeout(async () => {
           try {
             await readLatest(newRoomId);
-            console.log("입장 시 최신 메시지 읽음 처리 완료");
 
-            // ✅ 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
+            // 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
             setMessages((prevMessages) => {
               return prevMessages.map((msg) => {
                 if (!msg.isMyMessage) {
@@ -829,15 +702,12 @@ export const useCafeChat = ({
                 return msg;
               });
             });
-
-            console.log("=== 입장 시 안읽음 수 즉시 감소 ===");
           } catch (err) {
             console.error("입장 시 읽음 처리 실패:", err);
           }
         }, 1000);
 
         // 연결 완료 후 구독 (약간의 지연)
-        console.log("STOMP 연결 완료, 구독 시작:", newRoomId);
         setTimeout(() => {
           if (stompClientRef.current?.connected) {
             subscribeToRoom(newRoomId);
@@ -882,10 +752,8 @@ export const useCafeChat = ({
 
           // 처음 시도인 경우 자동 재시도
           if (retryCount === 0) {
-            console.log("Hibernate 에러 - 3초 후 자동 재시도...");
             setIsRetrying(true);
             setTimeout(() => {
-              console.log("Hibernate 에러 후 자동 재시도 시작");
               setIsRetrying(false);
               joinChat();
             }, 3000);
@@ -909,9 +777,7 @@ export const useCafeChat = ({
 
           // 처음 시도인 경우 자동 재시도
           if (retryCount === 0) {
-            console.log("가입 상태 조회 실패 - 3초 후 자동 재시도...");
             setTimeout(() => {
-              console.log("자동 재시도 시작");
               joinChat();
             }, 3000);
             setError(
@@ -929,7 +795,6 @@ export const useCafeChat = ({
         }
 
         if (isAlreadyParticipating) {
-          console.log("이미 참여 중인 채팅방 또는 중복 생성 시도 - 정상 처리");
           console.error(
             "예상치 못한 중복 참여 에러 발생. 이 에러는 발생하지 않아야 합니다."
           );
@@ -945,7 +810,6 @@ export const useCafeChat = ({
 
         // 데드락 에러인 경우 재시도 (최대 3번)
         if (errorMessage.includes("Deadlock") && retryCount < 3) {
-          console.log(`데드락 발생, ${retryCount + 1}번째 재시도 중...`);
           setTimeout(() => {
             joinChat(retryCount + 1);
           }, 1000 * (retryCount + 1)); // 지수 백오프
@@ -979,20 +843,16 @@ export const useCafeChat = ({
     setError(null);
 
     try {
-      console.log("=== 채팅방 나가기 시작 ===", { roomId, cafeId });
-
       // 나가기 API 호출 - 반드시 성공해야 함
       await leaveChatRoomNew(roomId);
-      console.log("=== 채팅방 나가기 API 성공 ===");
 
-      // ✅ API 성공 후에만 로컬 스토리지에 기록
+      // API 성공 후에만 로컬 스토리지에 기록
       const leftKey = `chat_left_${cafeId}`;
       const leftData = {
         leftAt: new Date().toISOString(),
         roomId: roomId,
       };
       localStorage.setItem(leftKey, JSON.stringify(leftData));
-      console.log("채팅방 나간 시점 저장:", leftData);
 
       // 매핑 제거
       removeChatMapping(parseInt(cafeId));
@@ -1011,12 +871,10 @@ export const useCafeChat = ({
 
       // joinChat 재호출 가능하도록 초기화
       joinedCafeIdRef.current = null;
-
-      console.log("=== 채팅방 나가기 완료 (상태 초기화됨) ===");
     } catch (err) {
       console.error("=== 채팅방 나가기 API 실패 ===", err);
 
-      // ❌ API 실패 시 localStorage에 기록하지 않음
+      // API 실패 시 localStorage에 기록하지 않음
       // 사용자에게 명확한 에러 메시지 표시
       const errorMessage =
         err instanceof Error ? err.message : "채팅방 나가기에 실패했습니다.";
@@ -1030,9 +888,6 @@ export const useCafeChat = ({
       // 에러가 발생해도 STOMP는 해제
       disconnectStomp();
 
-      // ❌ API 실패 시 상태는 초기화하지 않음 (여전히 참여 중)
-      console.log("채팅방 나가기 실패 - 상태 유지 (여전히 참여 중)");
-
       throw err; // 에러를 상위로 전파하여 UI에서 처리
     } finally {
       setIsLoading(false);
@@ -1042,13 +897,7 @@ export const useCafeChat = ({
   // 메시지 전송 (STOMP 발행)
   const sendMessage = useCallback(
     async (content: string) => {
-      console.log("메시지 전송 시도:", { roomId, content });
-
       if (!roomId || !content.trim()) {
-        console.log("메시지 전송 실패: roomId 또는 content가 없음", {
-          roomId,
-          content,
-        });
         return;
       }
 
@@ -1063,9 +912,6 @@ export const useCafeChat = ({
       };
 
       if (!stompClientRef.current?.connected) {
-        console.log("STOMP 미연결 - 연결 시도 후 대기", {
-          isConnected: stompClientRef.current?.connected,
-        });
         try {
           await connectStomp();
         } catch (e) {
@@ -1073,18 +919,14 @@ export const useCafeChat = ({
         }
         const ok = await waitForConnected(5000);
         if (!ok) {
-          console.log("메시지 전송 실패: STOMP 연결이 없음 (타임아웃)");
           return;
         }
       }
 
       try {
-        console.log("STOMP 메시지 발행:", { roomId, content });
-
         // STOMP로 메시지 발행
         const client = stompClientRef.current;
         if (!client) {
-          console.log("메시지 전송 실패: STOMP 클라이언트가 없음");
           return;
         }
 
@@ -1095,8 +937,6 @@ export const useCafeChat = ({
             roomId: parseInt(roomId),
           }),
         });
-
-        console.log("메시지 발행 성공");
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "메시지 전송에 실패했습니다."
@@ -1136,9 +976,7 @@ export const useCafeChat = ({
       setError(null);
 
       try {
-        console.log("1:1 채팅방 생성 시도:", counterpartId);
         const response = await createDmChat(counterpartId);
-        console.log("1:1 채팅방 생성 응답:", response);
 
         setRoomId(response.data.roomId.toString());
         setIsJoined(true);
@@ -1165,7 +1003,6 @@ export const useCafeChat = ({
 
     try {
       const newMutedState = !isMuted;
-      console.log("🔔 알림 토글 시작:", newMutedState ? "끄기" : "켜기");
 
       // 서버에 muted 값 업데이트
       await toggleChatMute(roomId, newMutedState);
@@ -1175,15 +1012,12 @@ export const useCafeChat = ({
 
       // 로컬 스토리지에 저장 (새로고침 시 유지)
       saveMutedStateToStorage(roomId, newMutedState);
-
-      console.log("🔔 알림 토글 완료:", newMutedState ? "끄기" : "켜기");
     } catch (err) {
       console.error("채팅방 알림 설정 실패:", err);
       // 에러가 발생해도 UI 상태는 변경 (사용자 경험 개선)
       const newMutedState = !isMuted;
       setIsMuted(newMutedState);
       saveMutedStateToStorage(roomId, newMutedState);
-      console.log("API 에러로 인한 로컬 상태 변경");
     }
   }, [roomId, isMuted, saveMutedStateToStorage]);
 
@@ -1192,14 +1026,10 @@ export const useCafeChat = ({
     if (!roomId) return;
 
     try {
-      console.log("=== markAsRead 호출됨 - roomId:", roomId, "===");
-
       // 현재 메시지 목록에서 가장 최근 메시지의 ID를 찾음
       const allMessages = [...messages, ...chatHistory];
-      console.log("전체 메시지 수:", allMessages.length);
 
       if (allMessages.length === 0) {
-        console.log("읽을 메시지가 없습니다.");
         return;
       }
 
@@ -1210,55 +1040,16 @@ export const useCafeChat = ({
         return aId - bId;
       });
 
-      console.log(
-        "정렬된 메시지들:",
-        sortedMessages.slice(-5).map((msg) => ({
-          id: "id" in msg ? msg.id : msg.chatId,
-          senderId: "senderId" in msg ? msg.senderId : msg.senderNickname,
-          isMyMessage: "isMyMessage" in msg ? msg.isMyMessage : msg.mine,
-          content: "content" in msg ? msg.content : msg.message,
-          othersUnreadUsers: (msg as any).othersUnreadUsers,
-        }))
-      );
-
       // 가장 최근 메시지를 찾기 (내 메시지 포함)
       const lastMessage = sortedMessages[sortedMessages.length - 1];
-
-      console.log("=== 가장 최근 메시지 ===", {
-        id: "id" in lastMessage ? lastMessage.id : lastMessage.chatId,
-        isMyMessage:
-          "isMyMessage" in lastMessage
-            ? lastMessage.isMyMessage
-            : lastMessage.mine,
-        content:
-          "content" in lastMessage ? lastMessage.content : lastMessage.message,
-      });
 
       if (lastMessage) {
         const messageId =
           "id" in lastMessage ? lastMessage.id : lastMessage.chatId.toString();
 
-        console.log("=== 읽음 처리할 메시지 ===", {
-          messageId,
-          roomId,
-          messageContent:
-            "content" in lastMessage
-              ? lastMessage.content
-              : lastMessage.message,
-          senderName:
-            "senderName" in lastMessage
-              ? lastMessage.senderName
-              : lastMessage.senderNickname,
-        });
-
         await markChatAsRead(roomId, messageId);
 
-        console.log("=== 채팅 읽음 처리 API 호출 완료 ===", {
-          roomId,
-          lastReadChatId: messageId,
-        });
-
-        // ✅ 읽음 처리 즉시 로컬 상태에서 읽은 메시지들의 안읽음 수 감소
+        // 읽음 처리 즉시 로컬 상태에서 읽은 메시지들의 안읽음 수 감소
         const readMessageId =
           parseInt(messageId.replace("history-", "")) || parseInt(messageId);
 
@@ -1270,9 +1061,6 @@ export const useCafeChat = ({
             if (msgId <= readMessageId && !msg.isMyMessage) {
               const currentCount = msg.othersUnreadUsers || 0;
               const newCount = Math.max(0, currentCount - 1);
-              console.log(
-                `즉시 감소: 메시지 ${msgId} 안읽음 수 ${currentCount} → ${newCount}`
-              );
               return {
                 ...msg,
                 othersUnreadUsers: newCount,
@@ -1282,7 +1070,7 @@ export const useCafeChat = ({
           });
         });
 
-        // ✅ chatHistory도 동일하게 업데이트
+        // chatHistory도 동일하게 업데이트
         setChatHistory((prevHistory) => {
           return prevHistory.map((msg) => {
             const msgId = msg.chatId;
@@ -1298,8 +1086,6 @@ export const useCafeChat = ({
           });
         });
 
-        console.log("=== 로컬 상태 즉시 업데이트: 안읽음 수 감소 완료 ===");
-
         // 읽음 처리 후 읽지 않은 사람 수 업데이트를 위한 이벤트 발생
         window.dispatchEvent(
           new CustomEvent("chatMarkedAsRead", {
@@ -1307,7 +1093,6 @@ export const useCafeChat = ({
           })
         );
       } else {
-        console.log("읽을 메시지가 없습니다 (모든 메시지가 내가 보낸 메시지)");
       }
     } catch (err) {
       console.error("채팅 읽음 처리 실패:", err);
@@ -1326,10 +1111,8 @@ export const useCafeChat = ({
     // React Strict Mode 대응: 같은 cafeId로 이미 joinChat을 시도했으면 무시
     if (cafeId && !isJoined && !isLoading && !isJoining) {
       if (joinedCafeIdRef.current === cafeId) {
-        console.log("⏭️ 이미 joinChat 시도한 cafeId - 스킵:", cafeId);
         return;
       }
-      console.log("초기 채팅방 참여 시도 (useCafeChat):", cafeId);
       joinedCafeIdRef.current = cafeId;
       joinChat();
     }

@@ -200,8 +200,6 @@ export default function MyBookmarksPage() {
       // 북마크 해제 시 현재 보고 있는 카테고리를 사용
       const categoryEn = categoryMapping[activeCategory];
 
-      console.log("북마크 해제 시도:", { cafeId, category: categoryEn });
-
       await deleteWishlist(cafeId, categoryEn);
 
       // 토스트 메시지 표시

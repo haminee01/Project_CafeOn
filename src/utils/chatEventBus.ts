@@ -19,7 +19,6 @@ class ChatEventBus {
 
   // 채팅방 읽음 이벤트 발생
   emitChatRead(roomId: number) {
-    console.log("ChatEventBus: 채팅방 읽음 이벤트 발생:", roomId);
     this.chatReadHandlers.forEach((handler) => {
       try {
         handler(roomId);

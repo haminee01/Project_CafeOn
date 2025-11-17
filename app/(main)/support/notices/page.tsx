@@ -49,8 +49,6 @@ const NoticePage = () => {
   const handlePageChange = useCallback((page: number) => {
     if (page >= 1 && page <= FINAL_TOTAL_PAGES) {
       setCurrentPage(page);
-      // 실제 API 호출 로직은 여기에 들어갑니다.
-      console.log(`페이지 ${page} 로드`);
     }
   }, []);
 

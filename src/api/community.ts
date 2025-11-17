@@ -18,37 +18,33 @@ import {
   ReportResponse,
 } from "@/types/Post";
 
-// BASE_URL은 환경에 따라 다를 수 있습니다. 예: http://localhost:8080
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
-
-// --- [ 1. 타입 정의 ] ---
 
 // GET /api/posts/{id}/comments 응답 타입 (댓글 목록)
 export type CommentListResponse = Comment[];
 
-// **[추가/수정된 부분]** 백엔드 API의 실제 응답 구조를 정의 (Spring Pageable 응답)
 interface BackendPostListItem {
   id: number;
   type: string;
   title: string;
-  authorNickname: string; // 백엔드에서 전송하는 필드명
-  authorProfileImageUrl: string | null; // 백엔드에서 전송하는 필드명
-  createdAt: string; // 백엔드에서 전송하는 필드명
-  viewCount: number; // 백엔드에서 전송하는 필드명
-  likeCount: number; // 백엔드에서 전송하는 필드명
-  commentCount: number; // 백엔드에서 전송하는 필드명
-  likedByMe: boolean; // 백엔드에서 전송하는 필드명
+  authorNickname: string;
+  authorProfileImageUrl: string | null;
+  createdAt: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  likedByMe: boolean;
 }
 
 interface BackendPostListResponse {
   message: string;
   data: {
-    content: BackendPostListItem[]; // 실제 게시글 리스트
-    totalPages: number; // 총 페이지 수
+    content: BackendPostListItem[];
+    totalPages: number;
     totalElements: number;
-    number: number; // 현재 페이지 (0부터 시작)
-    size: number; // 페이지 크기 // 기타 Pageable 정보...
-  } | null; // data가 null일 수 있음을 처리
+    number: number;
+    size: number;
+  } | null;
 }
 
 // 백엔드 PostDetail API 응답 구조
@@ -57,8 +53,8 @@ interface BackendPostDetailResponse {
   title: string;
   content: string;
   authorNickname: string;
-  authorId?: string; // 작성자 userId 추가
-  authorUserId?: string; // 백엔드가 다른 필드명을 사용할 수도 있음
+  authorId?: string;
+  authorUserId?: string;
   authorProfileImageUrl: string | null;
   type: string;
   viewCount: number;
@@ -87,63 +83,50 @@ interface BackendPostDetailApiResponse {
 // PostDetailResponse는 PostDetail 타입을 사용
 export type PostDetailResponse = PostDetailType;
 
-// --- [ 2. API 함수 구현 ] ---
-
 /**
  * GET /api/posts - 커뮤니티 글 목록 조회
  * @param query 검색, 필터링, 정렬을 위한 쿼리 파라미터
  */
 export const getPosts = async (
   query: {
-    // page 속성을 추가합니다. CommunityList에서 이 값을 사용합니다.
-    page: number; // 클라이언트는 1부터 시작하는 페이지 번호를 사용합니다.
+    page: number;
     keyword?: string;
     type?: PostListItem["type"];
     sort?: "latest" | "likes" | "views";
-  } = { page: 1 } // 기본값으로 page: 1을 설정합니다.
+  } = { page: 1 }
 ): Promise<PostListResponse> => {
-  // URLSearchParams를 사용하여 쿼리 스트링을 깔끔하게 만듭니다.
-  const params = new URLSearchParams(); // **[핵심 수정]** 클라이언트 페이지 번호(1부터 시작)에서 1을 빼서 // 백엔드 Spring Data JPA가 사용하는 0부터 시작하는 페이지 번호로 변환합니다.
+  const params = new URLSearchParams();
 
-  const backendPageNumber = Math.max(0, query.page - 1); // 1페이지 요청 시 0으로 변환
+  const backendPageNumber = Math.max(0, query.page - 1);
   params.append("page", String(backendPageNumber));
 
   if (query.keyword) params.append("keyword", query.keyword);
   if (query.type) params.append("type", query.type);
   if (query.sort) params.append("sort", query.sort);
 
-  const url = `/api/posts?${params.toString()}`; // 1. fetcher를 사용하여 API 호출. 백엔드 응답 구조를 예상합니다.
+  const url = `/api/posts?${params.toString()}`;
 
-  console.log("API 호출 URL:", url);
-  console.log("쿼리 파라미터:", {
-    page: backendPageNumber,
-    keyword: query.keyword,
-    type: query.type,
-    sort: query.sort,
-  });
+  const backendResponse = await fetcher<BackendPostListResponse>(url);
 
-  const backendResponse = await fetcher<BackendPostListResponse>(url); // 2. 백엔드 응답을 프론트엔드에서 기대하는 PostListResponse 구조로 변환합니다.
-
-  const data = backendResponse.data; // 데이터가 없거나 content가 없는 경우 빈 리스트 반환
+  const data = backendResponse.data;
 
   if (!data || !data.content) {
     return {
       posts: [],
       pages: data?.totalPages || 1,
     };
-  } // 3. 데이터를 프론트엔드 구조로 매핑하여 반환
+  }
 
-  // 백엔드 응답을 프론트엔드 형식으로 변환
   const transformedPosts: PostListItem[] = data.content.map((backendPost) => ({
     id: backendPost.id,
     type: backendPost.type as PostListItem["type"],
     title: backendPost.title,
-    author: backendPost.authorNickname, // authorNickname -> author로 매핑
+    author: backendPost.authorNickname,
     authorProfileImageUrl: backendPost.authorProfileImageUrl,
-    created_at: backendPost.createdAt, // createdAt -> created_at으로 매핑
-    views: backendPost.viewCount, // viewCount -> views로 매핑
-    likes: backendPost.likeCount, // likeCount -> likes로 매핑
-    comments: backendPost.commentCount, // commentCount -> comments로 매핑
+    created_at: backendPost.createdAt,
+    views: backendPost.viewCount,
+    likes: backendPost.likeCount,
+    comments: backendPost.commentCount,
     likedByMe: backendPost.likedByMe,
   }));
 
@@ -166,10 +149,8 @@ export const getPostDetail = async (
 
   const backendResponse = await fetcher<BackendPostDetailApiResponse>(url);
 
-  // 백엔드 응답을 프론트엔드 형식으로 변환
   const backendData = backendResponse.data;
 
-  // 이미지 URL 배열 추출 (리뷰와 동일한 방식)
   let imageUrls: string[] = [];
 
   if (backendData.images && Array.isArray(backendData.images)) {
@@ -177,14 +158,11 @@ export const getPostDetail = async (
       const firstItem = backendData.images[0];
 
       if (typeof firstItem === "string") {
-        // 이미 문자열 배열인 경우
         imageUrls = backendData.images as string[];
       } else if (firstItem && typeof firstItem === "object") {
-        // 객체 배열인 경우 - publicUrl 또는 imageUrl 필드 사용
         imageUrls = backendData.images
           .map((img: any) => {
             const url = img.publicUrl || img.imageUrl || img.url || "";
-            // URL 디코딩 (백엔드가 인코딩된 URL을 보내는 경우 대비)
             return url ? decodeURIComponent(url) : "";
           })
           .filter(Boolean) as string[];
@@ -212,7 +190,6 @@ export const getPostDetail = async (
   return transformedData;
 };
 
-// 백엔드 댓글 응답 구조
 interface BackendComment {
   commentId: number;
   parentId: number | null;
@@ -246,15 +223,10 @@ export const getComments = async (
 ): Promise<CommentListResponse> => {
   const url = `/api/posts/${postId}/comments`;
 
-  console.log(`[API] Fetching comments for post ${postId}`);
-
   try {
     const backendResponse = await fetcher<BackendCommentListResponse>(url);
-    console.log("댓글 목록 응답:", backendResponse);
 
-    // 백엔드 응답을 프론트엔드 형식으로 변환
     const commentsData = backendResponse.data?.content || [];
-    console.log("댓글 데이터:", commentsData);
 
     const transformedComments: Comment[] = commentsData.map(
       (backendComment) => ({
@@ -293,7 +265,6 @@ export const getComments = async (
       })
     );
 
-    console.log("변환된 댓글 목록:", transformedComments);
     return transformedComments;
   } catch (error) {
     console.error("댓글 목록 조회 실패:", error);
@@ -446,10 +417,8 @@ export async function updatePostMutator(
 
   // 이미지 파일들 추가
   const images = (arg as any).Image || arg.image;
-  console.log("updatePostMutator - 이미지 확인:", images?.length || 0, "개");
   if (images && images.length > 0) {
     images.forEach((file: File, idx: number) => {
-      console.log(`수정 - 이미지 ${idx + 1}:`, file.name, file.size, "bytes");
       formData.append("images", file);
     });
   }
@@ -457,7 +426,6 @@ export async function updatePostMutator(
   // FormData 사용 시 Content-Type 헤더 제거 (브라우저가 자동 설정)
   delete headers["Content-Type"];
 
-  console.log("FormData API URL:", correctUrl);
   const response = await fetch(correctUrl, {
     method: "PUT",
     headers,
@@ -547,14 +515,6 @@ export async function createCommentMutator(
   if (authToken) {
     headers["Authorization"] = `Bearer ${authToken}`;
   }
-
-  console.log("댓글 작성 API 요청:", {
-    url: fullUrl,
-    method: "POST",
-    headers,
-    body: JSON.stringify(arg),
-    arg,
-  });
 
   const response = await fetch(fullUrl, {
     method: "POST",
@@ -754,15 +714,6 @@ export const createPostReport = async (
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("게시글 신고 API 요청:", {
-    url: fullUrl,
-    method: "POST",
-    headers,
-    body: JSON.stringify({ content }),
-    postId,
-    content,
-  });
-
   const response = await fetch(fullUrl, {
     method: "POST",
     headers,
@@ -781,7 +732,6 @@ export const createPostReport = async (
   }
 
   const result = await response.json();
-  console.log("게시글 신고 API 응답:", result);
   return result;
 };
 
@@ -805,14 +755,6 @@ export const createReport = async (
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("신고 API 요청:", {
-    url: fullUrl,
-    method: "POST",
-    headers,
-    body: JSON.stringify(reportData),
-    reportData,
-  });
-
   const response = await fetch(fullUrl, {
     method: "POST",
     headers,
@@ -831,7 +773,6 @@ export const createReport = async (
   }
 
   const result = await response.json();
-  console.log("신고 API 응답:", result);
   return result;
 };
 
@@ -852,15 +793,6 @@ export const createCommentReport = async (
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("댓글 신고 API 요청:", {
-    url: fullUrl,
-    method: "POST",
-    headers,
-    body: JSON.stringify({ content }),
-    commentId,
-    content,
-  });
-
   const response = await fetch(fullUrl, {
     method: "POST",
     headers,
@@ -879,6 +811,5 @@ export const createCommentReport = async (
   }
 
   const result = await response.json();
-  console.log("댓글 신고 API 응답:", result);
   return result;
 };

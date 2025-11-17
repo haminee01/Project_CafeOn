@@ -70,27 +70,13 @@ export default function CommentItem({
 
     try {
       const response = await toggleCommentLike(comment.id);
-      console.log("댓글 좋아요 응답:", response);
 
       // 응답 타입: { message, data: { commentId, liked, likes } }
       if (response && response.data) {
         const { liked, likes } = response.data;
 
-        console.log("댓글 좋아요 상태 변경:", {
-          before: prevLiked,
-          after: liked,
-          likesFromServer: likes,
-        });
-
         setIsLiked(liked);
-        // 서버에서 직접 likes 값을 받으므로 그대로 사용
         setCurrentLikes(likes);
-
-        console.log(
-          `댓글 좋아요 ${
-            liked ? "추가" : "취소"
-          } 완료 - 현재 좋아요 수: ${likes}`
-        );
       }
 
       // 댓글 목록 새로고침
@@ -178,14 +164,6 @@ export default function CommentItem({
     if (!replyContent.trim()) return;
 
     try {
-      console.log("대댓글 작성 요청:", {
-        postId,
-        content: replyContent,
-        parent_comment_id: comment.id,
-        commentId: comment.id,
-      });
-
-      // 여러 필드명을 시도해보기
       const requestData = {
         content: replyContent,
         parent_comment_id: comment.id,
@@ -194,11 +172,8 @@ export default function CommentItem({
         parentComment: comment.id,
       };
 
-      console.log("대댓글 요청 데이터:", requestData);
-
       await createCommentMutator(postId, requestData as any);
 
-      console.log("대댓글 작성 성공");
       setReplyContent("");
       setShowReplyForm(false);
 

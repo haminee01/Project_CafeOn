@@ -44,7 +44,8 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
           email: memberData?.email || "",
           nickname: memberData?.nickname || "",
           keywords: memberData?.keywords || [],
-          penaltyScore: memberData?.penaltyCount || memberData?.penalty_count || 0,
+          penaltyScore:
+            memberData?.penaltyCount || memberData?.penalty_count || 0,
           status: memberData?.status?.toLowerCase() || "active",
         });
 
@@ -89,8 +90,6 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
 
   const handleSuspensionConfirm = () => {
     if (suspensionReason.trim()) {
-      // 실제로는 API 호출
-      console.log(`회원 ${member.name} 정지 처리: ${suspensionReason}`);
       setShowSuspensionModal(false);
       setSuspensionReason("");
     }
@@ -105,7 +104,9 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-600">회원 정보를 불러오는 중...</div>
+          <div className="text-lg text-gray-600">
+            회원 정보를 불러오는 중...
+          </div>
         </div>
       </div>
     );
@@ -185,7 +186,7 @@ export default function MemberDetailPage({ params }: MemberDetailPageProps) {
             </label>
             <div className="flex-1 p-3 border border-gray-200 rounded-lg bg-gray-50">
               <div className="flex flex-wrap gap-2">
-                {member.keywords.map((keyword, index) => (
+                {member.keywords.map((keyword: string, index: number) => (
                   <span
                     key={index}
                     className="px-2 py-1 bg-secondary text-white text-sm rounded"

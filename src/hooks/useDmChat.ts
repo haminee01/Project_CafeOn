@@ -159,7 +159,6 @@ export const useDmChat = ({
         );
 
         if (res.ok || res.status === 204) {
-          console.log("1:1 채팅 자동 read-latest 완료:", targetRoomId);
         }
       } catch (error) {
         console.error("1:1 채팅 자동 read-latest 실패:", error);
@@ -170,7 +169,6 @@ export const useDmChat = ({
   // STOMP 클라이언트 연결
   const connectStomp = useCallback(async () => {
     if (stompClientRef.current?.connected) {
-      console.log("1:1 채팅 STOMP 이미 연결됨");
       return;
     }
 
@@ -185,28 +183,23 @@ export const useDmChat = ({
 
       const serverUrl =
         process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/stomp/chats";
-      console.log("1:1 채팅 STOMP 연결 시도:", serverUrl);
 
       const client = createStompClient(serverUrl, token);
       stompClientRef.current = client;
 
       client.onConnect = (frame) => {
-        console.log("1:1 채팅 STOMP 연결 성공:", frame);
         setStompConnected(true);
       };
 
       client.onStompError = (frame) => {
-        console.error("1:1 채팅 STOMP 에러:", frame);
         setStompConnected(false);
       };
 
       client.onWebSocketError = (error) => {
-        console.error("1:1 채팅 WebSocket 에러:", error);
         setStompConnected(false);
       };
 
       client.onDisconnect = () => {
-        console.log("1:1 채팅 STOMP 연결 해제");
         setStompConnected(false);
       };
 
@@ -216,7 +209,6 @@ export const useDmChat = ({
       // 연결 완료까지 잠시 대기
       await new Promise((resolve) => setTimeout(resolve, 500));
     } catch (error) {
-      console.error("1:1 채팅 STOMP 연결 실패:", error);
       setStompConnected(false);
     }
   }, []);
@@ -226,7 +218,6 @@ export const useDmChat = ({
     (targetRoomId: string) => {
       // roomId가 "1"인 경우 구독하지 않음 (잘못된 상태)
       if (targetRoomId === "1") {
-        console.error("❌ subscribeToRoom: 잘못된 roomId(1) 구독 시도 차단!");
         return;
       }
 
@@ -244,12 +235,10 @@ export const useDmChat = ({
 
       // 기존 구독 해제
       if (messageSubscriptionRef.current) {
-        console.log("기존 1:1 채팅 메시지 STOMP 구독 해제");
         messageSubscriptionRef.current.unsubscribe();
         messageSubscriptionRef.current = null;
       }
       if (readSubscriptionRef.current) {
-        console.log("기존 1:1 채팅 읽음 영수증 STOMP 구독 해제");
         readSubscriptionRef.current.unsubscribe();
         readSubscriptionRef.current = null;
       }
@@ -371,7 +360,6 @@ export const useDmChat = ({
         );
 
         messageSubscriptionRef.current = messageSubscription;
-        console.log(`1:1 채팅 메시지 구독 성공: /sub/rooms/${targetRoomId}`);
 
         // 읽음 영수증 스트림 구독
         const readSubscription = stompClientRef.current.subscribe(
@@ -379,7 +367,6 @@ export const useDmChat = ({
           (message) => {
             try {
               const readReceipt = JSON.parse(message.body);
-              console.log("1:1 채팅 읽음 영수증 수신:", readReceipt);
 
               // { roomId, readerId, lastReadChatId }
               if (
@@ -418,10 +405,6 @@ export const useDmChat = ({
                   return msg;
                 });
               });
-
-              console.log(
-                `1:1 채팅 읽음 영수증 처리 완료: readerId=${readReceipt.readerId}, prev=${prev}, cur=${cur}`
-              );
             } catch (error) {
               console.error("1:1 채팅 읽음 영수증 파싱 오류:", error);
             }
@@ -429,9 +412,6 @@ export const useDmChat = ({
         );
 
         readSubscriptionRef.current = readSubscription;
-        console.log(
-          `1:1 채팅 읽음 영수증 구독 성공: /sub/rooms/${targetRoomId}/read`
-        );
       } catch (error) {
         console.error("1:1 채팅 STOMP 구독 실패:", error);
       }
@@ -464,7 +444,6 @@ export const useDmChat = ({
 
     setStompConnected(false);
     lastReadSeenRef.current.clear();
-    console.log("1:1 채팅 STOMP 연결 해제");
   }, []);
 
   // 채팅방별 muted 상태를 로컬 스토리지에서 가져오기
@@ -474,14 +453,8 @@ export const useDmChat = ({
       const stored = localStorage.getItem(key);
       if (stored !== null) {
         const muted = stored === "true";
-        console.log(
-          `🔔 DM 로컬 스토리지에서 muted 상태 로드: ${muted} (${targetRoomId})`
-        );
         return muted;
       }
-      console.log(
-        `🔔 DM 로컬 스토리지에 muted 상태 없음 - 기본값 false (${targetRoomId})`
-      );
       return false;
     },
     []
@@ -492,9 +465,6 @@ export const useDmChat = ({
     (targetRoomId: string, muted: boolean): void => {
       const key = `chat_muted_${targetRoomId}`;
       localStorage.setItem(key, String(muted));
-      console.log(
-        `🔔 DM 로컬 스토리지에 muted 상태 저장: ${muted} (${targetRoomId})`
-      );
     },
     []
   );
@@ -526,9 +496,7 @@ export const useDmChat = ({
         const mutedState = getMutedStateFromStorage(roomId);
         setIsMuted(mutedState);
       }
-    } catch (err) {
-      console.error("1:1 채팅 참여자 목록 새로고침 실패:", err);
-    }
+    } catch (err) {}
   }, [roomId, getMutedStateFromStorage, user, currentUserId]);
 
   // 채팅 히스토리 로딩
@@ -547,8 +515,6 @@ export const useDmChat = ({
         // 비동기로 히스토리 로드
         getChatHistory(roomId, lastMessageId)
           .then((response) => {
-            console.log("1:1 채팅 히스토리 응답:", response);
-
             if (response.data.content.length > 0) {
               // 중복 제거하여 히스토리 추가
               setChatHistory((prev) => {
@@ -577,18 +543,11 @@ export const useDmChat = ({
               );
 
               setMessages((prev) => [...historyMessages, ...prev]);
-              console.log(
-                "1:1 채팅 히스토리 로딩 완료:",
-                historyMessages.length,
-                "개 메시지"
-              );
             } else {
-              console.log("더 이상 로드할 히스토리가 없음");
               setHasMoreHistory(false);
             }
           })
           .catch((err) => {
-            console.error("1:1 채팅 히스토리 로딩 실패:", err);
             setHasMoreHistory(false);
           })
           .finally(() => {
@@ -598,7 +557,6 @@ export const useDmChat = ({
         return currentHistory; // 현재 상태 유지
       });
     } catch (err) {
-      console.error("1:1 채팅 히스토리 로딩 실패:", err);
       setHasMoreHistory(false);
       setIsLoadingHistory(false);
     }
@@ -612,10 +570,6 @@ export const useDmChat = ({
     }
     // 이전 채팅방이 있고 새로운 채팅방으로 전환하는 경우 정리
     if (roomId && existingRoomId && roomId !== existingRoomId) {
-      console.log("🔔 채팅방 전환: 이전 채팅방 정리", {
-        previousRoomId: roomId,
-        newRoomId: existingRoomId,
-      });
       // 이전 STOMP 구독 해제
       if (messageSubscriptionRef.current) {
         messageSubscriptionRef.current.unsubscribe();
@@ -632,7 +586,6 @@ export const useDmChat = ({
       setParticipantCount(0);
       setRoomId(null);
       setIsJoined(false);
-      console.log("🔔 새 채팅방을 위해 상태 완전 초기화");
     }
 
     // 마이페이지에서 이미 존재하는 채팅방인 경우
@@ -662,7 +615,6 @@ export const useDmChat = ({
         setParticipantCount(participantList.length);
 
         // 참여자 목록 로드 후 refreshParticipants를 호출하여 상태 동기화
-        // (user 정보가 준비되지 않았을 경우를 대비)
         const targetRoomIdForExisting = existingRoomId;
         setTimeout(() => {
           // roomId가 여전히 유효한지 확인
@@ -676,10 +628,6 @@ export const useDmChat = ({
         const hasLeft = localStorage.getItem(leftKey);
 
         if (hasLeft) {
-          console.log(
-            "=== 이전에 나간 DM 채팅방 재입장 - 히스토리 로드 안 함 (마이페이지) ===",
-            counterpartId
-          );
           // 나간 기록 삭제
           localStorage.removeItem(leftKey);
           // 빈 채팅방으로 시작
@@ -707,9 +655,8 @@ export const useDmChat = ({
         setTimeout(async () => {
           try {
             await readLatest(existingRoomId);
-            console.log("마이페이지 DM 입장 시 읽음 처리 완료");
 
-            // ✅ 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
+            // 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
             setMessages((prevMessages) => {
               return prevMessages.map((msg) => {
                 if (!msg.isMyMessage) {
@@ -723,16 +670,12 @@ export const useDmChat = ({
                 return msg;
               });
             });
-            console.log("=== 마이페이지 DM 입장 시 안읽음 수 즉시 감소 ===");
-          } catch (err) {
-            console.error("마이페이지 DM 입장 시 읽음 처리 실패:", err);
-          }
+          } catch (err) {}
         }, 1000);
 
         setIsLoading(false);
         return;
       } catch (err) {
-        console.error("기존 채팅방 로드 실패:", err);
         setError("채팅방 로드에 실패했습니다.");
         setIsLoading(false);
         return;
@@ -747,13 +690,6 @@ export const useDmChat = ({
       counterpartId === "user-1"
     ) {
       const errorMsg = `유효하지 않은 상대방 ID: ${counterpartId}`;
-      console.error("=== 1:1 채팅방 참여 실패 ===", {
-        counterpartId,
-        counterpartName,
-        errorMsg,
-        counterpartIdType: typeof counterpartId,
-        counterpartIdLength: counterpartId?.length,
-      });
       setError(errorMsg);
       setIsLoading(false);
       return;
@@ -762,20 +698,14 @@ export const useDmChat = ({
     setIsLoading(true);
     setError(null);
 
-    // ✅ joinChat 시작 시 항상 메시지/히스토리 초기화 (중복 방지) - existingRoomId가 없는 경우만
+    // joinChat 시작 시 항상 메시지/히스토리 초기화 (중복 방지) - existingRoomId가 없는 경우만
     if (!existingRoomId) {
-      console.log("🔄 1:1 joinChat 시작 - 메시지/히스토리 초기화");
       setChatHistory([]);
       setMessages([]);
       setHasMoreHistory(true);
     }
 
     try {
-      console.log("=== 1:1 채팅방 참여 시작 ===", {
-        counterpartId,
-        counterpartName,
-      });
-
       // 먼저 모든 잘못된 매핑 제거
       removeInvalidMappings();
 
@@ -800,7 +730,6 @@ export const useDmChat = ({
           setParticipantCount(participantList.length);
 
           // 참여자 목록 로드 후 refreshParticipants를 호출하여 상태 동기화
-          // (user 정보가 준비되지 않았을 경우를 대비)
           const targetRoomId = existingRoomIdFromMapping.toString();
           setTimeout(() => {
             // roomId가 여전히 유효한지 확인
@@ -816,10 +745,6 @@ export const useDmChat = ({
           let hasJoinMessage = false;
 
           if (hasLeft) {
-            console.log(
-              "=== 이전에 나간 DM 채팅방 재입장 - 히스토리 로드 안 함 (매핑) ===",
-              counterpartId
-            );
             // 나간 기록 삭제
             localStorage.removeItem(leftKey);
             // 빈 채팅방으로 시작
@@ -841,7 +766,6 @@ export const useDmChat = ({
               setHasMoreHistory(historyResponse.data.hasNext);
 
               // PrivateChatModal에서는 messages에 히스토리를 넣어야 표시됨
-              // 날짜, 입장/퇴장 메시지 모두 포함하여 변환
               const historyMessages: ChatMessage[] =
                 historyResponse.data.content.map((msg: ChatHistoryMessage) => ({
                   id: msg.chatId.toString(),
@@ -867,9 +791,7 @@ export const useDmChat = ({
               sendMessage(`${currentUserNickname}님이 입장했습니다.`);
             }, 300);
           }
-        } catch (dataLoadError) {
-          console.error("기존 1:1 채팅방 데이터 로드 실패:", dataLoadError);
-        }
+        } catch (dataLoadError) {}
 
         try {
           await connectStomp();
@@ -880,9 +802,8 @@ export const useDmChat = ({
             setTimeout(async () => {
               try {
                 await readLatest(roomIdForRead);
-                console.log("매핑 DM 입장 시 읽음 처리 완료");
 
-                // ✅ 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
+                // 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
                 setMessages((prevMessages) => {
                   return prevMessages.map((msg) => {
                     if (!msg.isMyMessage) {
@@ -896,15 +817,10 @@ export const useDmChat = ({
                     return msg;
                   });
                 });
-                console.log("=== 매핑 DM 입장 시 안읽음 수 즉시 감소 ===");
-              } catch (err) {
-                console.error("매핑 DM 입장 시 읽음 처리 실패:", err);
-              }
+              } catch (err) {}
             }, 1000);
           }
-        } catch (stompError) {
-          console.warn("기존 1:1 채팅방 STOMP 연결 실패:", stompError);
-        }
+        } catch (stompError) {}
         return;
       }
 
@@ -913,9 +829,7 @@ export const useDmChat = ({
       let newRoomId: string | null = null;
 
       try {
-        console.log("=== createDmChat API 호출 ===", { counterpartId });
         response = await createDmChat(counterpartId);
-        console.log("=== createDmChat API 응답 ===", response);
         // 응답 검증: roomId가 1이면 에러
         if (response.data.roomId === 1) {
           throw new Error(
@@ -924,19 +838,11 @@ export const useDmChat = ({
         }
         newRoomId = response.data.roomId.toString();
       } catch (createError: any) {
-        console.error("=== createDmChat API 에러 ===", createError);
-
         // 이미 참여 중인 경우 (Duplicate entry 에러) - 기존 채팅방으로 연결
         if (createError?.isDuplicateEntry) {
-          console.log("=== Duplicate entry 감지 - 이미 참여 중인 채팅방 ===", {
-            extractedRoomId: createError.roomId,
-            counterpartId,
-          });
-
           // 1. 에러에서 추출한 roomId 사용
           if (createError.roomId) {
             newRoomId = createError.roomId;
-            console.log("=== 에러에서 추출한 roomId 사용 ===", newRoomId);
           }
           // 2. 매핑에서 기존 채팅방 찾기
           else {
@@ -944,12 +850,9 @@ export const useDmChat = ({
               getRoomIdByCounterpart(counterpartId);
             if (existingRoomIdFromMapping) {
               newRoomId = existingRoomIdFromMapping.toString();
-              console.log("=== 매핑에서 찾은 roomId 사용 ===", newRoomId);
             }
           }
 
-          // roomId를 찾지 못한 경우, 약간의 지연 후 재시도 (React Strict Mode 대응)
-          // 첫 번째 요청이 성공해서 매핑이 저장되었을 수 있음
           if (!newRoomId) {
             // 200ms 후 매핑이 업데이트되었는지 확인
             await new Promise((resolve) => setTimeout(resolve, 200));
@@ -959,12 +862,7 @@ export const useDmChat = ({
             }
           }
 
-          // 여전히 roomId를 찾지 못한 경우, 성공한 요청의 응답을 확인
-          // React Strict Mode에서 첫 번째 요청이 성공했을 수 있음
           if (!newRoomId) {
-            // 에러가 발생했지만 실제로는 채팅방이 생성되었을 수 있음
-            // 이 경우 사용자에게 에러를 보여주지 않고 정상적으로 처리
-            // roomId를 찾기 위해 다시 매핑 확인 (약간 더 긴 지연)
             await new Promise((resolve) => setTimeout(resolve, 300));
             const finalRetryRoomId = getRoomIdByCounterpart(counterpartId);
             if (finalRetryRoomId) {
@@ -974,10 +872,6 @@ export const useDmChat = ({
 
           // 기존 채팅방으로 처리
           if (newRoomId) {
-            console.log("=== Duplicate entry 처리: 기존 채팅방으로 연결 ===", {
-              newRoomId,
-            });
-
             response = {
               data: { roomId: parseInt(newRoomId) },
             };
@@ -1010,8 +904,6 @@ export const useDmChat = ({
         throw new Error("채팅방 ID를 가져올 수 없습니다.");
       }
 
-      console.log("=== 최종 newRoomId 확인 ===", { newRoomId });
-
       setRoomId(newRoomId);
       setIsJoined(true);
 
@@ -1036,9 +928,7 @@ export const useDmChat = ({
             refreshParticipants();
           }
         }, 100);
-      } catch (e) {
-        console.error("새 채팅방 참여자 목록 로드 실패:", e);
-      }
+      } catch (e) {}
 
       // 매핑 저장
       setDmChatMapping(counterpartId, parseInt(newRoomId));
@@ -1055,9 +945,8 @@ export const useDmChat = ({
         setTimeout(async () => {
           try {
             await readLatest(newRoomIdStr);
-            console.log("새 DM 채팅방 입장 시 읽음 처리 완료");
 
-            // ✅ 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
+            // 입장 시 읽음 처리 후 즉시 로컬 상태 업데이트
             setMessages((prevMessages) => {
               return prevMessages.map((msg) => {
                 if (!msg.isMyMessage) {
@@ -1071,10 +960,7 @@ export const useDmChat = ({
                 return msg;
               });
             });
-            console.log("=== 새 DM 채팅방 입장 시 안읽음 수 즉시 감소 ===");
-          } catch (err) {
-            console.error("새 DM 채팅방 입장 시 읽음 처리 실패:", err);
-          }
+          } catch (err) {}
         }, 1000);
       }
 
@@ -1085,10 +971,6 @@ export const useDmChat = ({
       let hasJoinMessage = false;
 
       if (hasLeft) {
-        console.log(
-          "=== 이전에 나간 DM 채팅방 재입장 - 히스토리 로드 안 함 (새 채팅) ===",
-          counterpartId
-        );
         // 나간 기록 삭제
         localStorage.removeItem(leftKey);
         // 빈 채팅방으로 시작
@@ -1137,7 +1019,6 @@ export const useDmChat = ({
             }, 300);
           }
         } catch (historyError) {
-          console.error("새 채팅방 히스토리 로드 실패:", historyError);
           setChatHistory([]);
           setMessages([]);
         }
@@ -1157,7 +1038,6 @@ export const useDmChat = ({
       const errorMessage =
         err instanceof Error ? err.message : "1:1 채팅방 생성에 실패했습니다.";
       setError(errorMessage);
-      console.error("1:1 채팅방 생성 실패:", err);
     } finally {
       setIsLoading(false);
     }
@@ -1178,20 +1058,16 @@ export const useDmChat = ({
     if (!roomId) return;
 
     try {
-      console.log("=== 1:1 채팅방 나가기 시작 ===", { roomId, counterpartId });
-
       // 나가기 API 호출 - 반드시 성공해야 함
       await leaveChatRoomNew(roomId);
-      console.log("=== 1:1 채팅방 나가기 API 성공 ===");
 
-      // ✅ API 성공 후에만 로컬 스토리지에 기록
+      // API 성공 후에만 로컬 스토리지에 기록
       const leftKey = `dm_left_${counterpartId}`;
       const leftData = {
         leftAt: new Date().toISOString(),
         roomId: roomId,
       };
       localStorage.setItem(leftKey, JSON.stringify(leftData));
-      console.log("1:1 채팅방 나간 시점 저장:", leftData);
 
       // 매핑 제거
       removeDmChatMapping(counterpartId);
@@ -1210,12 +1086,8 @@ export const useDmChat = ({
 
       // joinChat 재호출 가능하도록 초기화
       joinedCounterpartRef.current = null;
-
-      console.log("=== 1:1 채팅방 나가기 완료 (상태 초기화됨) ===");
     } catch (err) {
-      console.error("=== 1:1 채팅방 나가기 API 실패 ===", err);
-
-      // ❌ API 실패 시 localStorage에 기록하지 않음
+      // API 실패 시 localStorage에 기록하지 않음
       // 사용자에게 명확한 에러 메시지 표시
       const errorMessage =
         err instanceof Error ? err.message : "채팅방 나가기에 실패했습니다.";
@@ -1228,10 +1100,6 @@ export const useDmChat = ({
 
       // 에러가 발생해도 STOMP는 해제
       disconnectStomp();
-
-      // ❌ API 실패 시 상태는 초기화하지 않음 (여전히 참여 중)
-      console.log("1:1 채팅방 나가기 실패 - 상태 유지 (여전히 참여 중)");
-
       throw err; // 에러를 상위로 전파하여 UI에서 처리
     }
   }, [roomId, counterpartId, disconnectStomp]);
@@ -1256,7 +1124,6 @@ export const useDmChat = ({
           body: JSON.stringify({ message }),
         });
       } catch (err) {
-        console.error("1:1 채팅 메시지 전송 실패:", err);
         setError(
           err instanceof Error ? err.message : "메시지 전송에 실패했습니다."
         );
@@ -1271,7 +1138,6 @@ export const useDmChat = ({
 
     try {
       const newMutedState = !isMuted;
-      console.log("🔔 DM 알림 토글 시작:", newMutedState ? "끄기" : "켜기");
 
       // 서버에 muted 값 업데이트
       await toggleChatMute(roomId, newMutedState);
@@ -1281,15 +1147,11 @@ export const useDmChat = ({
 
       // 로컬 스토리지에 저장 (새로고침 시 유지)
       saveMutedStateToStorage(roomId, newMutedState);
-
-      console.log("🔔 DM 알림 토글 완료:", newMutedState ? "끄기" : "켜기");
     } catch (err) {
-      console.error("1:1 채팅 알림 토글 실패:", err);
       // 에러가 발생해도 UI 상태는 변경 (사용자 경험 개선)
       const newMutedState = !isMuted;
       setIsMuted(newMutedState);
       saveMutedStateToStorage(roomId, newMutedState);
-      console.log("API 에러로 인한 로컬 상태 변경");
     }
   }, [roomId, isMuted, saveMutedStateToStorage]);
 
@@ -1305,20 +1167,12 @@ export const useDmChat = ({
       return;
     }
 
-    console.log("🔔 existingRoomId 변경 감지:", {
-      previousExistingRoomId: previousExistingRoomIdRef.current,
-      currentRoomId: roomId,
-      newExistingRoomId: existingRoomId,
-    });
-
     // 이전 채팅방 STOMP 구독 해제
     if (messageSubscriptionRef.current) {
-      console.log("🔔 이전 채팅방 메시지 STOMP 구독 해제");
       messageSubscriptionRef.current.unsubscribe();
       messageSubscriptionRef.current = null;
     }
     if (readSubscriptionRef.current) {
-      console.log("🔔 이전 채팅방 읽음 영수증 STOMP 구독 해제");
       readSubscriptionRef.current.unsubscribe();
       readSubscriptionRef.current = null;
     }
@@ -1340,16 +1194,8 @@ export const useDmChat = ({
   useEffect(() => {
     if (!existingRoomId) return;
 
-    console.log("🔔 existingRoomId가 변경되어 채팅방 참여 시작:", {
-      existingRoomId,
-      currentRoomId: roomId,
-      isJoined,
-      isLoading,
-    });
-
     // 상태가 준비되었고 아직 조인되지 않은 경우에만 조인
     if (!isJoined && !isLoading && !error) {
-      console.log("🔔 새 채팅방 자동 조인 시작");
       joinChat();
     }
   }, [existingRoomId, isJoined, isLoading, error, joinChat, roomId]);
@@ -1358,7 +1204,6 @@ export const useDmChat = ({
   useEffect(() => {
     // roomId가 "1"인 경우 구독하지 않음 (잘못된 상태)
     if (roomId === "1") {
-      console.warn("⚠️ 잘못된 roomId(1) 감지, STOMP 구독 중단");
       return;
     }
 
@@ -1401,16 +1246,7 @@ export const useDmChat = ({
             : lastUnreadMessage.chatId.toString();
         await markChatAsRead(roomId, messageId);
 
-        console.log("DM 채팅 읽음 처리 완료:", {
-          roomId,
-          lastReadChatId: messageId,
-          messageContent:
-            "content" in lastUnreadMessage
-              ? lastUnreadMessage.content
-              : lastUnreadMessage.message,
-        });
-
-        // ✅ 읽음 처리 즉시 로컬 상태에서 읽은 메시지들의 안읽음 수 감소
+        // 읽음 처리 즉시 로컬 상태에서 읽은 메시지들의 안읽음 수 감소
         const readMessageId =
           parseInt(messageId.replace("history-", "")) || parseInt(messageId);
         setMessages((prevMessages) => {
@@ -1421,9 +1257,6 @@ export const useDmChat = ({
             if (msgId <= readMessageId && !msg.isMyMessage) {
               const currentCount = msg.othersUnreadUsers || 0;
               const newCount = Math.max(0, currentCount - 1);
-              console.log(
-                `DM 즉시 감소: 메시지 ${msgId} 안읽음 수 ${currentCount} → ${newCount}`
-              );
               return {
                 ...msg,
                 othersUnreadUsers: newCount,
@@ -1432,8 +1265,6 @@ export const useDmChat = ({
             return msg;
           });
         });
-
-        console.log("=== DM 로컬 상태 즉시 업데이트: 안읽음 수 감소 완료 ===");
       }
     } catch (err) {
       console.error("DM 채팅 읽음 처리 실패:", err);

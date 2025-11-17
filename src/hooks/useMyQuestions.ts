@@ -63,39 +63,20 @@ export const useMyQuestions = (params: MyQuestionsParams = {}) => {
 
     try {
       const token = localStorage.getItem("accessToken");
-      console.log("🔍 토큰 확인:", token ? "토큰 존재" : "토큰 없음");
-      console.log("🔍 토큰 길이:", token ? token.length : 0);
-      console.log(
-        "🔍 토큰 형식:",
-        token
-          ? token.includes(".")
-            ? "JWT 형식"
-            : "JWT 형식 아님"
-          : "토큰 없음"
-      );
 
       if (!token) {
         throw new Error("로그인이 필요합니다.");
       }
 
-      // 토큰이 "null" 문자열인지 확인
       if (token === "null" || token === "undefined") {
-        console.log("🔍 잘못된 토큰 값:", token);
         throw new Error("유효하지 않은 토큰입니다. 다시 로그인해주세요.");
       }
 
-      // 토큰에서 role 확인
       try {
         const payload = token.split(".")[1];
         const decoded = JSON.parse(atob(payload));
-        console.log("🔍 토큰 payload:", decoded);
-        console.log("🔍 토큰 role:", decoded.role);
-        console.log("🔍 토큰 userId:", decoded.userId);
-      } catch (e) {
-        console.log("🔍 토큰 디코딩 실패:", e);
-      }
+      } catch (e) {}
 
-      // URL 파라미터 구성
       const searchParams = new URLSearchParams();
       if (fetchParams.page)
         searchParams.append("page", fetchParams.page.toString());
@@ -105,12 +86,6 @@ export const useMyQuestions = (params: MyQuestionsParams = {}) => {
         searchParams.append("keyword", fetchParams.keyword);
 
       const url = `http://localhost:8080/api/my/questions?${searchParams.toString()}`;
-      console.log("🔍 API 호출 URL:", url);
-
-      // 다른 API 테스트 (권한이 있는 엔드포인트)
-      console.log(
-        "🔍 다른 API 테스트를 위해 /api/user 엔드포인트도 시도해보겠습니다."
-      );
 
       const response = await fetch(url, {
         method: "GET",
@@ -122,17 +97,8 @@ export const useMyQuestions = (params: MyQuestionsParams = {}) => {
         credentials: "include",
       });
 
-      console.log("🔍 응답 상태:", response.status);
-      console.log(
-        "🔍 응답 헤더:",
-        Object.fromEntries(response.headers.entries())
-      );
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.log("🔍 에러 응답 내용:", errorText);
-        console.log("🔍 에러 응답 길이:", errorText.length);
-
         if (response.status === 401) {
           throw new Error("인증이 필요합니다.");
         } else if (response.status === 403) {
@@ -147,7 +113,6 @@ export const useMyQuestions = (params: MyQuestionsParams = {}) => {
       }
 
       const apiResponse: MyQuestionsResponse = await response.json();
-      console.log("🔍 API 응답 데이터:", apiResponse);
 
       const pageData = apiResponse.data;
 
@@ -158,13 +123,11 @@ export const useMyQuestions = (params: MyQuestionsParams = {}) => {
       const errorMessage =
         err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
       setError(errorMessage);
-      console.error("문의 목록 조회 실패:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
     fetchMyQuestions(params);
   }, [params.page, params.size, params.keyword]);

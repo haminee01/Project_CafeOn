@@ -43,13 +43,9 @@ export const useMyQuestionActions = () => {
         if (currentTime >= expirationTime) {
           throw new Error("토큰이 만료되었습니다. 다시 로그인해주세요.");
         }
-      } catch (e) {
-        console.log("🔍 토큰 디코딩 실패:", e);
-      }
+      } catch (e) {}
 
       const url = `http://localhost:8080/api/my/questions/${questionId}`;
-      console.log("🔍 문의 수정 URL:", url);
-      console.log("🔍 수정 데이터:", updateData);
 
       const headers = {
         Authorization: `Bearer ${token}`,
@@ -64,22 +60,16 @@ export const useMyQuestionActions = () => {
         body: JSON.stringify(updateData),
       });
 
-      console.log("🔍 응답 상태:", response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.log("🔍 에러 응답 내용:", errorText);
 
         // JSON 응답 파싱 시도
         try {
           const errorJson = JSON.parse(errorText);
-          console.log("🔍 파싱된 에러 응답:", errorJson);
           if (errorJson.message) {
             throw new Error(errorJson.message);
           }
-        } catch (parseError) {
-          console.log("🔍 JSON 파싱 실패:", parseError);
-        }
+        } catch (parseError) {}
 
         if (response.status === 401) {
           throw new Error("인증이 필요합니다.");
@@ -95,17 +85,14 @@ export const useMyQuestionActions = () => {
       }
 
       const responseText = await response.text();
-      console.log("🔍 원본 응답 텍스트:", responseText);
 
       const apiResponse: ApiResponse<any> = JSON.parse(responseText);
-      console.log("🔍 파싱된 API 응답 데이터:", apiResponse);
 
       return true;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
       setError(errorMessage);
-      console.error("문의 수정 실패:", err);
       return false;
     } finally {
       setIsLoading(false);
@@ -134,12 +121,9 @@ export const useMyQuestionActions = () => {
         if (currentTime >= expirationTime) {
           throw new Error("토큰이 만료되었습니다. 다시 로그인해주세요.");
         }
-      } catch (e) {
-        console.log("🔍 토큰 디코딩 실패:", e);
-      }
+      } catch (e) {}
 
       const url = `http://localhost:8080/api/my/questions/${questionId}`;
-      console.log("🔍 문의 삭제 URL:", url);
 
       const headers = {
         Authorization: `Bearer ${token}`,
@@ -153,22 +137,16 @@ export const useMyQuestionActions = () => {
         credentials: "include",
       });
 
-      console.log("🔍 응답 상태:", response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.log("🔍 에러 응답 내용:", errorText);
 
         // JSON 응답 파싱 시도
         try {
           const errorJson = JSON.parse(errorText);
-          console.log("🔍 파싱된 에러 응답:", errorJson);
           if (errorJson.message) {
             throw new Error(errorJson.message);
           }
-        } catch (parseError) {
-          console.log("🔍 JSON 파싱 실패:", parseError);
-        }
+        } catch (parseError) {}
 
         if (response.status === 401) {
           throw new Error("인증이 필요합니다.");
@@ -184,10 +162,8 @@ export const useMyQuestionActions = () => {
       }
 
       const responseText = await response.text();
-      console.log("🔍 원본 응답 텍스트:", responseText);
 
       const apiResponse: ApiResponse<any> = JSON.parse(responseText);
-      console.log("🔍 파싱된 API 응답 데이터:", apiResponse);
 
       return true;
     } catch (err) {

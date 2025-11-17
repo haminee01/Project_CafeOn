@@ -6,14 +6,19 @@ interface PenaltyModalProps {
   isOpen: boolean;
   memberName: string;
   onConfirm: (reason: string) => void;
-  onCancel: () => void;
+  onClose: () => void;
 }
 
-export default function PenaltyModal({ isOpen, memberName, onConfirm, onCancel }: PenaltyModalProps) {
+export default function PenaltyModal({
+  isOpen,
+  memberName,
+  onConfirm,
+  onClose,
+}: PenaltyModalProps) {
   return (
     <InputModal
       isOpen={isOpen}
-      onClose={onCancel}
+      onClose={onClose}
       onConfirm={onConfirm}
       title="페널티 사유 입력"
       placeholder="페널티 사유를 입력하세요"

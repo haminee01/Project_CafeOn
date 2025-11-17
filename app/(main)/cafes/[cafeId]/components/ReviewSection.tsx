@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import { CafeReview } from "@/data/cafeDetails";
 import Button from "@/components/common/Button";
-import { getCafeReviews, deleteReview, reportReview, getCafeDetail } from "@/lib/api";
+import {
+  getCafeReviews,
+  deleteReview,
+  reportReview,
+  getCafeDetail,
+} from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import Toast from "@/components/common/Toast";
 import ReportReviewModal from "@/components/modals/ReportReviewModal";
@@ -55,30 +60,41 @@ export default function ReviewSection({
     type: "success" | "error" | "info";
   } | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [sortBy, setSortBy] = useState<"latest" | "rating-high" | "rating-low" | "likes">("latest");
+  const [sortBy, setSortBy] = useState<
+    "latest" | "rating-high" | "rating-low" | "likes"
+  >("latest");
   const [showAllReviews, setShowAllReviews] = useState(false);
   const INITIAL_REVIEWS_LIMIT = 5;
 
   // initialReviews 또는 sortBy 변경 시 리뷰 목록 새로고침 및 정렬
   useEffect(() => {
     setLoading(true);
-    
+
     if (initialReviews && initialReviews.length > 0) {
       // initialReviews가 있으면 변환 수행
       const transformedReviews: CafeReview[] = initialReviews.map((r: any) => {
         // 리뷰 이미지 처리: 다양한 형식 지원
         let reviewImages: string[] = [];
         if (r.images && Array.isArray(r.images)) {
-          reviewImages = r.images.map((img: any) => {
-            // 이미지가 객체인 경우
-            if (typeof img === 'object' && img !== null) {
-              return img.imageUrl || img.image_url || img.url || img.publicUrl || img.originalFileName || '';
-            }
-            // 이미지가 문자열인 경우
-            return img || '';
-          }).filter((url: string) => url && url.trim() !== '');
+          reviewImages = r.images
+            .map((img: any) => {
+              // 이미지가 객체인 경우
+              if (typeof img === "object" && img !== null) {
+                return (
+                  img.imageUrl ||
+                  img.image_url ||
+                  img.url ||
+                  img.publicUrl ||
+                  img.originalFileName ||
+                  ""
+                );
+              }
+              // 이미지가 문자열인 경우
+              return img || "";
+            })
+            .filter((url: string) => url && url.trim() !== "");
         }
-        
+
         return {
           id: r.reviewId,
           user: r.reviewerNickname || "익명",
@@ -97,16 +113,20 @@ export default function ReviewSection({
       const sortedReviews = [...transformedReviews].sort((a, b) => {
         switch (sortBy) {
           case "rating-high":
-            return b.rating - a.rating;
+            return (b.rating ?? 0) - (a.rating ?? 0);
           case "rating-low":
-            return a.rating - b.rating;
+            return (a.rating ?? 0) - (b.rating ?? 0);
           case "likes":
             return b.likes - a.likes;
           case "latest":
           default:
             // 최신순은 원본 createdAt 날짜 기준 정렬
-            const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
-            const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+            const dateA = (a as any).createdAt
+              ? new Date((a as any).createdAt).getTime()
+              : 0;
+            const dateB = (b as any).createdAt
+              ? new Date((b as any).createdAt).getTime()
+              : 0;
             return dateB - dateA; // 최신순 (내림차순)
         }
       });
@@ -115,68 +135,87 @@ export default function ReviewSection({
     } else {
       setReviews([]);
     }
-    
+
     // 로딩 완료
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialReviews, sortBy]);
-  
+
   // refreshTrigger 변경 시 리뷰 목록 새로고침 (강제 API 재호출)
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
       const forceRefreshReviews = async () => {
         try {
           setLoading(true);
-          
+
           // refreshTrigger가 변경되면 강제로 API에서 다시 가져오기
           const cafeData = await getCafeDetail(cafeId);
           const reviewData = cafeData.reviews || [];
-          
+
           if (reviewData && reviewData.length > 0) {
-            const transformedReviews: CafeReview[] = reviewData.map((r: any) => {
-              // 리뷰 이미지 처리
-              let reviewImages: string[] = [];
-              if (r.images && Array.isArray(r.images)) {
-                reviewImages = r.images.map((img: any) => {
-                  if (typeof img === 'object' && img !== null) {
-                    return img.imageUrl || img.image_url || img.url || img.publicUrl || img.originalFileName || '';
-                  }
-                  return img || '';
-                }).filter((url: string) => url && url.trim() !== '');
+            const transformedReviews: CafeReview[] = reviewData.map(
+              (r: any) => {
+                // 리뷰 이미지 처리
+                let reviewImages: string[] = [];
+                if (r.images && Array.isArray(r.images)) {
+                  reviewImages = r.images
+                    .map((img: any) => {
+                      if (typeof img === "object" && img !== null) {
+                        return (
+                          img.imageUrl ||
+                          img.image_url ||
+                          img.url ||
+                          img.publicUrl ||
+                          img.originalFileName ||
+                          ""
+                        );
+                      }
+                      return img || "";
+                    })
+                    .filter((url: string) => url && url.trim() !== "");
+                }
+
+                return {
+                  id: r.reviewId,
+                  user: r.reviewerNickname || "익명",
+                  rating: r.rating,
+                  content: r.content,
+                  date: formatRelativeTime(r.createdAt),
+                  createdAt: r.createdAt, // 정렬을 위한 원본 날짜 저장
+                  likes: 0,
+                  images: reviewImages,
+                  reviewerId: r.reviewerId,
+                  profileImageUrl: r.reviewerProfileImageUrl,
+                };
               }
-              
-              return {
-                id: r.reviewId,
-                user: r.reviewerNickname || "익명",
-                rating: r.rating,
-                content: r.content,
-                date: formatRelativeTime(r.createdAt),
-                createdAt: r.createdAt, // 정렬을 위한 원본 날짜 저장
-                likes: 0,
-                images: reviewImages,
-                reviewerId: r.reviewerId,
-                profileImageUrl: r.reviewerProfileImageUrl,
-              };
-            });
-            
+            );
+
             // 정렬 적용
             const sortedReviews = [...transformedReviews].sort((a, b) => {
               switch (sortBy) {
                 case "rating-high":
-                  return b.rating - a.rating;
+                  return (b.rating ?? 0) - (a.rating ?? 0);
                 case "rating-low":
-                  return a.rating - b.rating;
+                  return (a.rating ?? 0) - (b.rating ?? 0);
+                case "rating-high":
+                  return (b.rating ?? 0) - (a.rating ?? 0);
+                case "rating-low":
+                  return (a.rating ?? 0) - (b.rating ?? 0);
                 case "likes":
                   return b.likes - a.likes;
                 case "latest":
                 default:
                   // 최신순은 원본 createdAt 날짜 기준 정렬
-                  const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
-                  const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+                  const dateA = (a as any).createdAt
+                    ? new Date((a as any).createdAt).getTime()
+                    : 0;
+                  const dateB = (b as any).createdAt
+                    ? new Date((b as any).createdAt).getTime()
+                    : 0;
                   return dateB - dateA; // 최신순 (내림차순)
               }
             });
-            
+
             setReviews(sortedReviews);
           } else {
             setReviews([]);
@@ -188,7 +227,7 @@ export default function ReviewSection({
           setLoading(false);
         }
       };
-      
+
       forceRefreshReviews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -202,7 +241,7 @@ export default function ReviewSection({
       hasProfileImageUrl: !!user?.profileImageUrl,
       profileImageUrl: user?.profileImageUrl,
     });
-    
+
     if (user && isAuthenticated && user.profileImageUrl) {
       // user.userId가 없으면 JWT에서 추출
       let currentUserId = user.userId;
@@ -210,7 +249,7 @@ export default function ReviewSection({
         try {
           const token = localStorage.getItem("accessToken");
           if (token) {
-            const payload = JSON.parse(atob(token.split('.')[1]));
+            const payload = JSON.parse(atob(token.split(".")[1]));
             currentUserId = payload.sub || "";
           }
         } catch (e) {
@@ -218,16 +257,17 @@ export default function ReviewSection({
         }
       }
 
-      console.log("[ReviewSection useEffect] currentUserId:", currentUserId);
-
       if (currentUserId) {
         setReviews((prevReviews) => {
-          console.log("[ReviewSection setReviews] prevReviews:", prevReviews.map(r => ({
-            id: r.id,
-            reviewerId: r.reviewerId,
-            user: r.user,
-          })));
-          
+          console.log(
+            "[ReviewSection setReviews] prevReviews:",
+            prevReviews.map((r) => ({
+              id: r.id,
+              reviewerId: r.reviewerId,
+              user: r.user,
+            }))
+          );
+
           const updatedReviews = prevReviews.map((review) => {
             const isMatch = review.reviewerId === currentUserId;
             if (isMatch) {
@@ -242,7 +282,7 @@ export default function ReviewSection({
               ? { ...review, profileImageUrl: user.profileImageUrl }
               : review;
           });
-          
+
           // 디버깅 로그
           const matchedCount = updatedReviews.filter(
             (r) => r.reviewerId === currentUserId
@@ -253,7 +293,7 @@ export default function ReviewSection({
             reviewsCount: prevReviews.length,
             matchedReviewsCount: matchedCount,
           });
-          
+
           return updatedReviews;
         });
       }
@@ -272,13 +312,13 @@ export default function ReviewSection({
 
     // JWT 토큰에서 userId 추출 (user.userId가 없을 경우 대비)
     let currentUserId = user.userId;
-    
+
     // user.userId가 비어 있으면 JWT에서 추출 시도
     if (!currentUserId) {
       try {
         const token = localStorage.getItem("accessToken");
         if (token) {
-          const payload = JSON.parse(atob(token.split('.')[1]));
+          const payload = JSON.parse(atob(token.split(".")[1]));
           currentUserId = payload.sub || "";
         }
       } catch (e) {
@@ -405,10 +445,8 @@ export default function ReviewSection({
     <div className="py-12" onClick={handleClickOutside}>
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">
-            리뷰 모아보기
-          </h2>
-          
+          <h2 className="text-2xl font-bold text-gray-900">리뷰 모아보기</h2>
+
           {/* 정렬 버튼 */}
           <div className="flex gap-2">
             <button
@@ -468,7 +506,10 @@ export default function ReviewSection({
           </div>
         ) : (
           <div className="space-y-6">
-            {(showAllReviews ? reviews : reviews.slice(0, INITIAL_REVIEWS_LIMIT)).map((review) => (
+            {(showAllReviews
+              ? reviews
+              : reviews.slice(0, INITIAL_REVIEWS_LIMIT)
+            ).map((review) => (
               <div
                 key={review.id}
                 className="border border-secondary rounded-lg p-6 bg-white"
@@ -521,10 +562,12 @@ export default function ReviewSection({
                                   src={image}
                                   alt={`리뷰 이미지 ${index + 1}`}
                                   className="w-20 h-20 object-cover rounded-lg flex-shrink-0 border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                                  onClick={() => window.open(image, '_blank')}
+                                  onClick={() => window.open(image, "_blank")}
                                   onError={(e) => {
                                     // 이미지 로드 실패 시 플레이스홀더로 대체
-                                    e.currentTarget.src = 'data:image/svg+xml;base64,' + btoa(`
+                                    e.currentTarget.src =
+                                      "data:image/svg+xml;base64," +
+                                      btoa(`
                                       <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg">
                                         <rect width="100%" height="100%" fill="#f3f4f6"/>
                                         <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-family="Arial" font-size="12">이미지</text>

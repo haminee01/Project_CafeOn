@@ -72,8 +72,6 @@ export default function LoginPage() {
               username: username,
               email: userEmail,
             };
-
-            console.log("JWT에서 추출한 사용자 정보:", userInfo);
           } catch (tokenError) {
             console.error("JWT 토큰 디코딩 실패:", tokenError);
             // 토큰 디코딩 실패 시 API 응답에서 사용자 정보 확인
@@ -108,7 +106,6 @@ export default function LoginPage() {
 
         // 사용자 정보 저장 및 컨텍스트 갱신
         localStorage.setItem("userInfo", JSON.stringify(userInfo));
-        console.log("저장된 사용자 정보:", userInfo);
 
         // AuthContext에도 로그인 반영 (헤더 업데이트용)
         const refreshToken = data?.data?.refreshToken || "";
@@ -132,7 +129,6 @@ export default function LoginPage() {
         let errorMessage = "이메일 또는 비밀번호가 일치하지 않습니다.";
         try {
           const errorData = await response.json();
-          console.log("로그인 에러 응답:", errorData);
           if (errorData?.message) {
             // 백엔드에서 "로그인 실패"만 오는 경우 더 구체적인 메시지로 변경
             if (errorData.message === "로그인 실패") {

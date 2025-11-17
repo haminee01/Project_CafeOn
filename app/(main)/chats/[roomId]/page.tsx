@@ -101,7 +101,6 @@ export default function ChatPage() {
       // 최신을 보고 있으면 읽음 처리
       if (latestIdRef.current) {
         await readLatest(roomId);
-        console.log("최신 메시지 읽음 처리 완료:", latestIdRef.current);
       }
     } catch (err) {
       console.error("히스토리 로드 실패:", err);
@@ -118,8 +117,6 @@ export default function ChatPage() {
       return;
     }
 
-    console.log("딥링크 채팅 페이지 - WebSocket 연결 시작:", { roomId, wsUrl });
-
     const client = new Client({
       brokerURL: wsUrl,
       connectHeaders: {
@@ -134,7 +131,6 @@ export default function ChatPage() {
     });
 
     client.onConnect = () => {
-      console.log("WebSocket 연결 성공");
       setIsConnected(true);
 
       // 메시지 스트림 구독
@@ -143,7 +139,6 @@ export default function ChatPage() {
         (msg: IMessage) => {
           try {
             const data = JSON.parse(msg.body) as ChatHistoryMessage;
-            console.log("새 메시지 수신:", data);
 
             // ChatMessage 형태로 변환
             const newMessage: ChatMessage = {
@@ -183,7 +178,6 @@ export default function ChatPage() {
         (msg: IMessage) => {
           try {
             const readReceipt = JSON.parse(msg.body);
-            console.log("읽음 영수증 수신:", readReceipt);
 
             if (
               !readReceipt ||
@@ -219,10 +213,7 @@ export default function ChatPage() {
       // 개인 알림 구독
       const notificationSubscription = client.subscribe(
         `/user/queue/notifications`,
-        (msg: IMessage) => {
-          console.log("개인 알림 수신:", msg.body);
-          // 필요시 알림 처리 로직 추가
-        }
+        (msg: IMessage) => {}
       );
 
       // 구독 정보 저장
@@ -246,7 +237,6 @@ export default function ChatPage() {
     };
 
     client.onDisconnect = () => {
-      console.log("WebSocket 연결 해제");
       setIsConnected(false);
     };
 
@@ -272,7 +262,6 @@ export default function ChatPage() {
         return;
 
       try {
-        console.log("메시지 전송:", { roomId, content: message });
         stompClientRef.current.publish({
           destination: `/pub/rooms/${roomId}`,
           body: JSON.stringify({ message }),

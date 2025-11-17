@@ -8,7 +8,7 @@ interface DeleteConfirmModalProps {
   message: string;
   itemName: string;
   onConfirm: () => void;
-  onCancel: () => void;
+  onClose: () => void;
 }
 
 export default function DeleteConfirmModal({
@@ -17,12 +17,12 @@ export default function DeleteConfirmModal({
   message,
   itemName,
   onConfirm,
-  onCancel
+  onClose,
 }: DeleteConfirmModalProps) {
   return (
     <ConfirmModal
       isOpen={isOpen}
-      onClose={onCancel}
+      onClose={onClose}
       onConfirm={onConfirm}
       title={title}
       message={`"${itemName}" ${message}`}

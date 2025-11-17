@@ -25,8 +25,6 @@ export default function ReviewDetailModal({
   const { showToast } = useToastContext();
 
   const handleReport = () => {
-    console.log("리뷰 신고:", reportReason);
-    // 실제 구현에서는 리뷰 신고 로직
     showToast("신고가 접수되었습니다.", "success");
     setShowReportForm(false);
     setReportReason("");

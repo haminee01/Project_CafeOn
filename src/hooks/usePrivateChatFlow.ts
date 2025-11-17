@@ -1,4 +1,3 @@
-// usePrivateChatFlow.ts
 // 1:1 채팅 플로우 관리 훅
 
 import React, { useState, useCallback } from "react";
@@ -93,17 +92,7 @@ export const usePrivateChatFlow = (
 
         if (participant) {
           actualUserId = participant.id;
-          console.log("참여자 목록에서 실제 userId 찾음:", {
-            닉네임: senderName,
-            원본senderId: senderId,
-            실제userId: actualUserId,
-          });
         } else {
-          console.warn("참여자 목록에서 사용자를 찾을 수 없음:", {
-            senderId,
-            senderName,
-            참여자목록: participants,
-          });
         }
       }
 

@@ -18,10 +18,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   }>({});
 
   const updateUnreadCount = useCallback((roomId: number, count: number) => {
-    console.log("ChatContext: 읽지 않은 메시지 개수 업데이트:", {
-      roomId,
-      count,
-    });
     setUnreadCounts((prev) => ({
       ...prev,
       [roomId]: count,
@@ -29,7 +25,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const markAsRead = useCallback((roomId: number) => {
-    console.log("ChatContext: 채팅방 읽음 처리:", roomId);
     setUnreadCounts((prev) => ({
       ...prev,
       [roomId]: 0,

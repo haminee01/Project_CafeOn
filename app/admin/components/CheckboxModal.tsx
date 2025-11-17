@@ -20,7 +20,7 @@ interface CheckboxModalProps {
   options: CheckboxOption[];
   confirmText?: string;
   cancelText?: string;
-  confirmColor?: "primary" | "warning" | "danger";
+  confirmColor?: "primary" | "warning" | "secondary" | "gray";
 }
 
 export default function CheckboxModal({
@@ -31,7 +31,7 @@ export default function CheckboxModal({
   options,
   confirmText = "확인",
   cancelText = "취소",
-  confirmColor = "primary"
+  confirmColor = "primary",
 }: CheckboxModalProps) {
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} title={title} size="md">
@@ -47,7 +47,10 @@ export default function CheckboxModal({
                   onChange={(e) => option.onChange(e.target.checked)}
                   className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                 />
-                <label htmlFor={option.id} className="ml-2 text-sm text-gray-700">
+                <label
+                  htmlFor={option.id}
+                  className="ml-2 text-sm text-gray-700"
+                >
                   {option.label}
                 </label>
               </div>
@@ -60,18 +63,10 @@ export default function CheckboxModal({
           ))}
         </div>
         <div className="flex gap-3 justify-end">
-          <Button 
-            color="gray" 
-            size="md"
-            onClick={onClose}
-          >
+          <Button color="gray" size="md" onClick={onClose}>
             {cancelText}
           </Button>
-          <Button 
-            color={confirmColor} 
-            size="md"
-            onClick={onConfirm}
-          >
+          <Button color={confirmColor} size="md" onClick={onConfirm}>
             {confirmText}
           </Button>
         </div>

@@ -14,7 +14,6 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-// 토큰 가져오기 함수
 const getAuthToken = () => {
   if (typeof window !== "undefined") {
     return localStorage.getItem("accessToken");
@@ -192,28 +191,10 @@ export const useCreateQuestion = () => {
       };
 
       if (token) {
-        // 다양한 토큰 형식 시도
         headers.Authorization = `Bearer ${token}`;
-        headers["X-Auth-Token"] = token; // 대안 1
         headers["Accept"] = "application/json";
-        console.log(
-          "🔍 QnA API 요청 - 토큰 존재:",
-          token.substring(0, 20) + "..."
-        );
-        console.log("🔍 QnA API 요청 - 전체 토큰:", token);
-      } else {
-        console.log("🔍 QnA API 요청 - 토큰 없음");
       }
 
-      console.log("🔍 QnA API 요청 데이터:", data);
-      console.log("🔍 QnA API 요청 헤더:", {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      });
-      console.log("🔍 QnA API 전체 토큰:", token);
-
-      // Authorization Bearer 토큰으로 시도
       const response = await fetch(`${API_BASE_URL}/api/qna/questions`, {
         method: "POST",
         headers: {
@@ -225,15 +206,8 @@ export const useCreateQuestion = () => {
         body: JSON.stringify(data),
       });
 
-      console.log("🔍 QnA API 응답 상태:", response.status);
-      console.log(
-        "🔍 QnA API 응답 헤더:",
-        Object.fromEntries(response.headers.entries())
-      );
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.log("🔍 QnA API 에러 응답:", errorText);
         throw new Error(
           `HTTP error! status: ${response.status} - ${errorText}`
         );
@@ -286,18 +260,14 @@ export const useAnswerList = (questionId: number) => {
         }
       );
 
-      console.log("답변 API 응답 상태:", response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("답변 API 에러 응답:", errorText);
         throw new Error(
           `HTTP error! status: ${response.status} - ${errorText}`
         );
       }
 
       const apiResponse: ApiResponse<Answer[]> = await response.json();
-      console.log("답변 API 성공 응답:", apiResponse);
       setAnswers(apiResponse.data);
     } catch (err) {
       setError(

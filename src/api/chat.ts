@@ -1,5 +1,4 @@
 // 채팅 관련 API 함수들
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // 채팅방 참여 응답 타입
@@ -7,9 +6,9 @@ export interface NotificationResponse {
   notificationId: string;
   roomId: string;
   chatId: number;
-  title: string; // DM(상대 유저 닉네임), CAFE(00카페)
-  preview: string; // 메시지 미리보기
-  deeplink: string; // /chats/4?jump=37
+  title: string;
+  preview: string;
+  deeplink: string;
   read: boolean;
   createdAt: string;
 }
@@ -50,8 +49,8 @@ export interface ChatParticipant {
   userId: string;
   nickname: string;
   profileImage?: string | null;
-  me: boolean; // 채팅목록에서 나 표시
-  muted?: boolean; // 알림 상태
+  me: boolean;
+  muted?: boolean;
 }
 
 // 채팅 메시지 타입
@@ -74,7 +73,7 @@ export interface ChatHistoryMessage {
   mine: boolean;
   messageType: "TEXT" | "SYSTEM" | string;
   createdAt: string;
-  othersUnreadUsers?: number; // 안읽음 카운트 추가
+  othersUnreadUsers?: number;
   images?: Array<{
     imageId: number;
     originalFileName: string;
@@ -111,12 +110,6 @@ export const getChatRoomIdByCafeId = async (
   try {
     const token = localStorage.getItem("accessToken");
 
-    console.log("카페 ID로 채팅방 ID 조회 요청:", {
-      url: `${API_BASE_URL}/api/chat/rooms/cafe/${cafeId}`,
-      token: token ? "토큰 존재" : "토큰 없음",
-      cafeId,
-    });
-
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/cafe/${cafeId}`,
       {
@@ -140,25 +133,10 @@ export const getChatRoomIdByCafeId = async (
         response.status === 404 ||
         response.status === 500
       ) {
-        console.log(
-          "채팅방 ID 조회 API 에러, 매핑된 값 반환:",
-          response.status
-        );
-
         // 데이터베이스 테이블 기반 매핑 (임시 하드코딩)
-        const cafeToRoomMapping: { [key: string]: string } = {
-          "261": "1", // 스타벅스 강남점 채팅방
-          "262": "3", // 투썸플레이스 강남역점 채팅방
-          "263": "6", // 커피빈 선릉점 채팅방
-          // 프론트엔드 mockCafes.ts의 cafe_id와 매핑
-          "1": "1", // 스타벅스 강남점 (mockCafes)
-          "2": "3", // 투썸플레이스 강남역점 (mockCafes)
-          "3": "6", // 커피빈 선릉점 (mockCafes)
-          "33": "1", // 문래 마이스페이스 (현재 테스트 중인 카페)
-        };
+        const cafeToRoomMapping: { [key: string]: string } = {};
 
         const roomId = cafeToRoomMapping[cafeId] || "1"; // 기본값
-        console.log(`카페 ID ${cafeId} -> 채팅방 ID ${roomId} 매핑`);
         return { roomId };
       }
 
@@ -166,7 +144,6 @@ export const getChatRoomIdByCafeId = async (
     }
 
     const data = await response.json();
-    console.log("채팅방 ID 조회 응답:", data);
 
     return data;
   } catch (error) {
@@ -196,7 +173,6 @@ async function checkAuthStatus(): Promise<boolean> {
       },
     });
 
-    console.log("인증 상태 확인:", response.status);
     return response.ok;
   } catch (error) {
     console.error("인증 상태 확인 실패:", error);
@@ -215,7 +191,6 @@ export const joinCafeGroupChat = async (
   // 중복 요청 방지
   const requestKey = `${cafeId}-${retryCount}`;
   if (pendingRequests.has(requestKey)) {
-    console.log("중복 요청 감지, 기존 요청 반환:", requestKey);
     return pendingRequests.get(requestKey)!;
   }
 
@@ -230,14 +205,6 @@ export const joinCafeGroupChat = async (
         throw new Error(`유효하지 않은 카페 ID: ${cafeId}`);
       }
 
-      console.log("채팅방 참여 요청:", {
-        url: `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
-        token: token ? "토큰 존재" : "토큰 없음",
-        cafeId,
-        parsedCafeId,
-        retryCount,
-      });
-
       const response = await fetch(
         `${API_BASE_URL}/api/chat/rooms/group/${cafeId}/join`,
         {
@@ -246,7 +213,6 @@ export const joinCafeGroupChat = async (
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          // body는 포함하지 않음 - cafeId는 URL path에 이미 포함됨
         }
       );
 
@@ -265,9 +231,7 @@ export const joinCafeGroupChat = async (
               errorData = errorText;
             }
           }
-        } catch (textError) {
-          console.warn("에러 응답 본문 읽기 실패:", textError);
-        }
+        } catch (textError) {}
 
         // 에러 정보 구성
         const errorInfo: any = {
@@ -288,8 +252,6 @@ export const joinCafeGroupChat = async (
             errorInfo.message = errorData.message;
           }
         }
-
-        console.error("채팅방 참여 API 에러:", errorInfo);
 
         // 400 에러인 경우 더 자세한 정보 제공
         if (response.status === 400) {
@@ -321,17 +283,10 @@ export const joinCafeGroupChat = async (
 
               // 토큰이 있는데도 가입 상태 조회가 실패하면 토큰 갱신 시도
               if (token && retryCount === 0) {
-                console.log("토큰 갱신 시도...");
                 try {
                   const refreshToken = localStorage.getItem("refreshToken");
-                  console.log("refreshToken 존재:", !!refreshToken);
 
                   if (refreshToken) {
-                    console.log("토큰 갱신 요청:", {
-                      url: `${API_BASE_URL}/api/auth/refresh`,
-                      refreshTokenLength: refreshToken.length,
-                    });
-
                     const refreshResponse = await fetch(
                       `${API_BASE_URL}/api/auth/refresh`,
                       {
@@ -343,15 +298,8 @@ export const joinCafeGroupChat = async (
                       }
                     );
 
-                    console.log(
-                      "토큰 갱신 응답 상태:",
-                      refreshResponse.status,
-                      refreshResponse.statusText
-                    );
-
                     if (refreshResponse.ok) {
                       const refreshData = await refreshResponse.json();
-                      console.log("토큰 갱신 응답:", refreshData);
 
                       // 응답 구조 확인 및 토큰 저장
                       const newAccessToken =
@@ -359,7 +307,6 @@ export const joinCafeGroupChat = async (
                         refreshData.data?.accessToken;
                       if (newAccessToken) {
                         localStorage.setItem("accessToken", newAccessToken);
-                        console.log("토큰 갱신 성공, 재시도...");
                         return joinCafeGroupChat(cafeId, retryCount + 1);
                       } else {
                         console.error(
@@ -385,9 +332,7 @@ export const joinCafeGroupChat = async (
 
               // 토큰 갱신이 실패하거나 효과가 없을 때, 사용자 인증 상태 재확인
               if (retryCount === 0) {
-                console.log("사용자 인증 상태 재확인 시도...");
                 try {
-                  // 간단한 인증 확인 API 호출 (예: 사용자 정보 조회)
                   const authCheckResponse = await fetch(
                     `${API_BASE_URL}/api/auth/me`,
                     {
@@ -399,13 +344,9 @@ export const joinCafeGroupChat = async (
                     }
                   );
 
-                  console.log("인증 상태 확인 응답:", authCheckResponse.status);
-
                   if (authCheckResponse.ok) {
-                    console.log("인증 상태 정상, 잠시 후 재시도...");
                     // 인증이 정상이면 잠시 후 재시도
                     setTimeout(async () => {
-                      console.log("인증 확인 후 재시도");
                       await joinCafeGroupChat(cafeId, retryCount + 1);
                     }, 2000);
                   } else {
@@ -436,13 +377,9 @@ export const joinCafeGroupChat = async (
 
               // 처음 시도인 경우 인증 상태 확인 후 자동 재시도
               if (retryCount === 0) {
-                console.log("Hibernate 에러 - 인증 상태 확인 후 재시도...");
-
                 const isAuthValid = await checkAuthStatus();
                 if (isAuthValid) {
-                  console.log("인증 상태 정상, 3초 후 자동 재시도...");
                   setTimeout(async () => {
-                    console.log("Hibernate 에러 후 자동 재시도");
                     await joinCafeGroupChat(cafeId, retryCount + 1);
                   }, 3000);
                 } else {
@@ -459,7 +396,6 @@ export const joinCafeGroupChat = async (
       }
 
       const responseData: ChatRoomJoinResponse = await response.json();
-      console.log("채팅방 참여 성공:", responseData);
 
       // 응답 데이터 검증
       if (!responseData || !responseData.data || !responseData.data.roomId) {
@@ -486,7 +422,6 @@ export const joinCafeGroupChat = async (
         error.message.includes("Deadlock") &&
         retryCount < 2
       ) {
-        console.log(`데드락 발생, ${retryCount + 1}번째 재시도 중...`);
         await new Promise((resolve) =>
           setTimeout(resolve, 1000 * (retryCount + 1))
         );
@@ -520,11 +455,6 @@ export const getChatParticipants = async (
       return [];
     }
 
-    console.log("참여자 목록 요청:", {
-      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members`,
-      roomId,
-    });
-
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members`,
       {
@@ -549,7 +479,6 @@ export const getChatParticipants = async (
         response.status === 404 ||
         response.status === 500
       ) {
-        console.log("참여자 목록 API 에러, 빈 배열 반환:", response.status);
         return [];
       }
 
@@ -557,7 +486,6 @@ export const getChatParticipants = async (
     }
 
     const data = await response.json();
-    console.log("참여자 목록 응답:", data);
     return data.data || [];
   } catch (error) {
     console.error("채팅방 참여자 목록 조회 실패:", error);
@@ -578,16 +506,8 @@ export const getUnreadNotifications = async (): Promise<
 
     // 토큰이 없으면 빈 배열 반환 (인증되지 않은 사용자)
     if (!token) {
-      console.log("토큰이 없어 알림 목록 조회를 건너뜁니다.");
       return [];
     }
-
-    console.log("읽지 않은 알림 목록 조회 요청:", {
-      url: `${API_BASE_URL}/api/notifications/unread`,
-      token: token ? "토큰 존재" : "토큰 없음",
-      tokenValue: token ? token.substring(0, 50) + "..." : "토큰 없음",
-      tokenLength: token ? token.length : 0,
-    });
 
     const response = await fetch(`${API_BASE_URL}/api/notifications/unread`, {
       method: "GET",
@@ -623,7 +543,6 @@ export const getUnreadNotifications = async (): Promise<
     }
 
     const data = await response.json();
-    console.log("알림 목록 응답:", data);
 
     // 응답 구조 확인 및 데이터 추출
     let notifications: NotificationResponse[] = [];
@@ -634,15 +553,13 @@ export const getUnreadNotifications = async (): Promise<
         notifications = data;
       } else if (data.data && Array.isArray(data.data)) {
         // { message: "...", data: [...] } 구조인 경우
-        console.log("응답에서 data 배열 추출:", data.data);
         notifications = data.data;
       } else {
-        console.log("예상하지 못한 응답 구조:", data);
         return [];
       }
     }
 
-    // ✅ 나간 단체 채팅방 알림 필터링
+    // 나간 단체 채팅방 알림 필터링
     const filteredNotifications = notifications.filter(
       (notification: NotificationResponse) => {
         // deeplink에서 roomId 추출 (예: /mypage/chats?roomId=9)
@@ -664,9 +581,6 @@ export const getUnreadNotifications = async (): Promise<
                     leftData.roomId === notificationRoomId ||
                     leftData.roomId === parseInt(notificationRoomId)
                   ) {
-                    console.log(
-                      `🚫 나간 단체 채팅방 알림 필터링: roomId=${notificationRoomId}, title=${notification.title}`
-                    );
                     return false; // 필터링 (알림 제외)
                   }
                 } catch {}
@@ -677,11 +591,6 @@ export const getUnreadNotifications = async (): Promise<
         return true; // 유지
       }
     );
-
-    console.log("필터링 후 알림:", {
-      원본개수: notifications.length,
-      필터링후: filteredNotifications.length,
-    });
 
     return filteredNotifications;
   } catch (error) {
@@ -700,13 +609,6 @@ export const patchReadStatus = async (
 ): Promise<void> => {
   try {
     const token = localStorage.getItem("accessToken");
-
-    console.log("읽음 처리 요청:", {
-      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read`,
-      roomId,
-      lastReadChatId,
-      token: token ? "토큰 존재" : "토큰 없음",
-    });
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read`,
@@ -733,14 +635,11 @@ export const patchReadStatus = async (
         response.status === 404 ||
         response.status === 500
       ) {
-        console.log("읽음 처리 API 에러, 무시:", response.status);
         return;
       }
 
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
-    console.log("읽음 처리 성공");
   } catch (error) {
     console.error("읽음 처리 실패:", error);
     // 읽음 처리 실패는 치명적이지 않으므로 에러를 던지지 않음
@@ -759,13 +658,6 @@ export const sendChatMessage = async (
   try {
     const token = localStorage.getItem("accessToken");
 
-    console.log("메시지 전송 API 호출:", {
-      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/messages`,
-      roomId,
-      content,
-      retryCount,
-    });
-
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/messages`,
       {
@@ -780,12 +672,6 @@ export const sendChatMessage = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("메시지 전송 API 에러:", {
-        status: response.status,
-        statusText: response.statusText,
-        errorText,
-      });
-
       // 데드락 에러인 경우 재시도 (최대 5번, 더 긴 대기 시간)
       if (response.status === 500 && retryCount < 5) {
         let isDeadlockError = false;
@@ -807,14 +693,8 @@ export const sendChatMessage = async (
         }
 
         if (isDeadlockError) {
-          console.log(
-            `데드락 에러 발생, ${retryCount + 1}번째 재시도 중... (${
-              retryCount + 1
-            }/5)`
-          );
           // 더 긴 지수 백오프: 2초, 4초, 8초, 16초, 32초 대기
           const delay = Math.pow(2, retryCount + 1) * 1000;
-          console.log(`재시도까지 ${delay / 1000}초 대기...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
 
           return sendChatMessage(roomId, content, retryCount + 1);
@@ -825,7 +705,6 @@ export const sendChatMessage = async (
     }
 
     const data = await response.json();
-    console.log("메시지 전송 성공:", data);
     return data;
   } catch (error) {
     console.error("채팅 메시지 전송 실패:", error);
@@ -928,14 +807,6 @@ export const getChatHistory = async (
 
     const url = `${API_BASE_URL}/api/chat/rooms/${roomId}/messages?${params.toString()}`;
 
-    console.log("채팅 히스토리 요청:", {
-      url,
-      roomId,
-      beforeId,
-      size,
-      includeSystem,
-    });
-
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -957,10 +828,6 @@ export const getChatHistory = async (
         response.status === 404 ||
         response.status === 500
       ) {
-        console.log(
-          "채팅 히스토리 API 에러, 빈 히스토리 반환:",
-          response.status
-        );
         return {
           message: "채팅 히스토리를 불러올 수 없습니다",
           data: {
@@ -975,7 +842,6 @@ export const getChatHistory = async (
     }
 
     const data = await response.json();
-    console.log("채팅 히스토리 응답:", data);
 
     // 응답이 빈 배열인 경우 그대로 반환
     if (
@@ -983,7 +849,6 @@ export const getChatHistory = async (
       Array.isArray(data.data.items) &&
       data.data.items.length === 0
     ) {
-      console.log("채팅 히스토리가 비어있음");
     }
 
     return data;
@@ -1047,12 +912,6 @@ export const createDmChat = async (
       counterpartId
     )}`;
 
-    console.log("1:1 채팅방 생성 요청:", {
-      url,
-      counterpartId,
-      token: token ? "토큰 존재" : "토큰 없음",
-    });
-
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -1069,10 +928,6 @@ export const createDmChat = async (
 
       try {
         const errorText = await response.text();
-        console.log("=== createDmChat 에러 응답 ===", {
-          status: response.status,
-          errorText,
-        });
 
         // JSON 파싱 시도
         try {
@@ -1087,13 +942,11 @@ export const createDmChat = async (
               errorMessage.includes("chat_room_members"))
           ) {
             isDuplicateEntry = true;
-            console.log("=== Duplicate entry 에러 감지 (JSON) ===");
 
             // roomId 추출 시도: "Duplicate entry '7-d06eeb70-...' for key..."
             const match = errorMessage.match(/Duplicate entry ['"](\d+)-/);
             if (match && match[1]) {
               extractedRoomId = match[1];
-              console.log("=== 에러에서 roomId 추출 성공 ===", extractedRoomId);
             }
           }
         } catch {
@@ -1108,16 +961,11 @@ export const createDmChat = async (
                 errorText.includes("chat_room_members"))
             ) {
               isDuplicateEntry = true;
-              console.log("=== Duplicate entry 에러 감지 (텍스트) ===");
 
               // roomId 추출 시도
               const match = errorText.match(/Duplicate entry ['"](\d+)-/);
               if (match && match[1]) {
                 extractedRoomId = match[1];
-                console.log(
-                  "=== 에러에서 roomId 추출 성공 ===",
-                  extractedRoomId
-                );
               }
             }
           }
@@ -1139,11 +987,6 @@ export const createDmChat = async (
 
       // Duplicate entry 에러인 경우 특별한 에러 타입으로 throw
       if (isDuplicateEntry) {
-        console.log("=== Duplicate entry 에러로 처리 ===", {
-          extractedRoomId,
-          errorMessage,
-        });
-
         const duplicateError: any = new Error(
           "ALREADY_PARTICIPATING: 이미 채팅방에 참여 중입니다."
         );
@@ -1157,7 +1000,6 @@ export const createDmChat = async (
     }
 
     const data = await response.json();
-    console.log("1:1 채팅방 생성 응답:", data);
     return data;
   } catch (error) {
     console.error("1:1 채팅방 생성 실패:", error);
@@ -1173,13 +1015,6 @@ export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
   try {
     const token = localStorage.getItem("accessToken");
 
-    console.log("=== 채팅방 나가기 API 요청 ===", {
-      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/leave`,
-      roomId,
-      method: "DELETE",
-      token: token ? `토큰 존재 (${token.substring(0, 20)}...)` : "토큰 없음",
-    });
-
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/leave`,
       {
@@ -1191,37 +1026,21 @@ export const leaveChatRoomNew = async (roomId: string): Promise<void> => {
       }
     );
 
-    console.log("=== 채팅방 나가기 API 응답 ===", {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-    });
-
     // 204 No Content는 성공 (본문 없음)
     if (response.status === 204) {
-      console.log("=== 채팅방 나가기 API 성공 (204 No Content) ===");
       return;
     }
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("=== 채팅방 나가기 API 에러 상세 ===", {
-        status: response.status,
-        statusText: response.statusText,
-        errorText,
-        roomId,
-      });
 
       // 404 (채팅방/멤버 없음)만 무시, 나머지는 에러 처리
       if (response.status === 404) {
-        console.log("채팅방/멤버가 이미 삭제됨, 정상 처리:", response.status);
         return;
       }
 
       throw new Error(`채팅방 나가기 실패 (${response.status}): ${errorText}`);
     }
-
-    console.log("=== 채팅방 나가기 API 성공 ===");
   } catch (error) {
     console.error("=== 채팅방 나가기 최종 에러 ===", error);
     throw error;
@@ -1240,16 +1059,6 @@ export const toggleChatMute = async (
     const token = localStorage.getItem("accessToken");
 
     const requestBody = { muted };
-    console.log("채팅방 알림 설정 요청:", {
-      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/mute`,
-      roomId,
-      roomIdType: typeof roomId,
-      muted,
-      mutedType: typeof muted,
-      requestBody,
-      requestBodyString: JSON.stringify(requestBody),
-      token: token ? "토큰 존재" : "토큰 없음",
-    });
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/mute`,
@@ -1278,14 +1087,11 @@ export const toggleChatMute = async (
         response.status === 404 ||
         response.status === 500
       ) {
-        console.log("채팅방 알림 설정 API 에러, 무시:", response.status);
         return;
       }
 
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
-    console.log("채팅방 알림 설정 성공:", muted ? "끄기" : "켜기");
   } catch (error) {
     console.error("채팅방 알림 설정 실패:", error);
     throw error;
@@ -1299,12 +1105,6 @@ export const toggleChatMute = async (
 export const readLatest = async (roomId: string): Promise<void> => {
   try {
     const token = localStorage.getItem("accessToken");
-
-    console.log("최신 메시지 읽음 처리 요청:", {
-      url: `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,
-      roomId,
-      token: token ? "토큰 존재" : "토큰 없음",
-    });
 
     const response = await fetch(
       `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,
@@ -1331,14 +1131,11 @@ export const readLatest = async (roomId: string): Promise<void> => {
         response.status === 404 ||
         response.status === 500
       ) {
-        console.log("최신 메시지 읽음 처리 API 에러, 무시:", response.status);
         return;
       }
 
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
-    console.log("최신 메시지 읽음 처리 성공");
   } catch (error) {
     console.error("최신 메시지 읽음 처리 실패:", error);
     // 읽음 처리 실패는 치명적이지 않으므로 에러를 던지지 않음

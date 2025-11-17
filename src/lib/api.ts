@@ -1,5 +1,5 @@
 import apiClient from "./axios";
-// fetch 기반 API에서 사용하는 베이스 URL
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // ==================== Auth API ====================
@@ -13,9 +13,7 @@ export async function signup(userData: {
   phone: string;
 }) {
   try {
-    console.log("signup API 호출 - 전송 데이터:", userData);
     const response = await apiClient.post("/api/auth/signup", userData);
-    console.log("signup API 응답:", response.data);
     return response.data;
   } catch (error: any) {
     console.error("회원가입 API 호출 실패:", error);
@@ -209,17 +207,6 @@ function convertCafeResponseToCafe(cafe: any): any {
   // 최종적으로 null이면 0으로 설정 (백엔드 기본값과 동일)
   const finalRating = avgRating != null ? avgRating : 0;
 
-  // 디버깅용 로그 (개발 중에만)
-  if (process.env.NODE_ENV === "development" && cafe.cafeId) {
-    console.log(
-      `[Cafe ${cafe.cafeId}] 원본 avgRating:`,
-      cafe.avgRating,
-      typeof cafe.avgRating,
-      "-> 변환된 값:",
-      finalRating
-    );
-  }
-
   return {
     cafe_id: String(cafe.cafeId || cafe.id || cafe.cafe_id || ""),
     cafeId: cafe.cafeId || cafe.id || cafe.cafe_id,
@@ -257,10 +244,6 @@ export async function getRandomCafes() {
       Array.isArray(data) &&
       data.length > 0
     ) {
-      console.log(
-        "[getRandomCafes] 첫 번째 카페 원본 응답:",
-        JSON.stringify(data[0], null, 2)
-      );
     }
 
     // 배열인지 확인하고 변환
@@ -290,10 +273,6 @@ export async function getHotCafes() {
       Array.isArray(data) &&
       data.length > 0
     ) {
-      console.log(
-        "[getHotCafes] 첫 번째 카페 원본 응답:",
-        JSON.stringify(data[0], null, 2)
-      );
     }
 
     // 배열인지 확인하고 변환
@@ -353,9 +332,6 @@ export async function getRelatedCafes(cafeId: string) {
     // 백엔드 API가 아직 구현되지 않은 경우 404/500 에러가 발생할 수 있음
     // 에러를 조용히 처리하고 빈 배열 반환 (또는 임시로 랜덤 카페 사용 가능)
     if (error.response?.status === 404 || error.response?.status === 500) {
-      console.log(
-        "관련 카페 API가 아직 구현되지 않았습니다. 빈 배열을 반환합니다."
-      );
       return [];
     }
 
@@ -369,7 +345,6 @@ export async function getRelatedCafes(cafeId: string) {
 }
 
 // ==================== MyPage API ====================
-
 // ==================== Review API ====================
 
 // 카페별 리뷰 목록 조회
@@ -514,7 +489,6 @@ export async function getWishlist(params?: {
   try {
     // 백엔드가 category를 필수로 요구하므로, category가 없으면 빈 결과 반환
     if (!params?.category) {
-      console.log("위시리스트 조회: category 파라미터가 없어 빈 배열 반환");
       return {
         data: {
           content: [],
@@ -531,7 +505,6 @@ export async function getWishlist(params?: {
   } catch (error: any) {
     // 403 또는 401 에러인 경우 (권한 없음)
     if (error.response?.status === 403 || error.response?.status === 401) {
-      console.log("위시리스트 조회: 로그인이 필요합니다.");
       throw error;
     }
 
@@ -570,7 +543,6 @@ export async function getWishlistCategories(cafeId: string) {
       error.code === "ERR_NETWORK" ||
       error.message?.includes("Network Error")
     ) {
-      console.log("백엔드 서버가 실행되지 않음. 모킹된 응답을 반환합니다.");
       return {
         message: "카테고리 조회 완료 (모킹)",
         data: [],
@@ -596,7 +568,6 @@ export async function toggleWishlist(cafeId: string, category: string) {
       error.code === "ERR_NETWORK" ||
       error.message?.includes("Network Error")
     ) {
-      console.log("백엔드 서버가 실행되지 않음. 모킹된 응답을 반환합니다.");
       return {
         message: "위시리스트가 반영되었습니다. (모킹)",
         data: {
@@ -907,19 +878,11 @@ export interface WishlistResponse {
   };
 }
 
-// (중복 정의 제거됨 - getWishlist/toggleWishlist는 상단 apiClient 버전 사용)
-
 // 위시리스트 제거 (DELETE)
 export async function deleteWishlist(cafeId: number, category: string) {
   try {
     const token = localStorage.getItem("accessToken");
     const queryParams = new URLSearchParams({ category });
-
-    console.log("위시리스트 삭제 API 호출:", {
-      url: `${API_BASE_URL}/api/my/wishlist/${cafeId}?${queryParams.toString()}`,
-      method: "DELETE",
-      category,
-    });
 
     const response = await fetch(
       `${API_BASE_URL}/api/my/wishlist/${cafeId}?${queryParams.toString()}`,
@@ -960,9 +923,6 @@ export async function deleteWishlist(cafeId: number, category: string) {
     throw error;
   }
 }
-
-// 특정 카페의 위시리스트 카테고리 조회
-// (중복 정의 제거됨 - getWishlistCategories는 상단 apiClient 버전 사용)
 
 // ==================== Chat API ====================
 
@@ -1302,9 +1262,3 @@ export async function getMyReviews(params?: {
     throw error;
   }
 }
-
-// 리뷰 수정
-// (중복 정의 제거됨 - updateReview는 상단 apiClient 버전 사용)
-
-// 리뷰 삭제
-// (중복 정의 제거됨 - deleteReview는 상단 apiClient 버전 사용)

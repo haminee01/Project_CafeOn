@@ -56,22 +56,11 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
   useEffect(() => {
     // 이미 한 번 입장 시도했으면 재입장 안 함
     if (hasJoinedOnce.current) {
-      console.log("=== 이미 입장 시도함, 재입장 방지 ===");
       return;
     }
 
-    console.log("=== PrivateChatModal joinChat 확인 ===", {
-      targetUserId: targetUser.id,
-      targetUserName: targetUser.name,
-      isJoined,
-      isLoading,
-      error,
-      roomId,
-    });
-
     // 참여하지 않았고, 로딩 중이 아니고, 에러가 없으면 참여
     if (!isJoined && !isLoading && !error) {
-      console.log("=== PrivateChatModal joinChat 호출 ===");
       hasJoinedOnce.current = true;
       joinChat();
     }
@@ -84,10 +73,6 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
 
   // 알림 상태를 토글하는 Handler
   const handleToggleNotification = () => {
-    console.log(
-      "🔔 DM 알림 토글 버튼 클릭됨 - 현재 상태:",
-      isMuted ? "끄기" : "켜기"
-    );
     toggleMute();
   };
 
@@ -124,7 +109,6 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
   // 채팅방이 열릴 때 자동으로 참여
   useEffect(() => {
     if (roomId && !isJoined && !isLoading) {
-      console.log("DM 채팅방 자동 참여 시작:", roomId);
       joinChat();
     }
   }, [roomId, isJoined, isLoading, joinChat]);
@@ -132,7 +116,6 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
   // 채팅방이 열릴 때 참여자 목록 강제 로드 (알림 상태 확인용)
   useEffect(() => {
     if (roomId && isJoined) {
-      console.log("DM 채팅방 진입 후 참여자 목록 강제 로드:", roomId);
       // 약간의 지연을 두고 참여자 목록을 로드하여 상태가 안정화되도록 함
       const timer = setTimeout(() => {
         refreshParticipants();
@@ -145,19 +128,14 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
   useEffect(() => {
     return () => {
       // 컴포넌트가 언마운트될 때 상태 초기화
-      console.log("DM 채팅방 모달 언마운트 - 상태 초기화");
     };
   }, []);
-
-  // 채팅방이 열릴 때는 읽음 처리하지 않음 (사용자가 실제로 메시지를 볼 때만 처리)
-
-  // 새 메시지가 도착할 때 자동 읽음 처리는 제거 (사용자가 스크롤할 때만 처리)
 
   return (
     // 오버레이
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-70 font-sans transition-opacity duration-300"
-      onClick={handleModalOverlayClick} // 오버레이 클릭 시 모든 팝업/사이드바/모달 닫기
+      onClick={handleModalOverlayClick}
     >
       <div
         className="relative flex h-[60vh] w-[80%] flex-col rounded-xl bg-white shadow-2xl md:h-[70vh] md:w-[50%] lg:w-[40%] xl:w-[30%] max-w-lg overflow-hidden transition-all duration-300 transform scale-100"
@@ -274,14 +252,13 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({
                 isNotificationOn={!isMuted}
                 onToggleNotification={handleToggleNotification}
                 onClose={closeSidebar}
-                onProfileClick={() => {}} // 1:1 채팅에서는 별도 동작 없음
+                onProfileClick={() => {}}
                 onLeave={async () => {
                   try {
                     await leaveChat();
-                    onClose(); // 나가기 성공 시에만 모달 닫기
+                    onClose();
                   } catch (err) {
                     console.error("1:1 채팅방 나가기 실패:", err);
-                    // 에러는 useDmChat에서 이미 setError로 처리됨
                   }
                 }}
                 title="참여자 목록"

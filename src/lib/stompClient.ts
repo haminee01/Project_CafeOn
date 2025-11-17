@@ -13,7 +13,6 @@ export function createStompClient(serverUrl: string, token: string) {
   };
 
   const userName = getUserNameFromToken(token);
-  console.log("STOMP 클라이언트 생성:", { serverUrl, userName });
 
   const client = new Client({
     brokerURL: serverUrl, // ws://localhost:8080/stomp/chats
@@ -23,13 +22,8 @@ export function createStompClient(serverUrl: string, token: string) {
     },
     heartbeatIncoming: 0,
     heartbeatOutgoing: 10000,
-    debug: (str) => {
-      console.log("STOMP Debug:", str);
-    },
     reconnectDelay: 5000, // 5초 후 재연결 시도
-    onConnect: (frame) => {
-      console.log("STOMP 연결 성공:", frame);
-    },
+    onConnect: (frame) => {},
     onStompError: (frame) => {
       console.error("STOMP 에러 상세:", {
         command: frame.command,

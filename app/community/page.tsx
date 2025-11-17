@@ -34,7 +34,6 @@ export default function CommunityMainPage() {
     const fetchAllPosts = async () => {
       try {
         setLoading(true);
-        console.log("모든 게시글 로드 중...");
 
         const response = await getPosts({
           page: 1,
@@ -42,7 +41,6 @@ export default function CommunityMainPage() {
           type: "" as any,
         });
 
-        console.log("받은 모든 게시글:", response);
         setAllPosts(response.posts);
       } catch (err) {
         console.error("게시글 목록 조회 실패:", err);
@@ -69,7 +67,6 @@ export default function CommunityMainPage() {
       // 타입 필터링
       if (selectedType && selectedType !== "") {
         filtered = filtered.filter((post) => post.type === selectedType);
-        console.log("타입 필터링 결과:", selectedType, filtered);
       }
 
       // 검색어 필터링
@@ -79,7 +76,6 @@ export default function CommunityMainPage() {
             post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             post.author.toLowerCase().includes(searchQuery.toLowerCase())
         );
-        console.log("검색어 필터링 결과:", searchQuery, filtered);
       }
 
       // 페이지네이션 적용 (페이지당 10개)
@@ -175,11 +171,6 @@ export default function CommunityMainPage() {
                 <button
                   key={option.value}
                   onClick={() => {
-                    console.log(
-                      "카테고리 버튼 클릭:",
-                      option.value,
-                      option.label
-                    );
                     setSelectedType(option.value);
                   }}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${

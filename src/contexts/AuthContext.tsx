@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (response.ok) {
           const userData = await response.json();
-          console.log("✅ [AuthContext] /api/users/me 응답:", userData);
+          console.log("[AuthContext] /api/users/me 응답:", userData);
 
           const data = userData.data || userData;
           const authUser: User = {
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             profileImageUrl: data.profileImageUrl,
           };
 
-          console.log("✅ [AuthContext] 사용자 정보 설정:", authUser);
+          console.log("[AuthContext] 사용자 정보 설정:", authUser);
           setUser(authUser);
           setToken(storedToken);
           setIsAuthenticated(true);

@@ -344,11 +344,8 @@ export default function SignupPage() {
         phone: formData.phone,
       };
 
-      console.log("회원가입 데이터:", signupData);
-
       // 회원가입 API 호출
       const signupResponse = await signup(signupData);
-      console.log("회원가입 성공:", signupResponse);
 
       // 회원가입 성공 후 자동 로그인
       const loginResponse = await login({
@@ -363,13 +360,10 @@ export default function SignupPage() {
         // 프로필 이미지가 있으면 업로드
         if (profileImage) {
           try {
-            console.log("[Signup] 프로필 이미지 업로드 시도:", profileImage);
             const imageResponse = await updateProfileImage(profileImage);
-            console.log("[Signup] 프로필 이미지 업로드 응답:", imageResponse);
             const imageUrl =
               imageResponse.data?.profileImageUrl ||
               imageResponse.data?.profileImageUrl;
-            console.log("[Signup] 프로필 이미지 URL:", imageUrl);
             const userData = {
               userId: signupResponse.data?.userId || "",
               email: formData.email,
@@ -377,7 +371,6 @@ export default function SignupPage() {
               username: formData.nickname,
               profileImageUrl: imageUrl,
             };
-            console.log("[Signup] 로그인할 사용자 데이터:", userData);
             authLogin(token, refreshToken, userData);
           } catch (error: any) {
             console.error("[Signup] 프로필 이미지 업로드 실패:", error);
@@ -489,7 +482,6 @@ export default function SignupPage() {
       const authUrl = generateSocialAuthUrl(provider, baseUrl);
       window.location.href = authUrl;
     } else {
-      console.log(`${providerId} 회원가입 시도`);
     }
   };
 

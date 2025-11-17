@@ -11,7 +11,7 @@ interface ConfirmModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  confirmColor?: "primary" | "warning" | "danger";
+  confirmColor?: "primary" | "warning" | "secondary" | "gray";
   showWarning?: boolean;
 }
 
@@ -24,7 +24,7 @@ export default function ConfirmModal({
   confirmText = "확인",
   cancelText = "취소",
   confirmColor = "primary",
-  showWarning = false
+  showWarning = false,
 }: ConfirmModalProps) {
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} title={title} size="sm">
@@ -40,18 +40,10 @@ export default function ConfirmModal({
           )}
         </div>
         <div className="flex gap-3 justify-end">
-          <Button 
-            color="gray" 
-            size="md"
-            onClick={onClose}
-          >
+          <Button color="gray" size="md" onClick={onClose}>
             {cancelText}
           </Button>
-          <Button 
-            color={confirmColor} 
-            size="md"
-            onClick={onConfirm}
-          >
+          <Button color={confirmColor} size="md" onClick={onConfirm}>
             {confirmText}
           </Button>
         </div>
