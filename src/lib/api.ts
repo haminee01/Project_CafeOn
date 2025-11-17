@@ -1,6 +1,98 @@
+import { isAxiosError } from "axios";
 import apiClient from "./axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+type ApiErrorResponse = {
+  message?: string;
+  [key: string]: unknown;
+};
+
+interface NormalizedError {
+  message?: string;
+  status?: number;
+  code?: string;
+}
+
+function normalizeError(error: unknown): NormalizedError {
+  if (isAxiosError<ApiErrorResponse>(error)) {
+    return {
+      message: error.response?.data?.message ?? error.message,
+      status: error.response?.status,
+      code: typeof error.code === "string" ? error.code : undefined,
+    };
+  }
+
+  if (error instanceof Error) {
+    const code =
+      "code" in error && typeof (error as { code?: string }).code === "string"
+        ? (error as { code?: string }).code
+        : undefined;
+    return { message: error.message, code };
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as { message?: string }).message === "string"
+  ) {
+    const code =
+      "code" in error && typeof (error as { code?: string }).code === "string"
+        ? (error as { code?: string }).code
+        : undefined;
+    return { message: (error as { message?: string }).message, code };
+  }
+
+  if (typeof error === "string") {
+    return { message: error };
+  }
+
+  return {};
+}
+
+type NumericLike = number | string | { [key: string]: unknown };
+
+interface CafeApiResponse {
+  cafeId?: string | number;
+  id?: string | number;
+  cafe_id?: string | number;
+  name?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  openHours?: string;
+  open_hours?: string;
+  avgRating?: NumericLike | null;
+  avg_rating?: NumericLike | null;
+  createdAt?: string;
+  created_at?: string;
+  description?: string;
+  reviewsSummary?: string;
+  tags?: string[];
+  photoUrl?: string | null;
+  photo_url?: string | null;
+  imageUrl?: string | null;
+  image_url?: string | null;
+  images?: string[];
+}
+
+export interface CafeSummary {
+  cafe_id: string;
+  cafeId?: string | number;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  open_hours: string;
+  avg_rating: number;
+  avgRating: number;
+  created_at: string;
+  description: string;
+  tags: string[];
+  photoUrl: string | null;
+  images: string[];
+}
 
 // ==================== Auth API ====================
 
@@ -15,9 +107,10 @@ export async function signup(userData: {
   try {
     const response = await apiClient.post("/api/auth/signup", userData);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("회원가입 API 호출 실패:", error);
-    throw new Error(error.message || "회원가입 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "회원가입 실패");
   }
 }
 
@@ -26,21 +119,19 @@ export async function login(credentials: { email: string; password: string }) {
   try {
     const response = await apiClient.post("/api/auth/login", credentials);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("로그인 API 호출 실패:", error);
-
+    const { status, message } = normalizeError(error);
     // 상태 코드별 에러 메시지
-    if (error.response?.status === 400) {
+    if (status === 400) {
       throw new Error("이메일 또는 비밀번호가 일치하지 않습니다.");
-    } else if (error.response?.status === 401) {
+    } else if (status === 401) {
       throw new Error("인증에 실패했습니다. 이메일과 비밀번호를 확인해주세요.");
-    } else if (error.response?.status === 403) {
+    } else if (status === 403) {
       throw new Error("계정이 정지되었거나 접근 권한이 없습니다.");
     }
 
-    throw new Error(
-      error.message || "로그인에 실패했습니다. 다시 시도해주세요."
-    );
+    throw new Error(message || "로그인에 실패했습니다. 다시 시도해주세요.");
   }
 }
 
@@ -53,20 +144,20 @@ export async function requestPasswordReset(email: string) {
     return (
       response.data || { message: "임시 비밀번호가 이메일로 발송되었습니다." }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("비밀번호 재설정 API 호출 실패:", error);
+    const { status, message } = normalizeError(error);
 
     // 에러 메시지 결정
-    if (error.response?.status === 403) {
+    if (status === 403) {
       throw new Error("접근이 거부되었습니다. 백엔드 설정을 확인해주세요.");
     }
-    if (error.response?.status === 500) {
-      throw new Error(error.message || "서버 오류가 발생했습니다.");
+    if (status === 500) {
+      throw new Error(message || "서버 오류가 발생했습니다.");
     }
 
     throw new Error(
-      error.message ||
-        `비밀번호 재설정 요청 실패 (${error.response?.status || "unknown"})`
+      message || `비밀번호 재설정 요청 실패 (${status || "unknown"})`
     );
   }
 }
@@ -78,9 +169,10 @@ export async function getAllCafes() {
   try {
     const response = await apiClient.get("/api/cafes/search");
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("전체 카페 조회 실패:", error);
-    throw new Error(error.message || "전체 카페 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "전체 카페 조회 실패");
   }
 }
 
@@ -88,7 +180,7 @@ export async function getAllCafes() {
 export async function searchCafes(query?: string, tags?: string | string[]) {
   try {
     // 백엔드에 query와 tags 파라미터 전달 (명세서에 따라 tags 복수형 사용)
-    const params: any = {};
+    const params: Record<string, string | string[]> = {};
     if (query) params.query = query;
     if (tags) {
       // 배열이면 각 태그를 개별 파라미터로 전달 (예: tags=분위기&tags=포토스팟)
@@ -107,9 +199,10 @@ export async function searchCafes(query?: string, tags?: string | string[]) {
       return cafes.map(convertCafeResponseToCafe);
     }
     return [];
-  } catch (error: any) {
+  } catch (error) {
     console.error("카페 검색 실패:", error);
-    throw new Error(error.message || "카페 검색 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "카페 검색 실패");
   }
 }
 
@@ -118,9 +211,10 @@ export async function getCafeDetail(cafeId: string) {
   try {
     const response = await apiClient.get(`/api/cafes/${cafeId}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("카페 상세 정보 조회 실패:", error);
-    throw new Error(error.message || "카페 상세 정보 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "카페 상세 정보 조회 실패");
   }
 }
 
@@ -151,9 +245,10 @@ export async function getNearbyCafes(params: {
       return cafesData.map(convertCafeResponseToCafe);
     }
     return [];
-  } catch (error: any) {
+  } catch (error) {
     // 타임아웃 에러인 경우 특별 처리
-    if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+    const { code, message } = normalizeError(error);
+    if (code === "ECONNABORTED" || message?.includes("timeout")) {
       console.warn("근처 카페 조회 타임아웃 (30초 초과), 빈 배열 반환");
       return [];
     }
@@ -166,7 +261,7 @@ export async function getNearbyCafes(params: {
 }
 
 // 백엔드 카페 응답을 프론트엔드 Cafe 타입으로 변환
-function convertCafeResponseToCafe(cafe: any): any {
+function convertCafeResponseToCafe(cafe: CafeApiResponse): CafeSummary {
   // 평점 처리: avgRating이 우선, 없으면 avg_rating 사용
   let avgRating = null;
 
@@ -251,7 +346,7 @@ export async function getRandomCafes() {
       return data.map(convertCafeResponseToCafe);
     }
     return [];
-  } catch (error: any) {
+  } catch (error) {
     console.error("랜덤 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
     console.warn("랜덤 카페 API 실패, 빈 배열 반환");
@@ -280,7 +375,7 @@ export async function getHotCafes() {
       return data.map(convertCafeResponseToCafe);
     }
     return [];
-  } catch (error: any) {
+  } catch (error) {
     console.error("인기 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환
     console.warn("인기 카페 API 실패, 빈 배열 반환");
@@ -301,7 +396,7 @@ export async function getWishlistTopCafes() {
       return data.map(convertCafeResponseToCafe);
     }
     return [];
-  } catch (error: any) {
+  } catch (error) {
     console.error("찜 많은 카페 조회 실패:", error);
     // API 실패 시 빈 배열 반환
     console.warn("찜 많은 카페 API 실패, 빈 배열 반환");
@@ -328,18 +423,17 @@ export async function getRelatedCafes(cafeId: string) {
       return cafesData.map(convertCafeResponseToCafe);
     }
     return [];
-  } catch (error: any) {
+  } catch (error) {
     // 백엔드 API가 아직 구현되지 않은 경우 404/500 에러가 발생할 수 있음
     // 에러를 조용히 처리하고 빈 배열 반환 (또는 임시로 랜덤 카페 사용 가능)
-    if (error.response?.status === 404 || error.response?.status === 500) {
+    const normalizedError = normalizeError(error);
+    const { status, message } = normalizedError;
+    if (status === 404 || status === 500) {
       return [];
     }
 
     // 기타 에러의 경우에도 빈 배열 반환
-    console.warn(
-      "관련 카페 조회 실패:",
-      error.response?.status || error.message
-    );
+    console.warn("관련 카페 조회 실패:", status || message);
     return [];
   }
 }
@@ -352,9 +446,10 @@ export async function getCafeReviews(cafeId: string) {
   try {
     const response = await apiClient.get(`/api/cafes/${cafeId}/reviews`);
     return response.data || { reviews: [], count: 0 };
-  } catch (error: any) {
+  } catch (error) {
     console.error("카페 리뷰 목록 조회 실패:", error);
-    throw new Error(error.message || "리뷰 목록 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "리뷰 목록 조회 실패");
   }
 }
 
@@ -396,9 +491,10 @@ export async function createReview(
       }
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("리뷰 작성 실패:", error);
-    throw new Error(error.message || "리뷰 작성 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "리뷰 작성 실패");
   }
 }
 
@@ -436,9 +532,10 @@ export async function updateReview(
       },
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("리뷰 수정 실패:", error);
-    throw new Error(error.message || "리뷰 수정 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "리뷰 수정 실패");
   }
 }
 
@@ -447,9 +544,10 @@ export async function deleteReview(reviewId: string) {
   try {
     const response = await apiClient.delete(`/api/reviews/${reviewId}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("리뷰 삭제 실패:", error);
-    throw new Error(error.message || "리뷰 삭제 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "리뷰 삭제 실패");
   }
 }
 
@@ -460,9 +558,10 @@ export async function checkReviewReportStatus(reviewId: string) {
       `/api/reviews/${reviewId}/reports/status`
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("리뷰 신고 상태 확인 실패:", error);
-    throw new Error(error.message || "리뷰 신고 상태 확인 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "리뷰 신고 상태 확인 실패");
   }
 }
 
@@ -473,9 +572,10 @@ export async function reportReview(reviewId: string, content: string) {
       content,
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("리뷰 신고 실패:", error);
-    throw new Error(error.message || "리뷰 신고 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "리뷰 신고 실패");
   }
 }
 
@@ -502,18 +602,17 @@ export async function getWishlist(params?: {
 
     const response = await apiClient.get("/api/my/wishlist", { params });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     // 403 또는 401 에러인 경우 (권한 없음)
-    if (error.response?.status === 403 || error.response?.status === 401) {
+    const normalizedError = normalizeError(error);
+    const status = normalizedError.status;
+    if (status === 403 || status === 401) {
       throw error;
     }
 
     // 500 에러 등 기타 에러인 경우 빈 결과 반환
-    if (error.response?.status === 500 || error.response?.status === 400) {
-      console.warn(
-        "위시리스트 조회 실패:",
-        error.response?.status || error.message
-      );
+    if (status === 500 || status === 400) {
+      console.warn("위시리스트 조회 실패:", status || normalizedError.message);
       return {
         data: {
           content: [],
@@ -526,7 +625,7 @@ export async function getWishlist(params?: {
     }
 
     console.error("위시리스트 조회 API 호출 실패:", error);
-    throw new Error(error.message || "위시리스트 조회 실패");
+    throw new Error(normalizedError.message || "위시리스트 조회 실패");
   }
 }
 
@@ -535,13 +634,14 @@ export async function getWishlistCategories(cafeId: string) {
   try {
     const response = await apiClient.get(`/api/my/wishlist/${cafeId}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("위시리스트 카테고리 조회 API 호출 실패:", error);
+    const normalizedError = normalizeError(error);
 
     // 백엔드 서버가 실행되지 않은 경우 모킹된 응답 반환
     if (
-      error.code === "ERR_NETWORK" ||
-      error.message?.includes("Network Error")
+      normalizedError.code === "ERR_NETWORK" ||
+      normalizedError.message?.includes("Network Error")
     ) {
       return {
         message: "카테고리 조회 완료 (모킹)",
@@ -549,7 +649,7 @@ export async function getWishlistCategories(cafeId: string) {
       };
     }
 
-    throw new Error(error.message || "카테고리 조회 실패");
+    throw new Error(normalizedError.message || "카테고리 조회 실패");
   }
 }
 
@@ -560,13 +660,14 @@ export async function toggleWishlist(cafeId: string, category: string) {
       `/api/my/wishlist/${cafeId}?category=${category}`
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("위시리스트 토글 API 호출 실패:", error);
+    const normalizedError = normalizeError(error);
 
     // 백엔드 서버가 실행되지 않은 경우 모킹된 응답 반환
     if (
-      error.code === "ERR_NETWORK" ||
-      error.message?.includes("Network Error")
+      normalizedError.code === "ERR_NETWORK" ||
+      normalizedError.message?.includes("Network Error")
     ) {
       return {
         message: "위시리스트가 반영되었습니다. (모킹)",
@@ -577,7 +678,7 @@ export async function toggleWishlist(cafeId: string, category: string) {
       };
     }
 
-    throw new Error(error.message || "위시리스트 처리 실패");
+    throw new Error(normalizedError.message || "위시리스트 처리 실패");
   }
 }
 
@@ -593,17 +694,15 @@ export async function getAdminMembers(params?: {
   try {
     const response = await apiClient.get("/api/admin/users", { params });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 회원 목록 API 호출 실패:", error);
+    const { status, message } = normalizeError(error);
 
-    if (error.response?.status === 403) {
+    if (status === 403) {
       throw new Error("관리자 권한이 필요합니다.");
     }
 
-    throw new Error(
-      error.message ||
-        `회원 목록 조회 실패 (${error.response?.status || "unknown"})`
-    );
+    throw new Error(message || `회원 목록 조회 실패 (${status || "unknown"})`);
   }
 }
 
@@ -612,9 +711,10 @@ export async function getAdminMemberDetail(userId: string) {
   try {
     const response = await apiClient.get(`/api/admin/users/${userId}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 회원 상세 API 호출 실패:", error);
-    throw new Error(error.message || "회원 상세 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "회원 상세 조회 실패");
   }
 }
 
@@ -632,9 +732,10 @@ export async function addAdminPenalty(
       data
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 페널티 부여 API 호출 실패:", error);
-    throw new Error(error.message || "페널티 부여 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "페널티 부여 실패");
   }
 }
 
@@ -653,9 +754,10 @@ export async function suspendAdminUser(
       data
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 회원 정지 API 호출 실패:", error);
-    throw new Error(error.message || "회원 정지 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "회원 정지 실패");
   }
 }
 
@@ -666,9 +768,10 @@ export async function getUserPenalties(userId: string) {
       `/api/admin/users/${userId}/penalties`
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 회원 패널티 조회 API 호출 실패:", error);
-    throw new Error(error.message || "패널티 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "패널티 조회 실패");
   }
 }
 
@@ -680,9 +783,10 @@ export async function getAdminReports(status?: string) {
     const params = status ? { status } : {};
     const response = await apiClient.get("/api/admin/reports", { params });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 신고 목록 API 호출 실패:", error);
-    throw new Error(error.message || "신고 목록 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "신고 목록 조회 실패");
   }
 }
 
@@ -691,9 +795,10 @@ export async function getAdminReportDetail(id: number) {
   try {
     const response = await apiClient.get(`/api/admin/reports/${id}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 신고 상세 API 호출 실패:", error);
-    throw new Error(error.message || "신고 상세 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "신고 상세 조회 실패");
   }
 }
 
@@ -702,9 +807,10 @@ export async function updateAdminReport(id: number, data: { status: string }) {
   try {
     const response = await apiClient.put(`/api/admin/reports/${id}`, data);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 신고 처리 API 호출 실패:", error);
-    throw new Error(error.message || "신고 처리 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "신고 처리 실패");
   }
 }
 
@@ -715,9 +821,10 @@ export async function getUserProfile() {
   try {
     const response = await apiClient.get("/api/users/me");
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("회원 정보 조회 실패:", error);
-    throw new Error(error.message || "회원 정보 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "회원 정보 조회 실패");
   }
 }
 
@@ -726,9 +833,10 @@ export async function updateUserProfile(nickname: string) {
   try {
     const response = await apiClient.put("/api/users/me", { nickname });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("회원 정보 수정 실패:", error);
-    throw new Error(error.message || "회원 정보 수정 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "회원 정보 수정 실패");
   }
 }
 
@@ -748,9 +856,10 @@ export async function updateProfileImage(file: File) {
       }
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("프로필 이미지 변경 실패:", error);
-    throw new Error(error.message || "프로필 이미지 변경 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "프로필 이미지 변경 실패");
   }
 }
 
@@ -759,9 +868,10 @@ export async function deleteUser() {
   try {
     const response = await apiClient.delete("/api/users/me");
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("회원 탈퇴 실패:", error);
-    throw new Error(error.message || "회원 탈퇴 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "회원 탈퇴 실패");
   }
 }
 
@@ -777,19 +887,20 @@ export async function changePassword(passwordData: {
       passwordData
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("비밀번호 변경 실패:", error);
+    const { status, message } = normalizeError(error);
 
     // 상태 코드별 에러 메시지
-    if (error.response?.status === 400) {
+    if (status === 400) {
       throw new Error("현재 비밀번호가 일치하지 않습니다.");
-    } else if (error.response?.status === 401) {
+    } else if (status === 401) {
       throw new Error("인증이 필요합니다. 다시 로그인해주세요.");
-    } else if (error.response?.status === 403) {
+    } else if (status === 403) {
       throw new Error("접근 권한이 없습니다.");
     }
 
-    throw new Error(error.message || "비밀번호 변경에 실패했습니다.");
+    throw new Error(message || "비밀번호 변경에 실패했습니다.");
   }
 }
 
@@ -805,17 +916,15 @@ export async function getAdminInquiries(params?: {
   try {
     const response = await apiClient.get("/api/admin/inquiries", { params });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 문의 목록 API 호출 실패:", error);
+    const { status, message } = normalizeError(error);
 
-    if (error.response?.status === 403) {
+    if (status === 403) {
       throw new Error("관리자 권한이 필요합니다.");
     }
 
-    throw new Error(
-      error.message ||
-        `문의 목록 조회 실패 (${error.response?.status || "unknown"})`
-    );
+    throw new Error(message || `문의 목록 조회 실패 (${status || "unknown"})`);
   }
 }
 
@@ -824,9 +933,10 @@ export async function getAdminInquiryDetail(id: number) {
   try {
     const response = await apiClient.get(`/api/admin/inquiries/${id}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 문의 상세 API 호출 실패:", error);
-    throw new Error(error.message || "문의 상세 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "문의 상세 조회 실패");
   }
 }
 
@@ -837,9 +947,10 @@ export async function getAdminInquiryAnswers(inquiryId: number) {
       `/api/admin/inquiries/${inquiryId}/answers`
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 답변 목록 API 호출 실패:", error);
-    throw new Error(error.message || "답변 목록 조회 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "답변 목록 조회 실패");
   }
 }
 
@@ -854,9 +965,10 @@ export async function createAdminInquiryAnswer(
       { content }
     );
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin 답변 작성 API 호출 실패:", error);
-    throw new Error(error.message || "답변 작성 실패");
+    const { message } = normalizeError(error);
+    throw new Error(message || "답변 작성 실패");
   }
 }
 
@@ -900,9 +1012,9 @@ export async function deleteWishlist(cafeId: number, category: string) {
         throw new Error("로그인이 필요합니다.");
       }
 
-      let errorData: any = {};
+      let errorData: ApiErrorResponse = {};
       try {
-        errorData = await response.json();
+        errorData = (await response.json()) as ApiErrorResponse;
       } catch (parseError) {
         // JSON 파싱 실패 시 빈 객체 유지
       }
@@ -1070,7 +1182,7 @@ export interface SendChatImageResponse {
   timeLabel: string;
   senderNickname: string;
   messageType: string;
-  othersUnreadUsers: any[];
+  othersUnreadUsers: number | string[];
   images: Array<{
     imageId: number;
     originalFileName: string;
