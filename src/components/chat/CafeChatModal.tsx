@@ -10,6 +10,7 @@ import ProfileMiniPopup from "../common/ProfileMiniPopup";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { usePrivateChatFlow } from "../../hooks/usePrivateChatFlow";
 import { useAuth } from "../../contexts/AuthContext";
+import LoginPromptModal from "../modals/LoginPromptModal";
 
 interface CafeChatModalProps {
   cafeId: string;
@@ -37,6 +38,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
     isJoined,
     isLoading,
     error,
+    requiresLogin,
     participants,
     participantCount,
     messages,
@@ -198,8 +200,18 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
           </div>
         )}
 
+        {/* 로그인 필요 상태 */}
+        {requiresLogin && !isLoading && (
+          <div className="flex items-center justify-center h-full p-6">
+            <LoginPromptModal
+              onClose={onClose}
+              message="채팅방에 참여하려면 로그인이 필요합니다."
+            />
+          </div>
+        )}
+
         {/* 에러 상태 */}
-        {error && !isLoading && (
+        {error && !isLoading && !requiresLogin && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="text-red-500 text-6xl mb-4">⚠️</div>
@@ -216,7 +228,7 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
         )}
 
         {/* 정상 채팅 화면 */}
-        {!isLoading && !error && (
+        {!isLoading && !error && !requiresLogin && (
           <>
             {/* Header */}
             <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-10 shadow-sm bg-white sticky top-0">

@@ -249,9 +249,29 @@ const ChatRoomView: React.FC<{
       return;
     }
 
-    // 같은 채팅방이면 재입장 안 함
-    if (lastActiveRoomIdRef.current === roomId) {
+    // 채팅방이 바뀌었을 때만 처리
+    const isRoomChanged = lastActiveRoomIdRef.current !== roomId;
+
+    // 같은 채팅방이고 이미 참여 중이면 히스토리만 확인
+    if (!isRoomChanged && currentChat.isJoined) {
+      // 히스토리가 없으면 로드
+      if (currentChat.chatHistory.length === 0 && currentChat.hasMoreHistory) {
+        currentChat.loadMoreHistory();
+      }
+      // 히스토리는 있지만 messages에 반영되지 않은 경우 (채팅방 전환 시)
+      else if (
+        currentChat.chatHistory.length > 0 &&
+        currentChat.messages.length === 0
+      ) {
+        // useDmChat이나 useCafeChat에서 자동으로 처리하도록 함
+        // 여기서는 추가 처리 없음
+      }
       return;
+    }
+
+    // 이전 채팅방 ID 업데이트
+    if (isRoomChanged) {
+      lastActiveRoomIdRef.current = roomId;
     }
 
     // 이 채팅방에 한 번 입장했고 나간 경우 재입장 안 함
@@ -261,7 +281,6 @@ const ChatRoomView: React.FC<{
 
     if (!currentChat.isJoined && !currentChat.isLoading && !currentChat.error) {
       // 채팅방 ID 기록
-      lastActiveRoomIdRef.current = roomId;
       hasJoinedOnceRef.current.add(roomId);
 
       // 약간의 지연을 두고 참여 (상태 안정화를 위해)
@@ -423,6 +442,7 @@ const ChatListPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
   const [activeRoom, setActiveRoom] = useState<MyChatRoom | null>(null);
+  const previousRoomIdRef = useRef<number | null>(null); // 이전에 선택했던 채팅방 ID 추적 (새로고침용)
 
   // 채팅방 목록 로드
   const loadChatRooms = useCallback(async () => {
@@ -452,6 +472,22 @@ const ChatListPage = () => {
   }, [activeRoomId]);
 
   const handleRoomClick = (roomId: number) => {
+    // 다른 채팅방을 선택했다가 다시 같은 채팅방으로 돌아올 때 새로고침
+    // previousRoomIdRef에 저장된 이전 채팅방이 있고,
+    // 클릭한 채팅방이 이전에 선택했던 채팅방과 같고,
+    // 현재 활성화된 채팅방과 다른 경우 (다른 채팅방을 갔다가 돌아온 경우)
+    if (
+      previousRoomIdRef.current !== null &&
+      previousRoomIdRef.current === roomId &&
+      activeRoomId !== roomId
+    ) {
+      // 같은 채팅방으로 돌아온 경우 새로고침
+      window.location.reload();
+      return;
+    }
+
+    // 이전 채팅방 ID 업데이트 (현재 활성화된 채팅방 저장)
+    previousRoomIdRef.current = activeRoomId;
     setActiveRoomId(roomId);
     const room = chatRooms.find((r) => r.roomId === roomId);
 

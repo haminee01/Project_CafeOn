@@ -2,7 +2,7 @@ import React from "react";
 import ProfileIcon from "./ProfileIcon";
 import { ChatSidebarProps } from "@/types/chat";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAccessToken } from "@/stores/authStore";
+import { useAuthStore } from "@/stores/authStore";
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   participants,
@@ -20,28 +20,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const currentUserNickname = user?.username || user?.nickname || null;
   const effectiveCurrentUserId =
     currentUserId || (user as any)?.id || user?.userId || null;
-
-  let tokenNickname: string | null = null;
-  let currentUserIdFromToken: string | null = null;
-  try {
-    const token = getAccessToken();
-    if (token) {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      tokenNickname = payload?.nickname || payload?.username || null;
-      currentUserIdFromToken =
-        payload?.sub || payload?.userId || payload?.id || null;
-    }
-  } catch {}
+  const authStoreUser = useAuthStore((state) => state.user);
 
   const candidateMyNames = [
     currentUserNickname,
     user?.nickname,
-    tokenNickname,
+    authStoreUser?.nickname,
+    authStoreUser?.username,
   ].filter(Boolean) as string[];
 
   const candidateMyIds = [
     effectiveCurrentUserId,
-    currentUserIdFromToken,
+    authStoreUser?.userId,
+    authStoreUser?.id,
     (user as any)?.id,
     user?.userId,
   ].filter(Boolean) as string[];

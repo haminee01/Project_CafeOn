@@ -12,7 +12,7 @@ import { ChatMessage, ProfileClickHandler } from "@/types/chat";
 import { ChatHistoryMessage } from "@/api/chat";
 import { useAuth } from "@/contexts/AuthContext";
 import { getChatMessagesWithUnreadCount } from "@/lib/api";
-import { getAccessToken } from "@/stores/authStore";
+import { useAuthStore } from "@/stores/authStore";
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -235,23 +235,12 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
 
   // useAuth 훅 사용
   const { user } = useAuth();
+  const authStoreUser = useAuthStore((state) => state.user);
   const currentUserNickname = user?.username || user?.nickname || null;
+  const fallbackNickname =
+    authStoreUser?.nickname || authStoreUser?.username || null;
 
-  const tokenNickname = useMemo(() => {
-    try {
-      const token = getAccessToken();
-      if (token) {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        return payload?.nickname || payload?.username || null;
-      }
-    } catch {}
-    return null;
-  }, []);
-
-  const getMyNickname = () => {
-    if (currentUserNickname) return currentUserNickname;
-    return tokenNickname;
-  };
+  const getMyNickname = () => currentUserNickname || fallbackNickname || null;
 
   // 날짜 메시지인지 확인하는 함수
   const isDateMessage = (content: string): boolean => {

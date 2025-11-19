@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAccessToken } from "@/stores/authStore";
+import apiClient from "@/lib/axios";
 
 // 문의 상태 enum
 export enum QuestionStatus {
@@ -63,59 +63,18 @@ export const useMyQuestions = (params: MyQuestionsParams = {}) => {
     setError(null);
 
     try {
-      const token = getAccessToken();
-
-      if (!token) {
-        throw new Error("로그인이 필요합니다.");
-      }
-
-      if (token === "null" || token === "undefined") {
-        throw new Error("유효하지 않은 토큰입니다. 다시 로그인해주세요.");
-      }
-
-      try {
-        const payload = token.split(".")[1];
-        const decoded = JSON.parse(atob(payload));
-      } catch (e) {}
-
-      const searchParams = new URLSearchParams();
-      if (fetchParams.page)
-        searchParams.append("page", fetchParams.page.toString());
-      if (fetchParams.size)
-        searchParams.append("size", fetchParams.size.toString());
-      if (fetchParams.keyword)
-        searchParams.append("keyword", fetchParams.keyword);
-
-      const url = `http://localhost:8080/api/my/questions?${searchParams.toString()}`;
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 401) {
-          throw new Error("인증이 필요합니다.");
-        } else if (response.status === 403) {
-          throw new Error("접근 권한이 없습니다.");
-        } else if (response.status === 404) {
-          throw new Error("API 엔드포인트를 찾을 수 없습니다.");
-        } else {
-          throw new Error(
-            `문의 목록을 가져오는데 실패했습니다. (${response.status})`
-          );
+      const response = await apiClient.get<MyQuestionsResponse>(
+        "/api/my/questions",
+        {
+          params: {
+            page: fetchParams.page,
+            size: fetchParams.size,
+            keyword: fetchParams.keyword,
+          },
         }
-      }
+      );
 
-      const apiResponse: MyQuestionsResponse = await response.json();
-
-      const pageData = apiResponse.data;
+      const pageData = response.data.data;
 
       setQuestions(pageData.content || []);
       setTotalPages(pageData.totalPages || 0);

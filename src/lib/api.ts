@@ -1,55 +1,18 @@
-import { isAxiosError } from "axios";
-import { getAccessToken } from "@/stores/authStore";
 import apiClient from "./axios";
+import { normalizeError as normalizeErrorUtil } from "@/utils/errorHandler";
+import { AppError } from "@/errors/AppError";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-type ApiErrorResponse = {
-  message?: string;
-  [key: string]: unknown;
-};
-
-interface NormalizedError {
-  message?: string;
-  status?: number;
-  code?: string;
-}
-
-function normalizeError(error: unknown): NormalizedError {
-  if (isAxiosError<ApiErrorResponse>(error)) {
-    return {
-      message: error.response?.data?.message ?? error.message,
-      status: error.response?.status,
-      code: typeof error.code === "string" ? error.code : undefined,
-    };
-  }
-
-  if (error instanceof Error) {
-    const code =
-      "code" in error && typeof (error as { code?: string }).code === "string"
-        ? (error as { code?: string }).code
-        : undefined;
-    return { message: error.message, code };
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof (error as { message?: string }).message === "string"
-  ) {
-    const code =
-      "code" in error && typeof (error as { code?: string }).code === "string"
-        ? (error as { code?: string }).code
-        : undefined;
-    return { message: (error as { message?: string }).message, code };
-  }
-
-  if (typeof error === "string") {
-    return { message: error };
-  }
-
-  return {};
+/**
+ * API 호출 시 에러를 표준화하여 throw
+ * @deprecated normalizeErrorUtil을 직접 사용하세요
+ */
+function normalizeError(
+  error: unknown,
+  context?: Record<string, unknown>
+): AppError {
+  return normalizeErrorUtil(error, { source: "api.ts", ...context });
 }
 
 type NumericLike = number | string | { [key: string]: unknown };
@@ -109,9 +72,10 @@ export async function signup(userData: {
     const response = await apiClient.post("/api/auth/signup", userData);
     return response.data;
   } catch (error) {
-    console.error("회원가입 API 호출 실패:", error);
-    const { message } = normalizeError(error);
-    throw new Error(message || "회원가입 실패");
+    throw normalizeError(error, {
+      action: "signup",
+      userData: { email: userData.email },
+    });
   }
 }
 
@@ -121,18 +85,10 @@ export async function login(credentials: { email: string; password: string }) {
     const response = await apiClient.post("/api/auth/login", credentials);
     return response.data;
   } catch (error) {
-    console.error("로그인 API 호출 실패:", error);
-    const { status, message } = normalizeError(error);
-    // 상태 코드별 에러 메시지
-    if (status === 400) {
-      throw new Error("이메일 또는 비밀번호가 일치하지 않습니다.");
-    } else if (status === 401) {
-      throw new Error("인증에 실패했습니다. 이메일과 비밀번호를 확인해주세요.");
-    } else if (status === 403) {
-      throw new Error("계정이 정지되었거나 접근 권한이 없습니다.");
-    }
-
-    throw new Error(message || "로그인에 실패했습니다. 다시 시도해주세요.");
+    throw normalizeError(error, {
+      action: "login",
+      userData: { email: credentials.email },
+    });
   }
 }
 
@@ -146,20 +102,7 @@ export async function requestPasswordReset(email: string) {
       response.data || { message: "임시 비밀번호가 이메일로 발송되었습니다." }
     );
   } catch (error) {
-    console.error("비밀번호 재설정 API 호출 실패:", error);
-    const { status, message } = normalizeError(error);
-
-    // 에러 메시지 결정
-    if (status === 403) {
-      throw new Error("접근이 거부되었습니다. 백엔드 설정을 확인해주세요.");
-    }
-    if (status === 500) {
-      throw new Error(message || "서버 오류가 발생했습니다.");
-    }
-
-    throw new Error(
-      message || `비밀번호 재설정 요청 실패 (${status || "unknown"})`
-    );
+    throw normalizeError(error, { action: "requestPasswordReset", email });
   }
 }
 
@@ -171,9 +114,7 @@ export async function getAllCafes() {
     const response = await apiClient.get("/api/cafes/search");
     return response.data;
   } catch (error) {
-    console.error("전체 카페 조회 실패:", error);
-    const { message } = normalizeError(error);
-    throw new Error(message || "전체 카페 조회 실패");
+    throw normalizeError(error, { action: "getAllCafes" });
   }
 }
 
@@ -201,9 +142,7 @@ export async function searchCafes(query?: string, tags?: string | string[]) {
     }
     return [];
   } catch (error) {
-    console.error("카페 검색 실패:", error);
-    const { message } = normalizeError(error);
-    throw new Error(message || "카페 검색 실패");
+    throw normalizeError(error, { action: "searchCafes", query, tags });
   }
 }
 
@@ -213,9 +152,7 @@ export async function getCafeDetail(cafeId: string) {
     const response = await apiClient.get(`/api/cafes/${cafeId}`);
     return response.data;
   } catch (error) {
-    console.error("카페 상세 정보 조회 실패:", error);
-    const { message } = normalizeError(error);
-    throw new Error(message || "카페 상세 정보 조회 실패");
+    throw normalizeError(error, { action: "getCafeDetail", cafeId });
   }
 }
 
@@ -247,15 +184,19 @@ export async function getNearbyCafes(params: {
     }
     return [];
   } catch (error) {
-    // 타임아웃 에러인 경우 특별 처리
-    const { code, message } = normalizeError(error);
-    if (code === "ECONNABORTED" || message?.includes("timeout")) {
+    const normalizedError = normalizeError(error, {
+      action: "getNearbyCafes",
+      params,
+    });
+    // 타임아웃 에러인 경우 특별 처리 (빈 배열 반환)
+    if (
+      normalizedError.code === "NETWORK_ERROR" &&
+      normalizedError.message.includes("timeout")
+    ) {
       console.warn("근처 카페 조회 타임아웃 (30초 초과), 빈 배열 반환");
       return [];
     }
-
-    console.error("근처 카페 조회 실패:", error);
-    // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
+    // 기타 네트워크 에러도 빈 배열 반환 (에러를 throw하지 않음)
     console.warn("근처 카페 API 실패, 빈 배열 반환");
     return [];
   }
@@ -428,13 +369,13 @@ export async function getRelatedCafes(cafeId: string) {
     // 백엔드 API가 아직 구현되지 않은 경우 404/500 에러가 발생할 수 있음
     // 에러를 조용히 처리하고 빈 배열 반환 (또는 임시로 랜덤 카페 사용 가능)
     const normalizedError = normalizeError(error);
-    const { status, message } = normalizedError;
-    if (status === 404 || status === 500) {
+    const { statusCode, message } = normalizedError;
+    if (statusCode === 404 || statusCode === 500) {
       return [];
     }
 
     // 기타 에러의 경우에도 빈 배열 반환
-    console.warn("관련 카페 조회 실패:", status || message);
+    console.warn("관련 카페 조회 실패:", statusCode || message);
     return [];
   }
 }
@@ -606,7 +547,7 @@ export async function getWishlist(params?: {
   } catch (error) {
     // 403 또는 401 에러인 경우 (권한 없음)
     const normalizedError = normalizeError(error);
-    const status = normalizedError.status;
+    const status = normalizedError.statusCode;
     if (status === 403 || status === 401) {
       throw error;
     }
@@ -697,13 +638,15 @@ export async function getAdminMembers(params?: {
     return response.data;
   } catch (error) {
     console.error("Admin 회원 목록 API 호출 실패:", error);
-    const { status, message } = normalizeError(error);
+    const { statusCode, message } = normalizeError(error);
 
-    if (status === 403) {
+    if (statusCode === 403) {
       throw new Error("관리자 권한이 필요합니다.");
     }
 
-    throw new Error(message || `회원 목록 조회 실패 (${status || "unknown"})`);
+    throw new Error(
+      message || `회원 목록 조회 실패 (${statusCode || "unknown"})`
+    );
   }
 }
 
@@ -890,14 +833,14 @@ export async function changePassword(passwordData: {
     return response.data;
   } catch (error) {
     console.error("비밀번호 변경 실패:", error);
-    const { status, message } = normalizeError(error);
+    const { statusCode, message } = normalizeError(error);
 
     // 상태 코드별 에러 메시지
-    if (status === 400) {
+    if (statusCode === 400) {
       throw new Error("현재 비밀번호가 일치하지 않습니다.");
-    } else if (status === 401) {
+    } else if (statusCode === 401) {
       throw new Error("인증이 필요합니다. 다시 로그인해주세요.");
-    } else if (status === 403) {
+    } else if (statusCode === 403) {
       throw new Error("접근 권한이 없습니다.");
     }
 
@@ -919,13 +862,15 @@ export async function getAdminInquiries(params?: {
     return response.data;
   } catch (error) {
     console.error("Admin 문의 목록 API 호출 실패:", error);
-    const { status, message } = normalizeError(error);
+    const { statusCode, message } = normalizeError(error);
 
-    if (status === 403) {
+    if (statusCode === 403) {
       throw new Error("관리자 권한이 필요합니다.");
     }
 
-    throw new Error(message || `문의 목록 조회 실패 (${status || "unknown"})`);
+    throw new Error(
+      message || `문의 목록 조회 실패 (${statusCode || "unknown"})`
+    );
   }
 }
 
@@ -994,46 +939,13 @@ export interface WishlistResponse {
 // 위시리스트 제거 (DELETE)
 export async function deleteWishlist(cafeId: number, category: string) {
   try {
-    const token = getAccessToken();
-    const queryParams = new URLSearchParams({ category });
-
-    const response = await fetch(
-      `${API_BASE_URL}/api/my/wishlist/${cafeId}?${queryParams.toString()}`,
-      {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("로그인이 필요합니다.");
-      }
-
-      let errorData: ApiErrorResponse = {};
-      try {
-        errorData = (await response.json()) as ApiErrorResponse;
-      } catch (parseError) {
-        // JSON 파싱 실패 시 빈 객체 유지
-      }
-
-      const errorMessage =
-        errorData.message ||
-        (response.status === 500
-          ? "서버 내부 오류가 발생했습니다."
-          : `위시리스트 제거 실패 (${response.status})`);
-
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data;
+    const response = await apiClient.delete(`/api/my/wishlist/${cafeId}`, {
+      params: { category },
+    });
+    return response.data;
   } catch (error) {
     console.error("위시리스트 제거 API 호출 실패:", error);
-    throw error;
+    throw normalizeError(error, { action: "deleteWishlist", cafeId, category });
   }
 }
 
@@ -1042,96 +954,42 @@ export async function deleteWishlist(cafeId: number, category: string) {
 // 내 채팅방 목록 조회
 export async function getMyChatRooms() {
   try {
-    const token = getAccessToken();
-    const response = await fetch(`${API_BASE_URL}/api/my/chat/rooms`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("로그인이 필요합니다.");
-      }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || `채팅방 목록 조회 실패 (${response.status})`
-      );
-    }
-
-    const data = await response.json();
-    return data;
+    const response = await apiClient.get("/api/my/chat/rooms");
+    return response.data;
   } catch (error) {
     console.error("내 채팅방 목록 API 호출 실패:", error);
-    throw error;
+    throw normalizeError(error, { action: "getMyChatRooms" });
   }
 }
 
 // 채팅 읽음 처리
 export async function markChatAsRead(roomId: string, lastReadChatId: string) {
   try {
-    const token = getAccessToken();
-    const response = await fetch(
-      `${API_BASE_URL}/api/chat/rooms/${roomId}/members/me/read-latest`,
+    const response = await apiClient.post(
+      `/api/chat/rooms/${roomId}/members/me/read-latest`,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
-          lastReadChatId: lastReadChatId,
-        }),
+        lastReadChatId: lastReadChatId,
       }
     );
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("로그인이 필요합니다.");
-      }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || `채팅 읽음 처리 실패 (${response.status})`
-      );
-    }
-
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error("채팅 읽음 처리 API 호출 실패:", error);
-    throw error;
+    throw normalizeError(error, {
+      action: "markChatAsRead",
+      roomId,
+      lastReadChatId,
+    });
   }
 }
 
 // 사용자의 읽지 않은 채팅 목록 조회
 export async function getNotificationsUnread() {
   try {
-    const token = getAccessToken();
-    const response = await fetch(`${API_BASE_URL}/api/notifications/unread`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("로그인이 필요합니다.");
-      }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || `읽지 않은 알림 조회 실패 (${response.status})`
-      );
-    }
-
-    const data = await response.json();
-    return data;
+    const response = await apiClient.get("/api/notifications/unread");
+    return response.data;
   } catch (error) {
     console.error("읽지 않은 알림 조회 API 호출 실패:", error);
-    throw error;
+    throw normalizeError(error, { action: "getNotificationsUnread" });
   }
 }
 
@@ -1142,33 +1000,14 @@ export async function getChatMessagesWithUnreadCount(roomId: string) {
       throw new Error("유효하지 않은 roomId입니다.");
     }
 
-    const token = getAccessToken();
-    const response = await fetch(
-      `${API_BASE_URL}/api/chat/rooms/${roomId}/messages`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("로그인이 필요합니다.");
-      }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || `채팅 메시지 조회 실패 (${response.status})`
-      );
-    }
-
-    const data = await response.json();
-    return data;
+    const response = await apiClient.get(`/api/chat/rooms/${roomId}/messages`);
+    return response.data;
   } catch (error) {
     console.error("채팅 메시지 조회 API 호출 실패:", error);
-    throw error;
+    throw normalizeError(error, {
+      action: "getChatMessagesWithUnreadCount",
+      roomId,
+    });
   }
 }
 
@@ -1197,12 +1036,6 @@ export async function sendChatImage(
   caption?: string
 ): Promise<SendChatImageResponse> {
   try {
-    const token = getAccessToken();
-
-    if (!token) {
-      throw new Error("로그인이 필요합니다.");
-    }
-
     if (!files || files.length === 0) {
       throw new Error("전송할 파일을 선택해주세요.");
     }
@@ -1220,34 +1053,19 @@ export async function sendChatImage(
       formData.append("caption", caption);
     }
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/rooms/${roomId}/messages/image`,
+    const response = await apiClient.post(
+      `/api/rooms/${roomId}/messages/image`,
+      formData,
       {
-        method: "POST",
         headers: {
-          // FormData를 사용할 경우 Content-Type 헤더를 수동으로 설정하지 않아야 함
-          // 브라우저가 boundary 정보까지 포함하여 자동으로 생성
-          ...(token && { Authorization: `Bearer ${token}` }),
+          "Content-Type": "multipart/form-data",
         },
-        body: formData,
       }
     );
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("로그인이 필요합니다.");
-      }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || `이미지 전송 실패 (${response.status})`
-      );
-    }
-
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error("채팅 이미지 전송 API 호출 실패:", error);
-    throw error;
+    throw normalizeError(error, { action: "sendChatImage", roomId });
   }
 }
 
@@ -1339,39 +1157,15 @@ export async function getMyReviews(params?: {
   size?: number;
 }): Promise<MyReviewsResponse> {
   try {
-    const queryParams = new URLSearchParams();
-    if (params?.page !== undefined)
-      queryParams.append("page", params.page.toString());
-    if (params?.size !== undefined)
-      queryParams.append("size", params.size.toString());
-
-    const url = `${API_BASE_URL}/api/my/reviews${
-      queryParams.toString() ? `?${queryParams.toString()}` : ""
-    }`;
-
-    const token = getAccessToken();
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
+    const response = await apiClient.get("/api/my/reviews", {
+      params: {
+        page: params?.page,
+        size: params?.size,
       },
     });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("로그인이 필요합니다.");
-      }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || `리뷰 목록 조회 실패 (${response.status})`
-      );
-    }
-
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error("내가 작성한 리뷰 조회 API 호출 실패:", error);
-    throw error;
+    throw normalizeError(error, { action: "getMyReviews", params });
   }
 }

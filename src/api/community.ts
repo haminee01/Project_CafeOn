@@ -1,4 +1,3 @@
-import { fetcher, buildFullUrl, API_BASE_URL } from "./fetcher";
 import {
   PostListItem,
   PostListResponse,
@@ -17,9 +16,7 @@ import {
   ReportRequest,
   ReportResponse,
 } from "@/types/Post";
-import { getAccessToken } from "@/stores/authStore";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+import apiClient from "@/lib/axios";
 
 // GET /api/posts/{id}/comments 응답 타입 (댓글 목록)
 export type CommentListResponse = Comment[];
@@ -96,20 +93,17 @@ export const getPosts = async (
     sort?: "latest" | "likes" | "views";
   } = { page: 1 }
 ): Promise<PostListResponse> => {
-  const params = new URLSearchParams();
-
   const backendPageNumber = Math.max(0, query.page - 1);
-  params.append("page", String(backendPageNumber));
+  const response = await apiClient.get<BackendPostListResponse>("/api/posts", {
+    params: {
+      page: backendPageNumber,
+      keyword: query.keyword,
+      type: query.type,
+      sort: query.sort,
+    },
+  });
 
-  if (query.keyword) params.append("keyword", query.keyword);
-  if (query.type) params.append("type", query.type);
-  if (query.sort) params.append("sort", query.sort);
-
-  const url = `/api/posts?${params.toString()}`;
-
-  const backendResponse = await fetcher<BackendPostListResponse>(url);
-
-  const data = backendResponse.data;
+  const data = response.data.data;
 
   if (!data || !data.content) {
     return {
@@ -146,11 +140,11 @@ export const getPosts = async (
 export const getPostDetail = async (
   postId: number
 ): Promise<PostDetailResponse> => {
-  const url = `/api/posts/${postId}`;
+  const response = await apiClient.get<BackendPostDetailApiResponse>(
+    `/api/posts/${postId}`
+  );
 
-  const backendResponse = await fetcher<BackendPostDetailApiResponse>(url);
-
-  const backendData = backendResponse.data;
+  const backendData = response.data.data;
 
   let imageUrls: string[] = [];
 
@@ -222,12 +216,12 @@ interface BackendCommentListResponse {
 export const getComments = async (
   postId: number
 ): Promise<CommentListResponse> => {
-  const url = `/api/posts/${postId}/comments`;
-
   try {
-    const backendResponse = await fetcher<BackendCommentListResponse>(url);
+    const response = await apiClient.get<BackendCommentListResponse>(
+      `/api/posts/${postId}/comments`
+    );
 
-    const commentsData = backendResponse.data?.content || [];
+    const commentsData = response.data.data?.content || [];
 
     const transformedComments: Comment[] = commentsData.map(
       (backendComment) => ({
@@ -311,57 +305,13 @@ export async function createPostMutator(
     });
   }
 
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-
-  const headers: Record<string, string> = {};
-
-  // 토큰이 있는 경우에만 Authorization 헤더 추가
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const correctUrl = `${API_BASE_URL}/api/posts`;
-
-  const response = await fetch(correctUrl, {
-    method: "POST",
-    headers,
-    body: formData,
+  const response = await apiClient.post("/api/posts", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
   });
 
-  if (!response.ok) {
-    // 응답 본문 복제해서 에러 처리
-    const responseClone = response.clone();
-    let errorMessage = "게시글 작성 실패";
-    let errorDetail = "";
-
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-      errorDetail = JSON.stringify(errorData);
-    } catch {
-      const responseText = await responseClone.text();
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      errorDetail = responseText;
-    }
-
-    console.error("API 에러 상세:", {
-      status: response.status,
-      statusText: response.statusText,
-      errorMessage,
-      errorDetail,
-    });
-
-    if (response.status === 403) {
-      throw new Error(
-        "권한이 없습니다. 토큰이 만료되었거나 유효하지 않습니다."
-      );
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  const result = await response.json();
+  const result = response.data;
 
   // 백엔드 응답을 프론트엔드 형식으로 변환
   if (result.data) {
@@ -388,17 +338,6 @@ export async function updatePostMutator(
 ): Promise<PostUpdateResponse> {
   // URL에서 postId 추출
   const postId = url.split("/").pop();
-  const correctUrl = `${API_BASE_URL}/api/posts/${postId}`;
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
 
   // 백엔드는 항상 multipart/form-data를 기대하므로 항상 FormData 사용
   const formData = new FormData();
@@ -424,27 +363,13 @@ export async function updatePostMutator(
     });
   }
 
-  // FormData 사용 시 Content-Type 헤더 제거 (브라우저가 자동 설정)
-  delete headers["Content-Type"];
-
-  const response = await fetch(correctUrl, {
-    method: "PUT",
-    headers,
-    body: formData,
+  const response = await apiClient.put(`/api/posts/${postId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
   });
 
-  if (!response.ok) {
-    let errorMessage = "게시글 수정 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
-    throw new Error(errorMessage);
-  }
-
-  return response.json();
+  return response.data;
 }
 
 /**
@@ -453,45 +378,12 @@ export async function updatePostMutator(
 export async function deletePostMutator(
   postId: number
 ): Promise<PostDeleteResponse> {
-  const url = `/api/posts/${postId}`;
-  const fullUrl = buildFullUrl(url);
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {};
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "DELETE",
-    headers,
-  });
-
-  if (!response.ok) {
-    let errorMessage = "게시글 삭제 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
-    throw new Error(errorMessage);
-  }
-
-  // 응답이 비어있거나 JSON이 아닐 수 있으므로 안전하게 처리
   try {
-    const responseText = await response.text();
-    if (responseText) {
-      return JSON.parse(responseText);
-    } else {
-      // 빈 응답인 경우 기본 메시지 반환
-      return { message: "게시글이 삭제되었습니다." };
-    }
-  } catch {
-    // JSON 파싱 실패 시 기본 메시지 반환
-    return { message: "게시글이 삭제되었습니다." };
+    const response = await apiClient.delete(`/api/posts/${postId}`);
+    return response.data || { message: "게시글이 삭제되었습니다." };
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "게시글 삭제 실패";
+    throw new Error(errorMessage);
   }
 }
 
@@ -504,37 +396,13 @@ export async function createCommentMutator(
   postId: number,
   arg: CommentCreateRequest
 ): Promise<CommentCreateResponse> {
-  const url = `/api/posts/${postId}/comments`;
-  const fullUrl = buildFullUrl(url);
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(arg),
-  });
-
-  if (!response.ok) {
-    let errorMessage = "댓글 작성 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
+  try {
+    const response = await apiClient.post(`/api/posts/${postId}/comments`, arg);
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "댓글 작성 실패";
     throw new Error(errorMessage);
   }
-
-  return response.json();
 }
 
 /**
@@ -545,37 +413,16 @@ export const updateCommentMutator = async (
   commentId: number,
   arg: { content: string }
 ): Promise<CommentUpdateResponse> => {
-  const url = `/api/posts/${postId}/comments/${commentId}`;
-  const fullUrl = buildFullUrl(url);
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify(arg),
-  });
-
-  if (!response.ok) {
-    let errorMessage = "댓글 수정 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
+  try {
+    const response = await apiClient.put(
+      `/api/posts/${postId}/comments/${commentId}`,
+      arg
+    );
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "댓글 수정 실패";
     throw new Error(errorMessage);
   }
-
-  return response.json();
 };
 
 /**
@@ -585,38 +432,18 @@ export const deleteCommentMutator = async (
   postId: number,
   commentId: number
 ): Promise<CommentDeleteResponse> => {
-  const url = `/api/posts/${postId}/comments/${commentId}`;
-  const fullUrl = buildFullUrl(url);
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {};
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "DELETE",
-    headers,
-  });
-
-  if (response.status === 204 || response.status === 200) {
-    return { message: "댓글이 삭제되었습니다." };
-  }
-
-  if (!response.ok) {
-    let errorMessage = "댓글 삭제 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+  try {
+    const response = await apiClient.delete(
+      `/api/posts/${postId}/comments/${commentId}`
+    );
+    if (response.status === 204 || response.status === 200) {
+      return { message: "댓글이 삭제되었습니다." };
     }
+    return response.data || { message: "댓글이 삭제되었습니다." };
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "댓글 삭제 실패";
     throw new Error(errorMessage);
   }
-
-  return response.json();
 };
 
 /**
@@ -626,34 +453,13 @@ export const deleteCommentMutator = async (
 export const toggleCommentLike = async (
   commentId: number
 ): Promise<CommentLikeResponse> => {
-  const url = `/api/comments/${commentId}/like`;
-  const fullUrl = buildFullUrl(url);
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {};
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers,
-  });
-
-  if (!response.ok) {
-    let errorMessage = "좋아요 처리 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
+  try {
+    const response = await apiClient.post(`/api/comments/${commentId}/like`);
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "좋아요 처리 실패";
     throw new Error(errorMessage);
   }
-
-  return response.json();
 };
 
 /**
@@ -663,34 +469,13 @@ export const toggleCommentLike = async (
 export const togglePostLike = async (
   postId: number
 ): Promise<PostLikeResponse> => {
-  const url = `/api/posts/${postId}/like`;
-  const fullUrl = buildFullUrl(url);
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {};
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers,
-  });
-
-  if (!response.ok) {
-    let errorMessage = "좋아요 처리 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
+  try {
+    const response = await apiClient.post(`/api/posts/${postId}/like`);
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "좋아요 처리 실패";
     throw new Error(errorMessage);
   }
-
-  return response.json();
 };
 
 /**
@@ -702,38 +487,15 @@ export const createPostReport = async (
   postId: number,
   content: string
 ): Promise<{ message: string }> => {
-  const url = `/api/posts/${postId}/reports`;
-  const fullUrl = buildFullUrl(url);
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ content }),
-  });
-
-  if (!response.ok) {
-    let errorMessage = "신고 처리 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
+  try {
+    const response = await apiClient.post(`/api/posts/${postId}/reports`, {
+      content,
+    });
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "신고 처리 실패";
     throw new Error(errorMessage);
   }
-
-  const result = await response.json();
-  return result;
 };
 
 /**
@@ -743,38 +505,13 @@ export const createPostReport = async (
 export const createReport = async (
   reportData: ReportRequest
 ): Promise<ReportResponse> => {
-  const url = `/api/reports`;
-  const fullUrl = buildFullUrl(url);
-
-  // 로컬 스토리지에서 인증 토큰 가져오기
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(reportData),
-  });
-
-  if (!response.ok) {
-    let errorMessage = "신고 처리 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
+  try {
+    const response = await apiClient.post("/api/reports", reportData);
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "신고 처리 실패";
     throw new Error(errorMessage);
   }
-
-  const result = await response.json();
-  return result;
 };
 
 // 댓글 신고 API
@@ -782,35 +519,16 @@ export const createCommentReport = async (
   commentId: number,
   content: string
 ): Promise<{ message: string }> => {
-  const url = `/api/comments/${commentId}/reports`;
-  const fullUrl = buildFullUrl(url);
-
-  const authToken = getAccessToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ content }),
-  });
-
-  if (!response.ok) {
-    let errorMessage = "신고 처리 실패";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    }
+  try {
+    const response = await apiClient.post(
+      `/api/comments/${commentId}/reports`,
+      {
+        content,
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || "신고 처리 실패";
     throw new Error(errorMessage);
   }
-
-  const result = await response.json();
-  return result;
 };

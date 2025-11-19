@@ -43,12 +43,12 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
     const mapApiToCafeDetail = (data: any) => {
       // 이미지 처리: photoUrl을 우선하고, photos 배열이 있으면 추가
       let images: string[] = [];
-      
+
       // photoUrl이 있으면 배열에 추가
       if (data.photoUrl) {
         images.push(data.photoUrl);
       }
-      
+
       // photos 배열이 있으면 추가 (중복 제거)
       if (Array.isArray(data.photos) && data.photos.length > 0) {
         data.photos.forEach((photo: string) => {
@@ -57,16 +57,16 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
           }
         });
       }
-      
+
       // 디버깅 로그 (개발 환경)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[CafeDetail] API 응답 데이터:', {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[CafeDetail] API 응답 데이터:", {
           photoUrl: data.photoUrl,
           photos: data.photos,
           최종_images: images,
         });
       }
-      
+
       // API 응답(CafeDetailResponse)을 화면에서 사용하는 CafeDetail 형태로 변환
       return {
         id: String(data.id ?? ""),
@@ -122,8 +122,8 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       try {
         const cafes = await getRandomCafes();
         // 이미지가 있는 카페만 필터링
-        const cafesWithImages = (Array.isArray(cafes) ? cafes : []).filter(cafe => 
-          cafe.photoUrl || (cafe.images && cafe.images.length > 0)
+        const cafesWithImages = (Array.isArray(cafes) ? cafes : []).filter(
+          (cafe) => cafe.photoUrl || (cafe.images && cafe.images.length > 0)
         );
         setSimilarCafes(cafesWithImages);
       } catch (error: any) {
@@ -152,6 +152,12 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
 
   // 모달 핸들러 함수들
   const handleOpenChat = () => {
+    // 로그인하지 않은 상태에서 채팅방 참여 버튼 클릭 시 로그인 유도 모달 표시
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     console.log("=== 카페 디테일 페이지에서 채팅 모달 열기 ===", {
       cafeId,
       cafeName,
@@ -215,7 +221,6 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
-
       {/* 카페 메인 정보 섹션 */}
       <CafeInfoSection
         cafe={cafe}
@@ -282,10 +287,9 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
       {showLoginPrompt && (
         <LoginPromptModal
           onClose={() => setShowLoginPrompt(false)}
-          message="리뷰 작성은 로그인 후 가능합니다."
+          message="채팅방에 참여하려면 로그인이 필요합니다."
         />
       )}
-
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { getAccessToken } from "@/stores/authStore";
 import {
   QuestionListItem,
   QuestionDetail,
@@ -11,11 +10,7 @@ import {
   ApiResponse,
   Answer,
 } from "@/types/qna";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
-
-const getAuthToken = () => getAccessToken();
+import apiClient from "@/lib/axios";
 
 // 문의 목록 조회 훅
 export const useQuestionList = (params: QuestionListParams) => {
@@ -30,44 +25,17 @@ export const useQuestionList = (params: QuestionListParams) => {
     setError(null);
 
     try {
-      const queryParams = new URLSearchParams({
-        page: params.page.toString(),
-        size: params.size.toString(),
-      });
-
-      if (params.keyword) {
-        queryParams.append("keyword", params.keyword);
-      }
-
-      const token = getAuthToken();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/qna/questions?${queryParams}`,
+      const response = await apiClient.get<ApiResponse<QuestionListResponse>>(
+        "/api/qna/questions",
         {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
+          params: {
+            page: params.page,
+            size: params.size,
+            ...(params.keyword ? { keyword: params.keyword } : {}),
           },
-          credentials: "include",
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const apiResponse: ApiResponse<QuestionListResponse> =
-        await response.json();
-      const data = apiResponse.data;
+      const data = response.data.data;
 
       // 비공개 글 제목 및 작성자 마스킹 처리
       const maskedQuestions = data.content.map((question) => ({
@@ -123,31 +91,10 @@ export const useQuestionDetail = (id: number) => {
     setError(null);
 
     try {
-      const token = getAuthToken();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/qna/questions/${id}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const apiResponse: ApiResponse<QuestionDetail> = await response.json();
-      setQuestion(apiResponse.data);
+      const response = await apiClient.get<ApiResponse<QuestionDetail>>(
+        `/api/qna/questions/${id}`
+      );
+      setQuestion(response.data.data);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "문의를 불러오는데 실패했습니다."
@@ -181,37 +128,10 @@ export const useCreateQuestion = () => {
     setError(null);
 
     try {
-      const token = getAuthToken();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-        headers["Accept"] = "application/json";
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/qna/questions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `HTTP error! status: ${response.status} - ${errorText}`
-        );
-      }
-
-      const apiResponse: ApiResponse<CreateQuestionResponse> =
-        await response.json();
-      return apiResponse.data;
+      const response = await apiClient.post<
+        ApiResponse<CreateQuestionResponse>
+      >("/api/qna/questions", data);
+      return response.data.data;
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "문의 등록에 실패했습니다."
@@ -242,29 +162,10 @@ export const useAnswerList = (questionId: number) => {
     setError(null);
 
     try {
-      const token = getAuthToken();
-      const response = await fetch(
-        `${API_BASE_URL}/api/qna/questions/${questionId}/answers`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          credentials: "include",
-        }
+      const response = await apiClient.get<ApiResponse<Answer[]>>(
+        `/api/qna/questions/${questionId}/answers`
       );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `HTTP error! status: ${response.status} - ${errorText}`
-        );
-      }
-
-      const apiResponse: ApiResponse<Answer[]> = await response.json();
-      setAnswers(apiResponse.data);
+      setAnswers(response.data.data);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "답변을 불러오는데 실패했습니다."

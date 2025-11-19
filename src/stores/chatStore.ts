@@ -9,6 +9,7 @@ export interface CafeChatSessionState {
   isJoined: boolean;
   isLoading: boolean;
   error: string | null;
+  requiresLogin: boolean; // 로그인 필요 여부
   participants: Participant[];
   messages: ChatMessage[];
   chatHistory: ChatHistoryMessage[];
@@ -48,6 +49,7 @@ export const createCafeChatSessionState = (): CafeChatSessionState => ({
   isJoined: false,
   isLoading: false,
   error: null,
+  requiresLogin: false,
   participants: [],
   messages: [],
   chatHistory: [],
