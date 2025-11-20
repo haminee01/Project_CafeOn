@@ -113,9 +113,9 @@ export default function ReviewWriteModal({
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-        <div className="flex justify-end items-center mb-6">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-2xl p-5 sm:p-6 md:p-8 max-w-lg md:max-w-xl lg:max-w-2xl w-full">
+        <div className="flex justify-end items-center mb-4 sm:mb-6">
           <Button
             onClick={onClose}
             color="gray"
@@ -138,11 +138,11 @@ export default function ReviewWriteModal({
           </Button>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
           {/* 별점 선택 */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">별점</label>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -195,7 +195,7 @@ export default function ReviewWriteModal({
               className="hidden"
             />
             {imagePreviewUrls.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {imagePreviewUrls.map((url, index) => (
                   <div key={index} className="relative">
                     <img
@@ -217,7 +217,7 @@ export default function ReviewWriteModal({
             ) : (
               <div
                 onClick={handleImageAreaClick}
-                className="bg-gray-200 h-64 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors border-2 border-dashed border-gray-400"
+                className="bg-gray-200 h-48 sm:h-60 rounded-lg p-6 sm:p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-300 transition-colors border-2 border-dashed border-gray-400"
               >
                 <svg
                   className="w-12 h-12 text-gray-600 mb-2"
@@ -252,14 +252,28 @@ export default function ReviewWriteModal({
           </div>
 
           {/* 액션 버튼 */}
-          <div className="flex justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             {isEditMode && (
-              <Button onClick={handleDelete} color="warning" size="md">
+              <Button
+                onClick={handleDelete}
+                color="gray"
+                size="md"
+                className="w-full sm:w-auto sm:flex-shrink-0 !bg-gray-600 !text-white hover:!bg-gray-500"
+              >
                 삭제하기
               </Button>
             )}
-            <div className={`flex gap-3 ${isEditMode ? "ml-auto" : ""}`}>
-              <Button onClick={onClose} color="gray" size="md">
+            <div
+              className={`flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto ${
+                isEditMode ? "sm:ml-auto" : "sm:ml-auto"
+              }`}
+            >
+              <Button
+                onClick={onClose}
+                color="gray"
+                size="md"
+                className="w-full sm:w-auto sm:min-w-[100px] hover:!bg-gray-200"
+              >
                 취소
               </Button>
               <Button
@@ -267,9 +281,10 @@ export default function ReviewWriteModal({
                 color="primary"
                 size="md"
                 disabled={loading || !reviewContent.trim()}
+                className="w-full sm:w-auto sm:min-w-[100px] hover:!bg-[#5a360f]"
               >
                 {loading ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     {isEditMode ? "수정 중..." : "작성 중..."}
                   </div>

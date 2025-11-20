@@ -151,9 +151,9 @@ export default function CommunityMainPage() {
     <>
       <Header />
 
-      <main className="min-h-screen pt-4 pb-20">
+      <main className="min-h-screen pt-4 pb-12 sm:pb-20">
         {/* 검색바 */}
-        <div className="max-w-4xl mx-auto p-4 mb-6">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6 mb-4 sm:mb-6">
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}
@@ -163,8 +163,8 @@ export default function CommunityMainPage() {
         </div>
 
         {/* 카테고리 필터와 게시물 작성 버튼 */}
-        <div className="max-w-4xl mx-auto p-4 mb-6">
-          <div className="flex justify-between items-center">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             {/* 타입 필터 */}
             <div className="flex flex-wrap gap-2">
               {POST_TYPE_OPTIONS.map((option) => (
@@ -173,7 +173,7 @@ export default function CommunityMainPage() {
                   onClick={() => {
                     setSelectedType(option.value);
                   }}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                     selectedType === option.value
                       ? `${option.color} text-white`
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -186,7 +186,7 @@ export default function CommunityMainPage() {
 
             {/* 게시물 작성 버튼 */}
             <Link href="/community/write">
-              <button className="px-4 py-2 bg-[#6E4213] text-white rounded-md hover:bg-[#C19B6C] transition-colors">
+              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#6E4213] text-white rounded-md hover:bg-[#C19B6C] transition-colors text-sm sm:text-base">
                 게시물 작성
               </button>
             </Link>

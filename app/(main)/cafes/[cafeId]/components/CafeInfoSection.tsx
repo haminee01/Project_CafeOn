@@ -26,7 +26,7 @@ export default function CafeInfoSection({
   onWriteReview,
 }: CafeInfoSectionProps) {
   const { isAuthenticated } = useAuth();
-  
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   // 상세 시간 토글은 사용하지 않음 (백엔드에서 추가 정보 미제공)
   const [showHoursDetail] = useState<boolean>(false);
@@ -37,20 +37,20 @@ export default function CafeInfoSection({
   // 긴 설명 더보기 토글
   const [showFullDescription, setShowFullDescription] = useState(false);
   const DESCRIPTION_LIMIT = 100; // 글자수 제한
-  
+
   // 운영시간 토글
   const [showFullHours, setShowFullHours] = useState(false);
-  
+
   // 운영시간 파싱 함수
   const parseHours = (hoursStr: string) => {
     if (!hoursStr) return { lines: [], firstLine: "", currentDayLine: "" };
-    const lines = hoursStr.split('\n').filter(line => line.trim());
-    
+    const lines = hoursStr.split("\n").filter((line) => line.trim());
+
     // 오늘 요일 찾기
     const today = new Date().getDay(); // 0: 일, 1: 월, 2: 화, ..., 6: 토
-    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
     const todayName = dayNames[today];
-    
+
     // 오늘 요일에 해당하는 라인 찾기
     let currentDayLine = "";
     const regex = new RegExp(`^${todayName}\\s`);
@@ -60,23 +60,23 @@ export default function CafeInfoSection({
         break;
       }
     }
-    
+
     return {
       lines,
       firstLine: lines[0] || "",
-      currentDayLine: currentDayLine || lines[0] || ""
+      currentDayLine: currentDayLine || lines[0] || "",
     };
   };
 
   // 이미지 배열 계산 (photoUrl도 포함)
   const getCafeImages = () => {
     const images: string[] = [];
-    
+
     // 1. photoUrl이 있으면 먼저 추가
     if ((cafe as any).photoUrl) {
       images.push((cafe as any).photoUrl);
     }
-    
+
     // 2. images 배열이 있으면 추가 (photoUrl과 중복되지 않도록)
     if (cafe.images && Array.isArray(cafe.images) && cafe.images.length > 0) {
       cafe.images.forEach((img: string) => {
@@ -85,21 +85,21 @@ export default function CafeInfoSection({
         }
       });
     }
-    
+
     // 3. photo_url (snake_case)도 확인
     if ((cafe as any).photo_url && !images.includes((cafe as any).photo_url)) {
       images.push((cafe as any).photo_url);
     }
-    
+
     // 디버깅 로그
-    if (process.env.NODE_ENV === 'development' && images.length === 0) {
-      console.log('[CafeInfoSection] 이미지 없음 - cafe 객체:', {
+    if (process.env.NODE_ENV === "development" && images.length === 0) {
+      console.log("[CafeInfoSection] 이미지 없음 - cafe 객체:", {
         photoUrl: (cafe as any).photoUrl,
         images: cafe.images,
         photo_url: (cafe as any).photo_url,
       });
     }
-    
+
     return images;
   };
 
@@ -154,15 +154,16 @@ export default function CafeInfoSection({
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
         {/* 좌측 이미지 영역 */}
         <div className="relative">
           <div className="aspect-[4/3] bg-gray-200 rounded-lg overflow-hidden relative">
             {(() => {
               const images = getCafeImages();
-              const currentImage = images && images.length > 0 ? images[currentImageIndex] : null;
-              
+              const currentImage =
+                images && images.length > 0 ? images[currentImageIndex] : null;
+
               if (currentImage) {
                 return (
                   <img
@@ -176,7 +177,7 @@ export default function CafeInfoSection({
                   />
                 );
               }
-              
+
               // 이미지가 없을 때 플레이스홀더
               return (
                 <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-gray-500">
@@ -251,14 +252,15 @@ export default function CafeInfoSection({
         </div>
 
         {/* 우측 상세 정보 */}
-        <div className="space-y-6 w-3/4">
+        <div className="space-y-4 sm:space-y-6 w-full lg:w-3/4">
           {/* 카페 이름 */}
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               {cafe.name}
             </h1>
-            <p className="text-lg text-gray-600 mb-4">{cafe.slogan}</p>
-
+            <p className="text-base sm:text-lg text-gray-600 mb-4">
+              {cafe.slogan}
+            </p>
           </div>
 
           {/* 위치 정보 */}
@@ -296,60 +298,81 @@ export default function CafeInfoSection({
                     <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                   </svg>
                 </div>
-                <a href={`tel:${cafe.phone}`} className="text-gray-900 underline">
+                <a
+                  href={`tel:${cafe.phone}`}
+                  className="text-gray-900 underline"
+                >
                   {cafe.phone}
                 </a>
               </div>
             )}
 
             {/* 영업시간 (백엔드에서 추가 세부정보 미제공 → 단순 표시) */}
-            {cafe.hoursDetail?.fullHours && (() => {
-              const { lines, currentDayLine } = parseHours(cafe.hoursDetail.fullHours);
-              const hasMultipleLines = lines.length > 1;
-              
-              return (
-                <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
-                    <div className="w-3 h-3 bg-primary rounded-full"></div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="space-y-1">
-                      <span className="text-gray-600">운영시간:</span>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-gray-900 font-medium">{currentDayLine}</span>
-                        {hasMultipleLines && (
-                          <>
-                            {showFullHours && lines.map((line, idx) => (
-                              <span key={idx} className={`text-gray-900 ${line === currentDayLine ? 'font-medium underline underline-offset-2' : ''}`}>
-                                {line}
-                              </span>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => setShowFullHours(!showFullHours)}
-                              className="text-primary text-sm underline underline-offset-2 text-left"
-                            >
-                              {showFullHours ? "접기" : "더보기"}
-                            </button>
-                          </>
-                        )}
+            {cafe.hoursDetail?.fullHours &&
+              (() => {
+                const { lines, currentDayLine } = parseHours(
+                  cafe.hoursDetail.fullHours
+                );
+                const hasMultipleLines = lines.length > 1;
+
+                return (
+                  <div className="flex items-start gap-3">
+                    <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="space-y-1">
+                        <span className="text-gray-600">운영시간:</span>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-gray-900 font-medium">
+                            {currentDayLine}
+                          </span>
+                          {hasMultipleLines && (
+                            <>
+                              {showFullHours &&
+                                lines.map((line, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`text-gray-900 ${
+                                      line === currentDayLine
+                                        ? "font-medium underline underline-offset-2"
+                                        : ""
+                                    }`}
+                                  >
+                                    {line}
+                                  </span>
+                                ))}
+                              <button
+                                type="button"
+                                onClick={() => setShowFullHours(!showFullHours)}
+                                className="text-primary text-sm underline underline-offset-2 text-left"
+                              >
+                                {showFullHours ? "접기" : "더보기"}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
           </div>
 
           {/* 액션 버튼 */}
-          <div className="flex items-center justify-between gap-3">
-            <Button onClick={onChatRoom} color="primary" size="md">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <Button
+              onClick={onChatRoom}
+              color="primary"
+              size="md"
+              className="w-full sm:w-auto"
+            >
               채팅방 참여
             </Button>
             <div className="flex gap-2">
               <button
                 onClick={handleWishlistClick}
-                className={`flex flex-col items-center justify-center border rounded-lg h-12 w-20 transition-colors ${
+                className={`flex flex-col items-center justify-center border rounded-lg h-12 w-16 sm:w-20 transition-colors ${
                   wishlistCategories.length > 0
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-primary hover:bg-gray-50"
@@ -390,7 +413,7 @@ export default function CafeInfoSection({
               </button>
               <button
                 onClick={onShare}
-                className="flex flex-col items-center justify-center border border-primary rounded-lg h-12 w-20 hover:bg-gray-50 transition-colors"
+                className="flex flex-col items-center justify-center border border-primary rounded-lg h-12 w-16 sm:w-20 hover:bg-gray-50 transition-colors"
               >
                 <svg
                   className="w-5 h-5 text-primary mb-1"

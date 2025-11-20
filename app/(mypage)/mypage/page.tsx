@@ -218,7 +218,7 @@ export default function MypageMainPage() {
   };
 
   const ProfileIcon = () => (
-    <div className="w-28 h-28 bg-gray-100 rounded-full flex items-center justify-center border-4 border-[#C19B6C] overflow-hidden">
+    <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gray-100 rounded-full flex items-center justify-center border-4 border-[#C19B6C] overflow-hidden">
       {profile.profileImageUrl ? (
         <img
           src={profile.profileImageUrl}
@@ -226,7 +226,7 @@ export default function MypageMainPage() {
           className="w-full h-full object-cover"
         />
       ) : (
-        <FaUser className="w-16 h-16 text-gray-400" />
+        <FaUser className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
       )}
     </div>
   );
@@ -248,16 +248,18 @@ export default function MypageMainPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-8">회원정보</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6 sm:mb-8">
+        회원정보
+      </h1>
 
-      <div className="flex flex-col lg:flex-row gap-10">
-        <div className="flex flex-col items-center p-6 bg-white border-none border-gray-100 rounded-2xl shadow-sm lg:w-1/3 min-w-[250px] max-w-sm mx-auto lg:mx-0">
+      <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 lg:gap-10">
+        <div className="flex flex-col items-center p-4 sm:p-6 bg-white border-none border-gray-100 rounded-2xl shadow-sm lg:w-1/3 min-w-[250px] max-w-sm mx-auto lg:mx-0">
           <ProfileIcon />
-          <p className="mt-4 text-xl font-semibold text-gray-800">
+          <p className="mt-4 text-lg sm:text-xl font-semibold text-gray-800">
             {profile.nickname || "닉네임 없음"}
           </p>
           <button
-            className="mt-3 text-sm text-gray-500 hover:text-[#C19B6C] transition-colors"
+            className="mt-3 text-xs sm:text-sm text-gray-500 hover:text-[#C19B6C] transition-colors"
             onClick={handleProfileImageChange}
           >
             프로필 사진 변경
@@ -271,26 +273,26 @@ export default function MypageMainPage() {
           />
         </div>
 
-        <div className="flex-1 space-y-8 p-0">
+        <div className="flex-1 space-y-6 sm:space-y-8 p-0">
           <div className="space-y-4">
             <label className="block">
-              <span className="text-sm font-medium text-gray-700 block mb-1">
+              <span className="text-xs sm:text-sm font-medium text-gray-700 block mb-1">
                 닉네임
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   value={profile.nickname}
                   onChange={(e) =>
                     setProfile({ ...profile, nickname: e.target.value })
                   }
-                  className="flex-1 px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
                 />
                 <Button
                   size="md"
                   color="primary"
                   onClick={handleSaveNickname}
-                  className="hover:bg-[#6E4213]"
+                  className="hover:bg-[#6E4213] w-full sm:w-auto"
                 >
                   저장
                 </Button>
@@ -298,32 +300,32 @@ export default function MypageMainPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-gray-700 block mb-1">
+              <span className="text-xs sm:text-sm font-medium text-gray-700 block mb-1">
                 이름
               </span>
               <input
                 type="text"
                 value={profile.name}
                 readOnly
-                className="w-full px-4 py-3 border border-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-gray-700 block mb-1">
+              <span className="text-xs sm:text-sm font-medium text-gray-700 block mb-1">
                 이메일
               </span>
               <input
                 type="email"
                 value={profile.email}
                 readOnly
-                className="w-full px-4 py-3 border border-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
               />
             </label>
           </div>
 
           <div className="pt-4 border-t border-[#CDCDCD]">
-            <span className="text-sm font-medium text-gray-700 block mb-2">
+            <span className="text-xs sm:text-sm font-medium text-gray-700 block mb-2">
               비밀번호 변경
             </span>
             <div className="space-y-3">
@@ -332,21 +334,21 @@ export default function MypageMainPage() {
                 placeholder="현재 비밀번호"
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
               />
               <input
                 type="password"
                 placeholder="새 비밀번호"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
               />
               <input
                 type="password"
                 placeholder="새 비밀번호 확인"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-[#999999] rounded-xl focus:border-amber-500 focus:ring-amber-500"
               />
             </div>
             <div className="flex justify-end mt-4">
@@ -354,7 +356,7 @@ export default function MypageMainPage() {
                 size="md"
                 color="primary"
                 onClick={handleChangePassword}
-                className={`mt-2 ${
+                className={`mt-2 w-full sm:w-auto ${
                   isPasswordChangeEnabled
                     ? "hover:bg-[#6E4213]"
                     : "opacity-50 cursor-not-allowed"

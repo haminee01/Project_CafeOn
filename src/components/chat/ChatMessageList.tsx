@@ -396,7 +396,7 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 border-y"
+      className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 bg-gray-50 border-y"
       onClick={onListClick}
     >
       {/* 더 많은 히스토리 로드 버튼 - 메시지가 있을 때만 표시 */}

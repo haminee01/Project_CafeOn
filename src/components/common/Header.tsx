@@ -37,7 +37,12 @@ const Header = ({ className = "" }: HeaderProps) => {
 
   // 디버그 로그
   useEffect(() => {
-    console.log("[Header] 렌더링 - isLoading:", isLoading, "isAuthenticated:", isAuthenticated);
+    console.log(
+      "[Header] 렌더링 - isLoading:",
+      isLoading,
+      "isAuthenticated:",
+      isAuthenticated
+    );
   }, [isLoading, isAuthenticated]);
 
   // 알림 개수 조회 및 실시간 업데이트
@@ -71,17 +76,17 @@ const Header = ({ className = "" }: HeaderProps) => {
   return (
     <header className={`header-component ${className}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-4">
+        <div className="flex justify-between items-center h-12 md:h-16">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="relative">
               <button
                 onClick={toggleNotification}
-                className="text-gray-800 font-normal text-base hover:text-primary transition-colors relative"
+                className="text-gray-800 font-normal text-sm sm:text-base hover:text-primary transition-colors relative"
               >
-                <IoNotificationsOutline className="w-6 h-6 text-gray-600" />
+                <IoNotificationsOutline className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
                 {/* 읽지 않은 알림이 있으면 빨간 점 표시 */}
                 {unreadCount > 0 && (
-                  <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                  <span className="absolute top-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full border-2 border-white"></span>
                 )}
               </button>
 
@@ -92,12 +97,15 @@ const Header = ({ className = "" }: HeaderProps) => {
               />
             </div>
 
-            <Link href="/qna" className="text-gray-800 font-normal text-lg">
+            <Link
+              href="/qna"
+              className="text-gray-800 font-normal text-sm sm:text-lg"
+            >
               QnA
             </Link>
             <Link
               href="/community"
-              className="text-gray-800 font-normal text-base"
+              className="text-gray-800 font-normal text-sm sm:text-base"
             >
               ToCafe
             </Link>
@@ -105,18 +113,18 @@ const Header = ({ className = "" }: HeaderProps) => {
 
           <div className="flex-shrink-0">
             <Link href="/">
-              <h1 className="text-4xl font-bold text-primary cursor-pointer">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary cursor-pointer">
                 CafeOn.
               </h1>
             </Link>
           </div>
 
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-2 sm:space-x-4 md:space-x-6">
             {isLoading ? (
               // 초기 로딩 중일 때는 기본적으로 로그인 버튼 표시 (토큰 확인 중)
               <Link
                 href="/login"
-                className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+                className="text-gray-800 font-normal text-xs sm:text-sm md:text-base hover:text-primary transition-colors"
               >
                 로그인
               </Link>
@@ -124,13 +132,14 @@ const Header = ({ className = "" }: HeaderProps) => {
               <>
                 <Link
                   href="/mypage"
-                  className="text-gray-800 font-normal text-base"
+                  className="text-gray-800 font-normal text-xs sm:text-sm md:text-base"
                 >
-                  마이페이지
+                  <span className="hidden sm:inline">마이페이지</span>
+                  <span className="sm:hidden">마이</span>
                 </Link>
                 <button
                   onClick={logout}
-                  className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+                  className="text-gray-800 font-normal text-xs sm:text-sm md:text-base hover:text-primary transition-colors"
                 >
                   로그아웃
                 </button>
@@ -139,15 +148,16 @@ const Header = ({ className = "" }: HeaderProps) => {
               <>
                 <Link
                   href="/login"
-                  className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+                  className="text-gray-800 font-normal text-xs sm:text-sm md:text-base hover:text-primary transition-colors"
                 >
                   로그인
                 </Link>
                 <Link
                   href="/signup"
-                  className="text-gray-800 font-normal text-base hover:text-primary transition-colors"
+                  className="text-gray-800 font-normal text-xs sm:text-sm md:text-base hover:text-primary transition-colors"
                 >
-                  회원가입
+                  <span className="hidden sm:inline">회원가입</span>
+                  <span className="sm:hidden">가입</span>
                 </Link>
               </>
             )}

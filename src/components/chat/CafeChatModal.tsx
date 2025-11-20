@@ -182,12 +182,12 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
   return (
     // 오버레이
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-70 font-sans transition-opacity duration-300"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-70 font-sans transition-opacity duration-300 px-3 sm:px-0"
       onClick={handleModalOverlayClick}
     >
       <div
         ref={modalRef}
-        className="relative flex h-[70vh] w-[90%] flex-col rounded-xl bg-white shadow-2xl md:h-[80vh] md:w-[70%] lg:h-[75vh] lg:w-[60%] xl:w-[50%] max-w-4xl overflow-hidden transition-all duration-300 transform scale-100"
+        className="relative flex h-[90vh] sm:h-[80vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-2xl overflow-hidden transition-all duration-300 transform scale-100 md:h-[80vh] md:w-[70%] lg:h-[75vh] lg:w-[60%] xl:w-[50%]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 로딩 상태 */}
@@ -231,8 +231,8 @@ const CafeChatModal: React.FC<CafeChatModalProps> = ({
         {!isLoading && !error && !requiresLogin && (
           <>
             {/* Header */}
-            <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-10 shadow-sm bg-white sticky top-0">
-              <h2 className="text-xl font-bold text-gray-900">
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-gray-200 p-4 gap-2 rounded-t-xl z-10 shadow-sm bg-white sticky top-0">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 {cafeName} 채팅방
               </h2>
               <div className="flex items-center space-x-2">

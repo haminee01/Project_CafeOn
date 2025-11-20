@@ -254,19 +254,21 @@ export default function MapPage() {
       <MapComponent className="h-screen" cafes={getCafesByTab()} />
 
       {/* 통합 모달 - 탭과 리스트가 함께 */}
-      <div className="absolute bg-white top-1/2 left-4 transform -translate-y-1/2 min-w-96 h-[60vh] rounded-lg shadow-lg z-20 flex flex-col">
+      <div className="absolute bg-white top-1/2 left-2 sm:left-4 transform -translate-y-1/2 w-[calc(100%-1rem)] sm:w-80 md:min-w-96 max-w-sm md:max-w-none h-[50vh] sm:h-[60vh] rounded-lg shadow-lg z-20 flex flex-col">
         {/* 헤더 */}
-        <div className="px-4 pt-4 pb-2">
-          <h2 className="text-lg font-semibold text-primary">CafeOn.</h2>
+        <div className="px-3 sm:px-4 pt-3 sm:pt-4 pb-2">
+          <h2 className="text-base sm:text-lg font-semibold text-primary">
+            CafeOn.
+          </h2>
         </div>
 
         {/* 저장 탭 하위 카테고리 탭들 - 위쪽에 배치 */}
         {activeTab === "saved" && (
-          <div className="px-4 pb-2">
+          <div className="px-3 sm:px-4 pb-2">
             <div className="flex gap-1 flex-wrap max-w-full">
               <button
                 onClick={() => setSavedCategory("all")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
+                className={`px-1.5 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-md transition-colors flex-shrink-0 ${
                   savedCategory === "all"
                     ? "bg-amber-100 text-amber-800 border border-amber-300"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -276,27 +278,29 @@ export default function MapPage() {
               </button>
               <button
                 onClick={() => setSavedCategory("hideout")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
+                className={`px-1.5 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-md transition-colors flex-shrink-0 ${
                   savedCategory === "hideout"
                     ? "bg-amber-100 text-amber-800 border border-amber-300"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                나만의 아지트
+                <span className="hidden sm:inline">나만의 아지트</span>
+                <span className="sm:hidden">아지트</span>
               </button>
               <button
                 onClick={() => setSavedCategory("work")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
+                className={`px-1.5 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-md transition-colors flex-shrink-0 ${
                   savedCategory === "work"
                     ? "bg-amber-100 text-amber-800 border border-amber-300"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                작업하기 좋은
+                <span className="hidden sm:inline">작업하기 좋은</span>
+                <span className="sm:hidden">작업</span>
               </button>
               <button
                 onClick={() => setSavedCategory("atmosphere")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
+                className={`px-1.5 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-md transition-colors flex-shrink-0 ${
                   savedCategory === "atmosphere"
                     ? "bg-amber-100 text-amber-800 border border-amber-300"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -306,34 +310,36 @@ export default function MapPage() {
               </button>
               <button
                 onClick={() => setSavedCategory("taste")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
+                className={`px-1.5 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-md transition-colors flex-shrink-0 ${
                   savedCategory === "taste"
                     ? "bg-amber-100 text-amber-800 border border-amber-300"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                커피, 디저트 맛집
+                <span className="hidden sm:inline">커피, 디저트 맛집</span>
+                <span className="sm:hidden">맛집</span>
               </button>
               <button
                 onClick={() => setSavedCategory("planned")}
-                className={`px-2 py-1.5 text-xs rounded-md transition-colors flex-shrink-0 ${
+                className={`px-1.5 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-md transition-colors flex-shrink-0 ${
                   savedCategory === "planned"
                     ? "bg-amber-100 text-amber-800 border border-amber-300"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                방문예정, 찜
+                <span className="hidden sm:inline">방문예정, 찜</span>
+                <span className="sm:hidden">찜</span>
               </button>
             </div>
           </div>
         )}
         {/* 메인 콘텐츠 영역 */}
-        <div className="flex flex-1 px-4 pb-4 min-h-0">
+        <div className="flex flex-1 px-2 sm:px-4 pb-3 sm:pb-4 min-h-0">
           {/* 탭 버튼들 */}
           <div className="flex flex-col justify-start">
             <button
               onClick={() => setActiveTab("home")}
-              className={` flex items-center justify-center px-2 py-2 w-20 h-20 transition-colors ${
+              className={`flex items-center justify-center px-1 sm:px-2 py-1 sm:py-2 w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 transition-colors ${
                 activeTab === "home"
                   ? "bg-primary text-white"
                   : "text-gray-700 hover:bg-gray-50"
@@ -341,8 +347,9 @@ export default function MapPage() {
             >
               <div className="flex flex-col items-center">
                 <svg
-                  width="20"
-                  height="26"
+                  width="16"
+                  height="20"
+                  className="sm:w-5 sm:h-6"
                   viewBox="0 0 24 32"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -353,12 +360,14 @@ export default function MapPage() {
                   />
                   <circle cx="12" cy="12" r="6" fill="white" />
                 </svg>
-                <span className="text-sm">지도 홈</span>
+                <span className="text-[10px] sm:text-xs md:text-sm hidden sm:inline">
+                  지도 홈
+                </span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab("saved")}
-              className={` flex items-center justify-center px-2 py-2 w-20 h-20 transition-colors ${
+              className={`flex items-center justify-center px-1 sm:px-2 py-1 sm:py-2 w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 transition-colors ${
                 activeTab === "saved"
                   ? "bg-primary text-white"
                   : "text-gray-700 hover:bg-gray-50"
@@ -366,8 +375,9 @@ export default function MapPage() {
             >
               <div className="flex flex-col">
                 <svg
-                  width="24"
-                  height="24"
+                  width="18"
+                  height="18"
+                  className="sm:w-5 sm:h-5 md:w-6 md:h-6"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -377,12 +387,14 @@ export default function MapPage() {
                     fill="currentColor"
                   />
                 </svg>
-                <span className="text-sm">저장</span>
+                <span className="text-[10px] sm:text-xs md:text-sm hidden sm:inline">
+                  저장
+                </span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab("popular")}
-              className={` flex items-center justify-center px-2 py-2 w-20 h-20 transition-colors ${
+              className={`flex items-center justify-center px-1 sm:px-2 py-1 sm:py-2 w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 transition-colors ${
                 activeTab === "popular"
                   ? "bg-primary text-white"
                   : "text-gray-700 hover:bg-gray-50"
@@ -390,8 +402,9 @@ export default function MapPage() {
             >
               <div className="flex flex-col items-center">
                 <svg
-                  width="24"
-                  height="24"
+                  width="18"
+                  height="18"
+                  className="sm:w-5 sm:h-5 md:w-6 md:h-6"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -401,13 +414,15 @@ export default function MapPage() {
                     fill="currentColor"
                   />
                 </svg>
-                <span className="text-sm">인기</span>
+                <span className="text-[10px] sm:text-xs md:text-sm hidden sm:inline">
+                  인기
+                </span>
               </div>
             </button>
           </div>
 
           {/* 카페 카드 리스트 */}
-          <div className="space-y-3 flex-1 overflow-y-auto ml-4">
+          <div className="space-y-2 sm:space-y-3 flex-1 overflow-y-auto ml-2 sm:ml-4">
             {/* 로그인 안내 메시지 */}
             {activeTab === "saved" && !isLoggedIn && !loading && (
               <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -468,16 +483,16 @@ export default function MapPage() {
                 return (
                   <div
                     key={cafe.cafe_id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    className={`p-2 sm:p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedCafe === cafe.cafe_id
                         ? "border-amber-300 bg-amber-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                     onClick={handleCardClick}
                   >
-                    <div className="flex gap-3">
+                    <div className="flex gap-2 sm:gap-3">
                       {/* 카페 이미지 */}
-                      <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative">
                         {(() => {
                           const imageUrl =
                             cafe.photoUrl ||
@@ -521,11 +536,11 @@ export default function MapPage() {
                       </div>
 
                       {/* 카페 정보 */}
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-xs sm:text-sm text-gray-900 mb-1 truncate">
                           {cafe.name}
                         </h3>
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className="text-xs text-gray-600 mb-1 sm:mb-2">
                           {activeTab === "saved" &&
                             savedCategory === "hideout" &&
                             "나만의 아지트 카페"}
@@ -547,8 +562,8 @@ export default function MapPage() {
                           {activeTab === "home" && "영업 중 리뷰 999+"}
                           {activeTab === "popular" && "인기 카페 리뷰 999+"}
                         </p>
-                        <div className="flex gap-2">
-                          <button className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                        <div className="flex gap-1 sm:gap-2">
+                          <button className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-700 rounded text-[10px] sm:text-xs">
                             {activeTab === "saved" &&
                               savedCategory === "hideout" &&
                               "🏠 나만의 아지트"}

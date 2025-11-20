@@ -155,15 +155,15 @@ const QuestionList = ({
         <ul className="space-y-0 divide-y divide-[#999999] border-t border-[#999999]">
           {questions.length > 0 ? (
             questions.map((item) => (
-              <li key={item.id} className="text-base text-gray-800">
+              <li key={item.id} className="text-sm sm:text-base text-gray-800">
                 {/* 문의 항목 클릭 영역 */}
                 <button
                   onClick={() => handleQuestionClick(item.id)}
-                  className="w-full flex justify-between items-center py-4 px-0 text-left hover:bg-gray-50 transition-colors"
+                  className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 sm:py-4 px-0 text-left hover:bg-gray-50 transition-colors gap-2 sm:gap-0"
                 >
-                  <div className="flex items-center space-x-3 flex-1">
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
                     {/* 문의 제목 */}
-                    <span className="font-semibold text-left flex-1">
+                    <span className="font-semibold text-left flex-1 truncate">
                       {item.title}
                     </span>
 
@@ -171,7 +171,7 @@ const QuestionList = ({
                     {questionStatuses[item.id] && (
                       <span
                         style={getStatusBgColor(questionStatuses[item.id])}
-                        className="px-2 py-1 text-xs rounded-full"
+                        className="px-2 py-1 text-xs rounded-full flex-shrink-0"
                       >
                         {getStatusText(questionStatuses[item.id])}
                       </span>
@@ -180,40 +180,42 @@ const QuestionList = ({
                     {/* 가시성 배지 */}
                     <span
                       style={getVisibilityBgColor(item.visibility)}
-                      className="px-2 py-1 text-xs rounded-full"
+                      className="px-2 py-1 text-xs rounded-full flex-shrink-0"
                     >
                       {getVisibilityText(item.visibility)}
                     </span>
                   </div>
 
-                  {/* 작성자 정보 */}
-                  <div className="text-sm text-gray-500 ml-4">
-                    {item.authorNickname}
-                  </div>
+                  <div className="flex items-center gap-2 sm:gap-4 ml-0 sm:ml-4">
+                    {/* 작성자 정보 */}
+                    <div className="text-xs sm:text-sm text-gray-500">
+                      {item.authorNickname}
+                    </div>
 
-                  {/* 작성일 정보 */}
-                  <div className="text-sm text-gray-500 ml-4">
-                    {formatSimpleDate(item.createdAt)}
-                  </div>
+                    {/* 작성일 정보 */}
+                    <div className="text-xs sm:text-sm text-gray-500">
+                      {formatSimpleDate(item.createdAt)}
+                    </div>
 
-                  {/* 화살표 아이콘 */}
-                  <svg
-                    className="w-5 h-5 text-gray-400 ml-2"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                    {/* 화살표 아이콘 */}
+                    <svg
+                      className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
                 </button>
               </li>
             ))
           ) : (
-            <div className="py-8 text-center text-gray-500">
+            <div className="py-8 text-center text-gray-500 text-sm sm:text-base">
               {keyword
                 ? `"${keyword}"에 대한 검색 결과가 없습니다.`
                 : "등록된 문의가 없습니다."}
@@ -271,14 +273,14 @@ export default function QnAPage() {
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
       <div className="flex-grow">
-        <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 py-6 sm:py-8">
           {/* 페이지 타이틀 영역 */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold">QnA</h1>
+          <div className="mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h1 className="text-xl sm:text-2xl font-bold">QnA</h1>
               <button
                 onClick={handleCreateQuestion}
-                className="bg-[#6E4213] text-white px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+                className="bg-[#6E4213] text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md hover:bg-[#5a360f] transition-colors text-sm sm:text-base w-full sm:w-auto"
               >
                 문의 작성
               </button>
@@ -286,33 +288,38 @@ export default function QnAPage() {
           </div>
 
           {/* 검색 영역 */}
-          <div className="mb-6">
-            <form onSubmit={handleSearch} className="flex gap-2">
+          <div className="mb-4 sm:mb-6">
+            <form
+              onSubmit={handleSearch}
+              className="flex flex-col sm:flex-row gap-2"
+            >
               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="문의 제목으로 검색..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6E4213] focus:border-transparent"
+                className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6E4213] focus:border-transparent"
               />
-              <button
-                type="submit"
-                className="bg-[#6E4213] text-white px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
-              >
-                검색
-              </button>
-              {searchKeyword && (
+              <div className="flex gap-2">
                 <button
-                  type="button"
-                  onClick={handleClearSearch}
-                  className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                  type="submit"
+                  className="bg-[#6E4213] text-white px-3 sm:px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors text-sm sm:text-base flex-1 sm:flex-none"
                 >
-                  초기화
+                  검색
                 </button>
-              )}
+                {searchKeyword && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="bg-gray-500 text-white px-3 sm:px-4 py-2 rounded-md hover:bg-gray-600 transition-colors text-sm sm:text-base"
+                  >
+                    초기화
+                  </button>
+                )}
+              </div>
             </form>
             {searchKeyword && (
-              <div className="mt-2 text-sm text-gray-600">
+              <div className="mt-2 text-xs sm:text-sm text-gray-600">
                 검색어: "{searchKeyword}"
               </div>
             )}

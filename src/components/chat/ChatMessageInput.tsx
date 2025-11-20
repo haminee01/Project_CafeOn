@@ -119,14 +119,14 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
     <>
       <form
         onSubmit={handleSubmit}
-        className={`p-4 border-t border-gray-200 bg-white flex items-center shadow-md ${className}`}
+        className={`p-3 sm:p-4 border-t border-gray-200 bg-white flex items-center shadow-md ${className}`}
       >
         {/* 이미지 버튼 */}
         <button
           type="button"
           onClick={handleImageButtonClick}
           disabled={disabled}
-          className="p-3 rounded-xl transition duration-150 shadow-sm mr-2 text-gray-600 hover:text-[#6E4213] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2 sm:p-3 rounded-xl transition duration-150 shadow-sm mr-2 text-gray-600 hover:text-[#6E4213] disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="이미지 첨부"
         >
           <svg
@@ -159,13 +159,13 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
           onChange={(e) => setInput(e.target.value)}
           placeholder="메시지를 입력하세요..."
           disabled={disabled}
-          className="flex-1 p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6E4213] transition duration-150 mr-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-xl text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#6E4213] transition duration-150 mr-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
           autoFocus
         />
         <button
           type="submit"
           disabled={!input.trim() || disabled}
-          className={`p-3 rounded-xl transition duration-150 shadow-sm
+          className={`px-4 py-2 sm:p-3 rounded-xl transition duration-150 shadow-sm
             ${
               input.trim() && !disabled
                 ? "bg-[#6E4213] text-white hover:bg-[#8d5e33]"

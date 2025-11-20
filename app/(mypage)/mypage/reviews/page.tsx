@@ -85,16 +85,22 @@ const ReviewItem = ({
   const date = formatDate(review.createdAt);
   const rating = review.rating;
   const content = review.content;
-  
+
   // 리뷰 이미지 처리: 다양한 형식 지원
-  const images: string[] = review.images ? review.images.map((img: any) => {
-    // 이미지가 객체인 경우
-    if (typeof img === 'object' && img !== null) {
-      return img.imageUrl || img.image_url || img.url || img.publicUrl || '';
-    }
-    // 이미지가 문자열인 경우
-    return img || '';
-  }).filter((url: string) => url && url.trim() !== '') : [];
+  const images: string[] = review.images
+    ? review.images
+        .map((img: any) => {
+          // 이미지가 객체인 경우
+          if (typeof img === "object" && img !== null) {
+            return (
+              img.imageUrl || img.image_url || img.url || img.publicUrl || ""
+            );
+          }
+          // 이미지가 문자열인 경우
+          return img || "";
+        })
+        .filter((url: string) => url && url.trim() !== "")
+    : [];
 
   return (
     <div className="bg-white p-6 border border-[#CDCDCD] rounded-2xl shadow-sm space-y-3">
@@ -137,10 +143,12 @@ const ReviewItem = ({
                     src={imageUrl}
                     alt={`${cafeName} 리뷰 사진 ${index + 1}`}
                     className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => window.open(imageUrl, '_blank')}
+                    onClick={() => window.open(imageUrl, "_blank")}
                     onError={(e) => {
                       // 이미지 로드 실패 시 플레이스홀더로 대체
-                      e.currentTarget.src = 'data:image/svg+xml;base64,' + btoa(`
+                      e.currentTarget.src =
+                        "data:image/svg+xml;base64," +
+                        btoa(`
                         <svg width="96" height="96" xmlns="http://www.w3.org/2000/svg">
                           <rect width="100%" height="100%" fill="#f3f4f6"/>
                           <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-family="Arial" font-size="12">이미지</text>
@@ -247,8 +255,6 @@ export default function MyReviewsPage() {
       // 리뷰 목록 다시 조회하여 즉시 반영
       await fetchReviews(currentPage);
       handleCloseEditModal();
-      // 성공 토스트
-      showToast("리뷰가 수정되었습니다.", "success");
     } catch (error) {
       console.error("리뷰 목록 조회 실패:", error);
     }

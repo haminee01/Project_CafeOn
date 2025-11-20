@@ -174,15 +174,15 @@ export default function QuestionDetailPage({
   }
 
   return (
-    <div className="p-8 bg-white min-h-full">
+    <div className="p-4 sm:p-6 md:p-8 bg-white min-h-full">
       {/* 헤더 영역 */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <button
           onClick={handleBackClick}
-          className="text-[#6E4213] hover:text-[#5a360f] mb-4 flex items-center"
+          className="text-[#6E4213] hover:text-[#5a360f] mb-3 sm:mb-4 flex items-center text-sm sm:text-base"
         >
           <svg
-            className="w-5 h-5 mr-2"
+            className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -197,23 +197,25 @@ export default function QuestionDetailPage({
           문의 목록으로 돌아가기
         </button>
 
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">문의 상세</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+            문의 상세
+          </h1>
 
           {/* 액션 버튼들 (답변 대기 상태일 때만 표시) */}
           {question.status === "PENDING" && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               <button
                 onClick={handleEditClick}
                 disabled={actionLoading}
-                className="bg-[#C19B6C] text-white px-4 py-2 rounded-md hover:bg-[#a6855d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="bg-[#C19B6C] text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md hover:bg-[#a6855d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm flex-1 sm:flex-none"
               >
                 수정
               </button>
               <button
                 onClick={handleDeleteClick}
                 disabled={actionLoading}
-                className="bg-[#999999] text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="bg-[#999999] text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm flex-1 sm:flex-none"
               >
                 삭제
               </button>
@@ -233,16 +235,16 @@ export default function QuestionDetailPage({
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-md border border-gray-200">
           {/* 문의 헤더 */}
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <h2 className="text-xl font-semibold text-gray-800 flex-1 min-w-0">
+          <div className="p-4 sm:p-6 border-b border-gray-200">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800 flex-1 min-w-0">
                 {question.title}
               </h2>
 
               {/* 상태 배지 */}
               <span
                 style={getStatusBgColor(question.status)}
-                className="px-3 py-1 text-sm rounded-full font-medium"
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full font-medium"
               >
                 {getStatusText(question.status)}
               </span>
@@ -250,14 +252,14 @@ export default function QuestionDetailPage({
               {/* 가시성 배지 */}
               <span
                 style={getVisibilityBgColor(question.visibility)}
-                className="px-3 py-1 text-sm rounded-full font-medium"
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full font-medium"
               >
                 {getVisibilityText(question.visibility)}
               </span>
             </div>
 
             {/* 메타 정보 */}
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
               <div>
                 <span className="font-medium">작성자:</span>{" "}
                 {question.authorNickname}
@@ -276,12 +278,12 @@ export default function QuestionDetailPage({
           </div>
 
           {/* 문의 내용 */}
-          <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">
+          <div className="p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-3 sm:mb-4">
               문의 내용
             </h3>
-            <div className="bg-gray-50 p-4 rounded-md">
-              <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-md">
+              <div className="whitespace-pre-wrap text-sm sm:text-base text-gray-700 leading-relaxed">
                 {question.content}
               </div>
             </div>
@@ -289,12 +291,12 @@ export default function QuestionDetailPage({
 
           {/* 답변이 있는 경우 */}
           {question.status === "ANSWERED" && (
-            <div className="p-6 border-t border-gray-200 bg-green-50">
-              <h3 className="text-lg font-medium text-gray-800 mb-4">
+            <div className="p-4 sm:p-6 border-t border-gray-200 bg-green-50">
+              <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-3 sm:mb-4">
                 관리자 답변
               </h3>
-              <div className="bg-white p-4 rounded-md border border-green-200">
-                <div className="text-gray-700">
+              <div className="bg-white p-3 sm:p-4 rounded-md border border-green-200">
+                <div className="text-sm sm:text-base text-gray-700">
                   {/* 답변 내용이 API 응답에 포함되어 있지 않으므로 추후 추가 필요 */}
                   답변이 등록되었습니다. (답변 내용은 추후 API에서 제공될 예정)
                 </div>
@@ -322,26 +324,26 @@ export default function QuestionDetailPage({
       {isDeleteConfirmOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <div className="p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">
                 문의 삭제 확인
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 정말로 이 문의를 삭제하시겠습니까? 삭제된 문의는 복구할 수
                 없습니다.
               </p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
                 <button
                   onClick={handleDeleteCancel}
                   disabled={actionLoading}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors disabled:opacity-50"
+                  className="px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors disabled:opacity-50"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleDeleteConfirm}
                   disabled={actionLoading}
-                  className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                  className="px-3 sm:px-4 py-2 text-sm sm:text-base text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
                   {actionLoading ? "삭제 중..." : "삭제"}
                 </button>

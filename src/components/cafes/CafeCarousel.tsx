@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Cafe } from "@/types/cafe";
 import CafeCard from "./CafeCard";
 
@@ -19,8 +19,27 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
   description = "추천드리는 카페예요.",
   showAllButton = true,
 }) => {
+  // 반응형 카드 수 계산
+  const getCardsPerPage = () => {
+    if (typeof window === "undefined") return 4;
+    const width = window.innerWidth;
+    if (width >= 1024) return 4; // lg: 데스크탑
+    if (width >= 768) return 3; // md: 태블릿
+    return 2; // 모바일
+  };
+
   const [currentPage, setCurrentPage] = useState(0);
-  const cardsPerPage = 4; // 4개로 제한
+  const [cardsPerPage, setCardsPerPage] = useState(getCardsPerPage());
+
+  useEffect(() => {
+    const handleResize = () => {
+      setCardsPerPage(getCardsPerPage());
+      setCurrentPage(0); // 화면 크기 변경 시 첫 페이지로 리셋
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const totalPages = Math.ceil(cafes.length / cardsPerPage);
 
   const goToPrevious = () => {
@@ -45,65 +64,73 @@ const CafeCarousel: React.FC<CafeCarouselProps> = ({
 
   return (
     <div className={`w-full ${className}`}>
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">{title}</h2>
-      <p className="text-gray-600 mb-6">{description}</p>
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
+        {title}
+      </h2>
+      <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+        {description}
+      </p>
 
       <div className="relative">
-        {/* 카페 카드 그리드 - 한 줄로 제한 */}
-        <div className="grid grid-cols-4 gap-5 px-12">
+        {/* 카페 카드 그리드 - 반응형 */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 px-2 sm:px-4 md:px-8 lg:px-12">
           {currentCafes.map((cafe) => (
             <CafeCard key={cafe.cafe_id} cafe={cafe} />
           ))}
         </div>
 
-        {/* 좌우 버튼 - 카드 그리드 양 옆에 배치 */}
-        <button
-          onClick={goToPrevious}
-          disabled={currentPage === 0}
-          className={`absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full transition-colors z-10 ${
-            currentPage === 0
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-white text-gray-700 hover:bg-gray-50 shadow-lg border"
-          }`}
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
+        {/* 좌우 버튼 - 카드 그리드 양 옆에 배치 (데스크탑에서만 표시) */}
+        {cardsPerPage >= 4 && (
+          <>
+            <button
+              onClick={goToPrevious}
+              disabled={currentPage === 0}
+              className={`hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 items-center justify-center w-10 h-10 rounded-full transition-colors z-10 ${
+                currentPage === 0
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-white text-gray-700 hover:bg-gray-50 shadow-lg border"
+              }`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
 
-        <button
-          onClick={goToNext}
-          disabled={currentPage === totalPages - 1}
-          className={`absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full transition-colors z-10 ${
-            currentPage === totalPages - 1
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-white text-gray-700 hover:bg-gray-50 shadow-lg border"
-          }`}
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
+            <button
+              onClick={goToNext}
+              disabled={currentPage === totalPages - 1}
+              className={`hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 items-center justify-center w-10 h-10 rounded-full transition-colors z-10 ${
+                currentPage === totalPages - 1
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-white text-gray-700 hover:bg-gray-50 shadow-lg border"
+              }`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </>
+        )}
 
         {/* 페이지 인디케이터 */}
         {totalPages > 1 && (

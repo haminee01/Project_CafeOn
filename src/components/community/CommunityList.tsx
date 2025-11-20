@@ -37,9 +37,9 @@ export default function CommunityList({
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="max-w-4xl mx-auto p-2 sm:p-4">
       {/* 게시글 목록 렌더링 */}
-      <div className="pr-4 pl-4 bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 min-h-[400px]">
+      <div className="pr-2 sm:pr-4 pl-2 sm:pl-4 bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 min-h-[400px]">
         {posts.length > 0 ? (
           posts.map((post) => <PostItem key={post.id} post={post} />)
         ) : (

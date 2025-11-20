@@ -136,7 +136,8 @@ const ChatRoomList: React.FC<{
 const ChatRoomView: React.FC<{
   activeRoom: MyChatRoom | null;
   onLeaveRoom: () => void;
-}> = ({ activeRoom, onLeaveRoom }) => {
+  onToggleRoomList: () => void;
+}> = ({ activeRoom, onLeaveRoom, onToggleRoomList }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user } = useAuth();
   const currentUserId = user?.id || "user-me";
@@ -327,10 +328,16 @@ const ChatRoomView: React.FC<{
     <div className="flex-1 flex flex-col bg-white h-full relative overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between border-gray-200 p-4 rounded-t-xl z-10 shadow-sm bg-white">
-        <h2 className="text-xl font-bold text-gray-900">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900">
           {activeRoom.displayName}
         </h2>
         <div className="flex items-center space-x-2">
+          <button
+            className="md:hidden text-gray-900 px-3 py-1 rounded-full border border-gray-200 text-sm"
+            onClick={onToggleRoomList}
+          >
+            방 목록
+          </button>
           {/* 사이드바 토글 버튼 (햄버거 메뉴) */}
           <button
             onClick={(e) => {
@@ -538,28 +545,45 @@ const ChatListPage = () => {
     return () => clearInterval(interval);
   }, [activeRoomId]); // activeRoomId 변경 시에도 새로고침
 
+  const [isMobileRoomListOpen, setIsMobileRoomListOpen] = useState(false);
+
+  const handleSelectRoom = (roomId: number) => {
+    setIsMobileRoomListOpen(false);
+    handleRoomClick(roomId);
+  };
+
   return (
-    <div className="flex h-[calc(100vh-200px)] w-full bg-white">
+    <div className="flex flex-col h-[calc(100vh-200px)] w-full bg-white">
       {/* 채팅방이 선택되지 않은 경우: 목록만 전체 화면에 표시 */}
       {!activeRoom ? (
         <div className="w-full h-full overflow-y-auto bg-white">
           <ChatRoomList
             chatRooms={chatRooms}
             activeRoomId={activeRoomId}
-            onRoomClick={handleRoomClick}
+            onRoomClick={handleSelectRoom}
             isLoading={isLoading}
             error={error}
             onRetry={loadChatRooms}
           />
         </div>
       ) : (
-        <>
-          {/* 채팅방이 선택된 경우: 왼쪽 목록 + 오른쪽 채팅방 */}
-          <aside className="w-80 flex-shrink-0 border-r border-gray-200 h-full overflow-y-auto bg-white">
+        <div className="flex-1 flex flex-col md:flex-row h-full relative">
+          {/* 모바일 오버레이 */}
+          {isMobileRoomListOpen && (
+            <div
+              className="md:hidden fixed inset-0 bg-black bg-opacity-40 z-40"
+              onClick={() => setIsMobileRoomListOpen(false)}
+            />
+          )}
+          <aside
+            className={`${
+              isMobileRoomListOpen ? "block" : "hidden"
+            } md:block w-full md:w-80 flex-shrink-0 border-r border-gray-200 h-full overflow-y-auto bg-white z-50 md:z-auto md:static fixed inset-y-0 left-0`}
+          >
             <ChatRoomList
               chatRooms={chatRooms}
               activeRoomId={activeRoomId}
-              onRoomClick={handleRoomClick}
+              onRoomClick={handleSelectRoom}
               isLoading={isLoading}
               error={error}
               onRetry={loadChatRooms}
@@ -573,9 +597,10 @@ const ChatListPage = () => {
               onLeaveRoom={() => {
                 window.location.reload();
               }}
+              onToggleRoomList={() => setIsMobileRoomListOpen((prev) => !prev)}
             />
           </main>
-        </>
+        </div>
       )}
     </div>
   );

@@ -34,29 +34,34 @@ export default function MypageSidebar() {
   const pathname = usePathname();
 
   return (
-    <nav className="w-64 flex-shrink-0 p-6 border-r border-[#CDCDCD] bg-white">
-      <ul className="space-y-1">
+    <nav className="w-full lg:w-64 flex-shrink-0 p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-[#CDCDCD] bg-white mb-4 lg:mb-0">
+      <ul className="flex lg:flex-col flex-wrap lg:space-y-1 gap-2 lg:gap-0">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const IconComponent = icons[item.iconKey as keyof typeof icons];
 
           return (
-            <li key={item.name}>
+            <li
+              key={item.name}
+              className="flex-1 lg:flex-none min-w-[calc(50%-0.25rem)] lg:min-w-0"
+            >
               <a
                 href={item.href}
                 className={`
-                  flex items-center p-3 rounded-xl transition-colors duration-200 
+                  flex items-center justify-center lg:justify-start p-2 sm:p-3 rounded-xl transition-colors duration-200 
                   ${
                     isActive
-                      ? "text-[#6E4213] font-semibold"
-                      : "text-gray-600 hover:text-[#C19B6C]"
+                      ? "text-[#6E4213] font-semibold bg-[#6E4213]/10"
+                      : "text-gray-600 hover:text-[#C19B6C] hover:bg-gray-50"
                   }
                 `}
               >
-                <span className="w-5 h-5 mr-3 flex items-center justify-center">
+                <span className="w-4 h-4 sm:w-5 sm:h-5 lg:mr-3 flex items-center justify-center flex-shrink-0">
                   {IconComponent && <IconComponent />}
                 </span>
-                <span className="text-base">{item.name}</span>
+                <span className="text-xs sm:text-sm lg:text-base text-center lg:text-left hidden sm:inline">
+                  {item.name}
+                </span>
               </a>
             </li>
           );

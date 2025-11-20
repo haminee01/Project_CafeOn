@@ -116,18 +116,18 @@ const InquiryContent = ({
                 {/* 문의 항목 클릭 영역 */}
                 <button
                   onClick={() => handleQuestionClick(item.id)}
-                  className="w-full flex justify-between items-center py-4 px-0 text-left hover:bg-gray-50 transition-colors"
+                  className="w-full flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 py-4 px-0 text-left hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center space-x-3 flex-1">
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
                     {/* 문의 제목 */}
-                    <span className="font-semibold text-left flex-1">
+                    <span className="font-semibold text-left flex-1 truncate">
                       {item.title}
                     </span>
 
                     {/* 상태 배지 */}
                     <span
                       style={getStatusBgColor(item.status)}
-                      className="px-2 py-1 text-xs rounded-full"
+                      className="px-2 py-1 text-[10px] sm:text-xs rounded-full flex-shrink-0"
                     >
                       {getStatusText(item.status)}
                     </span>
@@ -135,30 +135,29 @@ const InquiryContent = ({
                     {/* 가시성 배지 */}
                     <span
                       style={getVisibilityBgColor(item.visibility)}
-                      className="px-2 py-1 text-xs rounded-full"
+                      className="px-2 py-1 text-[10px] sm:text-xs rounded-full flex-shrink-0"
                     >
                       {getVisibilityText(item.visibility)}
                     </span>
                   </div>
 
                   {/* 작성일 정보 */}
-                  <div className="text-sm text-gray-500 ml-4">
-                    {formatSimpleDate(item.createdAt)}
+                  <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto text-xs sm:text-sm text-gray-500">
+                    <span>{formatSimpleDate(item.createdAt)}</span>
+                    {/* 화살표 아이콘 */}
+                    <svg
+                      className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                   </div>
-
-                  {/* 화살표 아이콘 */}
-                  <svg
-                    className="w-5 h-5 text-gray-400 ml-2"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
                 </button>
               </li>
             ))
@@ -226,25 +225,28 @@ export default function InquiryHistoryPage() {
   }
 
   return (
-    <div className="p-8 bg-white min-h-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-full">
       {/* 헤더 영역 */}
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">나의 문의 내역</h1>
+      <header className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold">나의 문의 내역</h1>
       </header>
 
       {/* 검색 영역 */}
       <div className="mb-6">
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form
+          onSubmit={handleSearch}
+          className="flex flex-col sm:flex-row gap-2 sm:gap-3"
+        >
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="문의 제목으로 검색..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6E4213] focus:border-transparent"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#6E4213] focus:border-transparent"
           />
           <button
             type="submit"
-            className="bg-[#6E4213] text-white px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
+            className="bg-[#6E4213] text-white px-4 py-2 rounded-md text-sm sm:text-base hover:bg-[#5a360f] transition-colors w-full sm:w-auto"
           >
             검색
           </button>
@@ -252,14 +254,14 @@ export default function InquiryHistoryPage() {
             <button
               type="button"
               onClick={handleClearSearch}
-              className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+              className="bg-gray-500 text-white px-4 py-2 rounded-md text-sm sm:text-base hover:bg-gray-600 transition-colors w-full sm:w-auto"
             >
               초기화
             </button>
           )}
         </form>
         {searchKeyword && (
-          <div className="mt-2 text-sm text-gray-600">
+          <div className="mt-2 text-xs sm:text-sm text-gray-600">
             검색어: "{searchKeyword}"
           </div>
         )}

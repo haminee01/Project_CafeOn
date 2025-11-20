@@ -114,11 +114,11 @@ const HistoryContent = ({
             posts.map((post) => (
               <div
                 key={post.id}
-                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+                className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
               >
                 <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 leading-tight">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 leading-tight">
                       {post.title}
                     </h3>
                     {(() => {
@@ -127,7 +127,7 @@ const HistoryContent = ({
                       );
                       return (
                         <span
-                          className={`text-xs text-white px-2 py-1 rounded-full ${
+                          className={`text-xs text-white px-2 py-1 rounded-full self-start ${
                             typeOption?.color || "bg-gray-500"
                           }`}
                         >
@@ -137,7 +137,7 @@ const HistoryContent = ({
                     })()}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-600">
                     <div className="flex items-center gap-1">
                       <span className="font-medium">작성자:</span>
                       <span>{post.authorNickname}</span>
@@ -156,7 +156,7 @@ const HistoryContent = ({
                     </div>
                   </div>
 
-                  <div className="text-sm text-gray-500 border-t border-gray-100 pt-3">
+                  <div className="text-xs sm:text-sm text-gray-500 border-t border-gray-100 pt-3">
                     작성일: {new Date(post.createdAt).toLocaleDateString()}
                   </div>
                 </div>
@@ -209,23 +209,23 @@ const HistoryContent = ({
             comments.map((comment) => (
               <div
                 key={comment.commentId}
-                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+                className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
               >
                 <div className="space-y-3">
-                  <div className="text-sm text-gray-600 bg-gray-50 border border-[#CDCDCD] rounded-lg px-3 py-2 rounded-md">
+                  <div className="text-xs sm:text-sm text-gray-600 bg-gray-50 border border-[#CDCDCD] rounded-lg px-3 py-2 rounded-md">
                     <span className="font-medium">글 ID:</span> {comment.postId}
                   </div>
 
-                  <div className="text-gray-900 leading-relaxed">
+                  <div className="text-sm text-gray-900 leading-relaxed">
                     {comment.content}
                   </div>
 
-                  <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500 border-t border-gray-100 pt-3">
                     <div className="flex items-center gap-1">
                       <span className="font-medium">좋아요:</span>
                       <span>{comment.likeCount}</span>
                     </div>
-                    <div>
+                    <div className="text-right">
                       작성일: {new Date(comment.createdAt).toLocaleDateString()}
                     </div>
                   </div>
@@ -279,11 +279,11 @@ const HistoryContent = ({
             likedPosts.map((post) => (
               <div
                 key={post.id}
-                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+                className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
               >
                 <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 leading-tight">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 leading-tight">
                       {post.title}
                     </h3>
                     <div className="flex items-center gap-2">
@@ -293,7 +293,7 @@ const HistoryContent = ({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-600">
                     <div className="flex items-center gap-1">
                       <span className="font-medium">작성자:</span>
                       <span>{post.author}</span>
@@ -312,7 +312,7 @@ const HistoryContent = ({
                     </div>
                   </div>
 
-                  <div className="text-sm text-gray-500 border-t border-gray-100 pt-3">
+                  <div className="text-xs sm:text-sm text-gray-500 border-t border-gray-100 pt-3">
                     작성일: {new Date(post.createdAt).toLocaleDateString()}
                   </div>
                 </div>
@@ -365,29 +365,29 @@ const HistoryContent = ({
             likedComments.map((comment) => (
               <div
                 key={comment.commentId}
-                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+                className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
               >
                 <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="text-sm text-gray-600 bg-gray-50 border border-[#CDCDCD] rounded-lg px-3 py-2 rounded-md flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div className="text-xs sm:text-sm text-gray-600 bg-gray-50 border border-[#CDCDCD] rounded-lg px-3 py-2 rounded-md flex-1">
                       <span className="font-medium">글 ID:</span>{" "}
                       {comment.postId}
                     </div>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full sm:ml-2 self-start">
                       좋아요한 댓글
                     </span>
                   </div>
 
-                  <div className="text-gray-900 leading-relaxed">
+                  <div className="text-sm text-gray-900 leading-relaxed">
                     {comment.content}
                   </div>
 
-                  <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500 border-t border-gray-100 pt-3">
                     <div className="flex items-center gap-1">
                       <span className="font-medium">좋아요:</span>
                       <span>{comment.likeCount}</span>
                     </div>
-                    <div>
+                    <div className="text-right">
                       작성일: {new Date(comment.createdAt).toLocaleDateString()}
                     </div>
                   </div>
@@ -468,22 +468,22 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="p-8 bg-white min-h-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-full">
       {/* 닉네임님의 히스토리 헤더 */}
-      <h1 className="text-2xl font-bold mb-6">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
         {user?.username || "사용자"}님의 히스토리
       </h1>
 
       {/* 탭 메뉴 */}
-      <div className="border-b border-gray-300 mb-6">
-        <nav className="-mb-px flex justify-between">
+      <div className="border-b border-gray-300 mb-4 sm:mb-6">
+        <nav className="-mb-px flex overflow-x-auto gap-2">
           {historyTabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
               className={`
-                whitespace-nowrap pb-3 text-lg font-medium transition-colors duration-200
-                flex-grow text-center
+                whitespace-nowrap pb-3 text-sm sm:text-base font-medium transition-colors duration-200
+                flex-1 text-center
                 ${
                   activeTab === tab.key
                     ? "border-b-2 border-[#6E4213] text-[#6E4213] font-semibold"

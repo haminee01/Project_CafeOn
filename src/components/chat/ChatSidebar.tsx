@@ -46,7 +46,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
       {/* 사이드바 본체 */}
       <div
-        className={`absolute inset-y-0 right-0 w-64 bg-white shadow-2xl transition-transform duration-300 ease-in-out z-40`}
+        className={`absolute inset-y-0 right-0 w-full max-w-xs sm:w-64 bg-white shadow-2xl transition-transform duration-300 ease-in-out z-40`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col h-full border-l border-gray-200">

@@ -54,40 +54,42 @@ export default function HomePage() {
     fetchCafes();
   }, []);
   return (
-    <div className="min-h-screen px-20">
-      <SearchBar />
+    <div className="min-h-screen px-4 sm:px-6 lg:px-8 xl:px-0">
+      <div className="w-full max-w-6xl xl:max-w-7xl mx-auto">
+        <SearchBar />
 
-      <Map className="mb-10" cafes={randomCafes} />
+        <Map className="mb-6 sm:mb-8 md:mb-10" cafes={randomCafes} />
 
-      {wishlistTopCafes.length > 0 && (
-        <div>
+        {wishlistTopCafes.length > 0 && (
+          <div>
+            <CafeCarousel
+              cafes={wishlistTopCafes}
+              title="찜 많은 카페"
+              description="찜이 많은 카페를 만나보세요."
+              showAllButton={true}
+            />
+          </div>
+        )}
+
+        {hotCafes.length > 0 && (
+          <div className="mt-6 sm:mt-8 md:mt-10">
+            <CafeCarousel
+              cafes={hotCafes}
+              title="요즘 뜨고 있는 카페"
+              description="최근 사람들이 많이 찾는 카페를 엄선했어요."
+              showAllButton={true}
+            />
+          </div>
+        )}
+
+        <div className="mt-6 sm:mt-8 md:mt-10">
           <CafeCarousel
-            cafes={wishlistTopCafes}
-            title="찜 많은 카페"
-            description="찜이 많은 카페를 만나보세요."
+            cafes={randomCafes}
+            title="이런 카페는 어때요?"
+            description="추천 드리는 카페입니다."
             showAllButton={true}
           />
         </div>
-      )}
-
-      {hotCafes.length > 0 && (
-        <div className="mt-10">
-          <CafeCarousel
-            cafes={hotCafes}
-            title="요즘 뜨고 있는 카페"
-            description="최근 사람들이 많이 찾는 카페를 엄선했어요."
-            showAllButton={true}
-          />
-        </div>
-      )}
-
-      <div className="mt-10">
-        <CafeCarousel
-          cafes={randomCafes}
-          title="이런 카페는 어때요?"
-          description="추천 드리는 카페입니다."
-          showAllButton={true}
-        />
       </div>
     </div>
   );

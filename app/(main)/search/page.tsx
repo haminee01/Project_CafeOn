@@ -44,10 +44,13 @@ export default function SearchResultsPage() {
     const fetchCafes = async () => {
       setLoading(true);
       try {
-        const results = await searchCafes(searchQuery, selectedCategory || undefined);
+        const results = await searchCafes(
+          searchQuery,
+          selectedCategory || undefined
+        );
         // 이미지가 있는 카페만 필터링
-        const cafesWithImages = results.filter(cafe => 
-          cafe.photoUrl || (cafe.images && cafe.images.length > 0)
+        const cafesWithImages = results.filter(
+          (cafe) => cafe.photoUrl || (cafe.images && cafe.images.length > 0)
         );
         setCafes(cafesWithImages);
       } catch (error: any) {
@@ -104,13 +107,13 @@ export default function SearchResultsPage() {
   const availableTags = useMemo(() => {
     // 모든 카페들의 태그 수집 (필터링 전 원본 카페 목록)
     const allTags = cafes.flatMap((cafe) => cafe.tags || []);
-    
+
     // 태그별 개수 계산
     const tagCounts = new Map<string, number>();
     allTags.forEach((tag) => {
       tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
     });
-    
+
     // 개수가 많은 순으로 정렬하고 상위 10개만 반환
     return Array.from(tagCounts.entries())
       .sort((a, b) => b[1] - a[1]) // 개수가 많은 순
@@ -152,10 +155,10 @@ export default function SearchResultsPage() {
         placeholder="어떤 카페를 찾아볼까요?"
       />
 
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 sm:px-6 md:px-8">
         {/* 카테고리 필터 - 검색 결과의 태그 표시 */}
         {availableTags.length > 0 && (
-          <div className="mb-8 flex justify-center">
+          <div className="mb-6 sm:mb-8 flex justify-center">
             <CategoryFilter
               categories={availableTags}
               selectedCategory={selectedCategory}
