@@ -6,8 +6,9 @@ import { useMyQuestionDetail } from "@/hooks/useMyQuestionDetail";
 import { useMyQuestionActions } from "@/hooks/useMyQuestionActions";
 import { useAuth } from "@/contexts/AuthContext";
 import QuestionEditModal from "@/components/qna/QuestionEditModal";
-import { useToast } from "@/components/common/Toast";
+import { useToastContext } from "@/components/common/ToastProvider";
 import { formatDateTime } from "@/utils/dateFormat";
+import { colors } from "@/constants/colors";
 
 interface QuestionDetailPageProps {
   params: Promise<{
@@ -22,7 +23,7 @@ export default function QuestionDetailPage({
   const { isLoggedIn, isLoading: authLoading } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const { showToast, ToastContainer } = useToast();
+  const { showToast } = useToastContext();
 
   const resolvedParams = use(params);
   const questionId = parseInt(resolvedParams.id);
@@ -84,14 +85,15 @@ export default function QuestionDetailPage({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  // 상태 배경색 스타일
+  const getStatusBgColor = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "text-orange-600 bg-orange-100";
+        return { backgroundColor: colors.brown, color: "white" };
       case "ANSWERED":
-        return "text-green-600 bg-green-100";
+        return { backgroundColor: colors.beige, color: "white" };
       default:
-        return "text-gray-600 bg-gray-100";
+        return { backgroundColor: "#6b7280", color: "white" };
     }
   };
 
@@ -99,28 +101,20 @@ export default function QuestionDetailPage({
     return visibility === "PUBLIC" ? "공개" : "비공개";
   };
 
+  // 가시성 배경색 스타일
+  const getVisibilityBgColor = (visibility: string) => {
+    if (visibility === "PUBLIC") {
+      return { backgroundColor: colors.beige, color: "white" };
+    } else {
+      return { backgroundColor: "#6b7280", color: "white" };
+    }
+  };
+
   // 인증 로딩 중
   if (authLoading) {
     return (
       <div className="p-8 bg-white min-h-full flex items-center justify-center">
         <div className="text-gray-500">로딩 중...</div>
-      </div>
-    );
-  }
-
-  // 로그인하지 않은 경우
-  if (!isLoggedIn) {
-    return (
-      <div className="p-8 bg-white min-h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-gray-500 mb-4">로그인이 필요합니다.</div>
-          <button
-            onClick={() => router.push("/login")}
-            className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
-          >
-            로그인하기
-          </button>
-        </div>
       </div>
     );
   }
@@ -247,15 +241,17 @@ export default function QuestionDetailPage({
 
               {/* 상태 배지 */}
               <span
-                className={`px-3 py-1 text-sm rounded-full font-medium ${getStatusColor(
-                  question.status
-                )}`}
+                style={getStatusBgColor(question.status)}
+                className="px-3 py-1 text-sm rounded-full font-medium"
               >
                 {getStatusText(question.status)}
               </span>
 
               {/* 가시성 배지 */}
-              <span className="px-3 py-1 text-sm rounded-full font-medium bg-blue-100 text-blue-600">
+              <span
+                style={getVisibilityBgColor(question.visibility)}
+                className="px-3 py-1 text-sm rounded-full font-medium"
+              >
                 {getVisibilityText(question.visibility)}
               </span>
             </div>
@@ -354,9 +350,6 @@ export default function QuestionDetailPage({
           </div>
         </div>
       )}
-
-      {/* 토스트 컨테이너 */}
-      <ToastContainer />
     </div>
   );
 }

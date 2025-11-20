@@ -6,7 +6,7 @@ import Button from "@/components/common/Button";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { createReview, updateReview } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import Toast from "../common/Toast";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface ReviewWriteModalProps {
   onClose: () => void;
@@ -27,6 +27,7 @@ export default function ReviewWriteModal({
 }: ReviewWriteModalProps) {
   useEscapeKey(onClose);
   const { isAuthenticated, user } = useAuth();
+  const { showToast } = useToastContext();
   const isEditMode = !!editReview;
   const [reviewContent, setReviewContent] = useState(editReview?.content || "");
   const [rating, setRating] = useState(editReview?.rating || 5);
@@ -35,18 +36,11 @@ export default function ReviewWriteModal({
     editReview?.images || []
   );
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error" | "info";
-  } | null>(null);
 
   const handleSubmit = async () => {
     // 로그인 체크는 모달 열기 전에 이미 처리되었으므로 여기서는 불필요
     if (!reviewContent.trim()) {
-      setToast({
-        message: "리뷰 내용을 입력해주세요.",
-        type: "error",
-      });
+      showToast("리뷰 내용을 입력해주세요.", "error");
       return;
     }
 
@@ -59,26 +53,24 @@ export default function ReviewWriteModal({
           rating: rating,
           images: selectedImages,
         });
-        setToast({ message: "리뷰가 수정되었습니다.", type: "success" });
+        showToast("리뷰가 수정되었습니다.", "success");
       } else {
         await createReview(cafeId, {
           content: reviewContent,
           rating: rating,
           images: selectedImages,
         });
-        setToast({ message: "리뷰가 작성되었습니다.", type: "success" });
+        showToast("리뷰가 작성되었습니다.", "success");
       }
 
       onClose();
       onReviewSubmitted?.();
     } catch (error: any) {
       console.error("리뷰 처리 실패:", error);
-      setToast({
-        message: isEditMode
-          ? "리뷰 수정에 실패했습니다."
-          : "리뷰 작성에 실패했습니다.",
-        type: "error",
-      });
+      showToast(
+        isEditMode ? "리뷰 수정에 실패했습니다." : "리뷰 작성에 실패했습니다.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -86,7 +78,7 @@ export default function ReviewWriteModal({
 
   const handleDelete = () => {
     // TODO: 리뷰 삭제 API 연동
-    setToast({ message: "리뷰가 삭제되었습니다.", type: "success" });
+    showToast("리뷰가 삭제되었습니다.", "success");
     onClose();
   };
 
@@ -290,17 +282,6 @@ export default function ReviewWriteModal({
             </div>
           </div>
         </div>
-
-        {/* 토스트 */}
-        {toast && (
-          <div className="fixed top-4 right-4 z-[60]">
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={() => setToast(null)}
-            />
-          </div>
-        )}
       </div>
     </div>
   );

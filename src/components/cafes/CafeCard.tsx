@@ -22,15 +22,21 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, className = "" }) => {
     >
       <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden rounded-lg">
         {/* 플레이스홀더 (기본 배경) */}
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
           <div className="text-4xl">☕</div>
         </div>
-        
+
         {/* 카페 이미지 */}
         {(() => {
-          const imageUrl = (cafe as any).photoUrl || (cafe as any).photo_url || 
-                          ((cafe as any).images && Array.isArray((cafe as any).images) && (cafe as any).images.length > 0 ? (cafe as any).images[0] : null);
-          
+          const imageUrl =
+            (cafe as any).photoUrl ||
+            (cafe as any).photo_url ||
+            ((cafe as any).images &&
+            Array.isArray((cafe as any).images) &&
+            (cafe as any).images.length > 0
+              ? (cafe as any).images[0]
+              : null);
+
           if (imageUrl) {
             return (
               <img
@@ -58,18 +64,22 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, className = "" }) => {
             {cafe.tags.slice(0, 3).map((tag, index) => (
               <span
                 key={`${tag}-${index}`}
-                className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-medium"
+                className="px-2 py-0.5 bg-[#6E4213] text-white rounded-full text-xs font-medium"
               >
                 {tag}
               </span>
             ))}
             {cafe.tags.length > 3 && (
-              <span className="text-xs text-gray-400">+{cafe.tags.length - 3}</span>
+              <span className="text-xs text-gray-400">
+                +{cafe.tags.length - 3}
+              </span>
             )}
           </div>
         ) : (
           cafe.address && (
-            <p className="text-xs text-gray-500 line-clamp-1 min-h-[24px]">{cafe.address}</p>
+            <p className="text-xs text-gray-500 line-clamp-2 min-h-[24px] text-center">
+              {cafe.address}
+            </p>
           )
         )}
       </div>

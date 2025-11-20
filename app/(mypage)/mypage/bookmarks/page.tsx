@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Pagination from "@/components/common/Pagination";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHeart as faHeartSolid } from "@fortawesome/free-solid-svg-icons";
-import { getWishlist, deleteWishlist } from "@/lib/api";
+import { getWishlist, deleteWishlist, getCafeDetail } from "@/lib/api";
 import { useToastContext } from "@/components/common/ToastProvider";
 
 // 북마크 카테고리 목록 정의 (한글)
@@ -32,6 +32,11 @@ interface WishlistItem {
   cafeId: number;
   name: string;
   category: string;
+  photoUrl?: string | null;
+  photo_url?: string | null;
+  imageUrl?: string | null;
+  image_url?: string | null;
+  images?: string[];
 }
 
 // 카테고리 영문 -> 한글 매핑
@@ -110,21 +115,36 @@ const BookmarkItem = ({
       <div
         className={`relative pt-[100%] overflow-hidden bg-gradient-to-br ${style.gradient}`}
       >
-        {/* 카페 이름 오버레이 */}
-        <div className="absolute inset-0 flex items-center justify-center p-6">
-          <h3 className="text-2xl font-bold text-white drop-shadow-lg text-center leading-tight">
-            {item.name}
-          </h3>
+        {/* 플레이스홀더 배경 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+          <div className="text-4xl">☕</div>
         </div>
 
-        {/* 북마크 해제 버튼 (우측 상단) */}
-        <button
-          className="absolute top-3 right-3 p-2.5 text-red-500 bg-white bg-opacity-95 rounded-full hover:bg-red-100 transition-colors z-10 shadow-lg hover:scale-110 transform duration-200"
-          onClick={handleRemoveBookmark}
-          aria-label={`${item.name} 북마크 해제`}
-        >
-          <HeartIcon />
-        </button>
+        {/* 카페 이미지 */}
+        {(() => {
+          const imageUrl =
+            item.photoUrl ||
+            item.photo_url ||
+            item.imageUrl ||
+            item.image_url ||
+            (item.images && Array.isArray(item.images) && item.images.length > 0
+              ? item.images[0]
+              : null);
+
+          if (imageUrl) {
+            return (
+              <img
+                src={imageUrl}
+                alt={item.name || "카페 이미지"}
+                className="absolute inset-0 w-full h-full object-cover z-0"
+                onError={(e) => {
+                  // 이미지 로드 실패 시 숨김 (플레이스홀더가 보임)
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            );
+          }
+        })()}
 
         {/* 카테고리 뱃지 (좌측 상단) */}
         <div
@@ -141,6 +161,14 @@ const BookmarkItem = ({
           <h3 className="text-lg font-bold text-gray-800 truncate flex-1">
             {item.name}
           </h3>
+          {/* 북마크 해제 버튼 (카페 이름 오른쪽) */}
+          <button
+            className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors hover:scale-110 transform duration-200"
+            onClick={handleRemoveBookmark}
+            aria-label={`${item.name} 북마크 해제`}
+          >
+            <HeartIcon />
+          </button>
         </div>
         <p className="text-sm mt-1 font-medium" style={{ color: style.color }}>
           {categoryName}
@@ -175,7 +203,38 @@ export default function MyBookmarksPage() {
       });
 
       if (response && response.data) {
-        setBookmarks(response.data.content || []);
+        const wishlistItems = response.data.content || [];
+
+        // 각 카페의 이미지 정보 가져오기
+        const bookmarksWithImages = await Promise.all(
+          wishlistItems.map(async (item: WishlistItem) => {
+            try {
+              const cafeDetail = await getCafeDetail(item.cafeId.toString());
+              // 카페 상세 정보에서 이미지 추출
+              const imageUrl =
+                (cafeDetail as any)?.photoUrl ||
+                (cafeDetail as any)?.photo_url ||
+                (cafeDetail as any)?.imageUrl ||
+                (cafeDetail as any)?.image_url ||
+                ((cafeDetail as any)?.images &&
+                Array.isArray((cafeDetail as any).images) &&
+                (cafeDetail as any).images.length > 0
+                  ? (cafeDetail as any).images[0]
+                  : null);
+
+              return {
+                ...item,
+                photoUrl: imageUrl,
+              };
+            } catch (error) {
+              console.error(`카페 ${item.cafeId} 상세 정보 조회 실패:`, error);
+              // 이미지 조회 실패해도 북마크 항목은 유지
+              return item;
+            }
+          })
+        );
+
+        setBookmarks(bookmarksWithImages);
         setTotalPages(response.data.totalPages || 0);
         setTotalBookmarks(response.data.totalElements || 0);
       }

@@ -10,7 +10,7 @@ import {
   getCafeDetail,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import Toast from "@/components/common/Toast";
+import { useToastContext } from "@/components/common/ToastProvider";
 import ReportReviewModal from "@/components/modals/ReportReviewModal";
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
 import ProfileIcon from "@/components/chat/ProfileIcon";
@@ -47,6 +47,7 @@ export default function ReviewSection({
   initialReviews = [],
 }: ReviewSectionProps) {
   const { isAuthenticated, user } = useAuth();
+  const { showToast } = useToastContext();
   const [reviews, setReviews] = useState<CafeReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMenuFor, setShowMenuFor] = useState<number | null>(null);
@@ -56,10 +57,6 @@ export default function ReviewSection({
   );
   const [reportingReviewAuthor, setReportingReviewAuthor] =
     useState<string>("");
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error" | "info";
-  } | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [sortBy, setSortBy] = useState<
     "latest" | "rating-high" | "rating-low" | "likes"
@@ -280,7 +277,10 @@ export default function ReviewSection({
               });
             }
             return isMatch
-              ? { ...review, profileImageUrl: user.profileImageUrl }
+              ? {
+                  ...review,
+                  profileImageUrl: user.profileImageUrl ?? undefined,
+                }
               : review;
           });
 
@@ -363,28 +363,19 @@ export default function ReviewSection({
 
   const handleEdit = (reviewId: number) => {
     if (!isAuthenticated) {
-      setToast({
-        message: "로그인이 필요한 서비스입니다.",
-        type: "error",
-      });
+      showToast("로그인이 필요한 서비스입니다.", "error");
       return;
     }
 
     const review = reviews.find((r) => r.id === reviewId);
     if (!review) {
-      setToast({
-        message: "리뷰를 찾을 수 없습니다.",
-        type: "error",
-      });
+      showToast("리뷰를 찾을 수 없습니다.", "error");
       return;
     }
 
     // 본인 리뷰인지 확인
     if (!isMyReview(review)) {
-      setToast({
-        message: "본인의 리뷰만 수정할 수 있습니다.",
-        type: "error",
-      });
+      showToast("본인의 리뷰만 수정할 수 있습니다.", "error");
       return;
     }
 
@@ -396,27 +387,18 @@ export default function ReviewSection({
 
   const handleDelete = async (reviewId: number) => {
     if (!isAuthenticated) {
-      setToast({
-        message: "로그인이 필요한 서비스입니다.",
-        type: "error",
-      });
+      showToast("로그인이 필요한 서비스입니다.", "error");
       return;
     }
 
     try {
       await deleteReview(reviewId.toString());
-      setToast({
-        message: "리뷰가 삭제되었습니다.",
-        type: "success",
-      });
+      showToast("리뷰가 삭제되었습니다.", "success");
       // 리뷰 목록에서 제거
       setReviews((prev) => prev.filter((r) => r.id !== reviewId));
     } catch (error: any) {
       console.error("리뷰 삭제 실패:", error);
-      setToast({
-        message: "리뷰 삭제에 실패했습니다.",
-        type: "error",
-      });
+      showToast("리뷰 삭제에 실패했습니다.", "error");
     }
     setShowMenuFor(null);
   };
@@ -674,17 +656,6 @@ export default function ReviewSection({
                 {showAllReviews ? "리뷰 접기" : "리뷰 더보기"}
               </Button>
             )}
-          </div>
-        )}
-
-        {/* 토스트 */}
-        {toast && (
-          <div className="fixed top-4 right-4 z-[60]">
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={() => setToast(null)}
-            />
           </div>
         )}
 

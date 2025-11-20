@@ -11,6 +11,7 @@ import {
 } from "@/hooks/useMyQuestions";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatSimpleDate } from "@/utils/dateFormat";
+import { colors } from "@/constants/colors";
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -54,19 +55,29 @@ const InquiryContent = ({
     }
   };
 
-  const getStatusColor = (status: QuestionStatus) => {
+  // 상태 배경색 스타일
+  const getStatusBgColor = (status: QuestionStatus) => {
     switch (status) {
       case QuestionStatus.PENDING:
-        return "text-orange-600 bg-orange-100";
+        return { backgroundColor: colors.brown, color: "white" };
       case QuestionStatus.ANSWERED:
-        return "text-green-600 bg-green-100";
+        return { backgroundColor: colors.beige, color: "white" };
       default:
-        return "text-gray-600 bg-gray-100";
+        return { backgroundColor: "#6b7280", color: "white" }; // gray-500
     }
   };
 
   const getVisibilityText = (visibility: QuestionVisibility) => {
     return visibility === QuestionVisibility.PUBLIC ? "공개" : "비공개";
+  };
+
+  // 가시성 배경색 스타일
+  const getVisibilityBgColor = (visibility: QuestionVisibility) => {
+    if (visibility === QuestionVisibility.PUBLIC) {
+      return { backgroundColor: colors.beige, color: "white" };
+    } else {
+      return { backgroundColor: "#6b7280", color: "white" }; // gray-500
+    }
   };
 
   // 로딩 상태 표시
@@ -115,15 +126,17 @@ const InquiryContent = ({
 
                     {/* 상태 배지 */}
                     <span
-                      className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
-                        item.status
-                      )}`}
+                      style={getStatusBgColor(item.status)}
+                      className="px-2 py-1 text-xs rounded-full"
                     >
                       {getStatusText(item.status)}
                     </span>
 
                     {/* 가시성 배지 */}
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-600">
+                    <span
+                      style={getVisibilityBgColor(item.visibility)}
+                      className="px-2 py-1 text-xs rounded-full"
+                    >
                       {getVisibilityText(item.visibility)}
                     </span>
                   </div>
@@ -208,23 +221,6 @@ export default function InquiryHistoryPage() {
     return (
       <div className="p-8 bg-white min-h-full flex items-center justify-center">
         <div className="text-gray-500">로딩 중...</div>
-      </div>
-    );
-  }
-
-  // 로그인하지 않은 경우
-  if (!isLoggedIn) {
-    return (
-      <div className="p-8 bg-white min-h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-gray-500 mb-4">로그인이 필요합니다.</div>
-          <button
-            onClick={() => (window.location.href = "/login")}
-            className="bg-[#6E4213] text-white text-sm px-4 py-2 rounded-md hover:bg-[#5a360f] transition-colors"
-          >
-            로그인하기
-          </button>
-        </div>
       </div>
     );
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRef } from "react";
+import { colors } from "@/constants/colors";
 
 interface ToastProps {
   message: string;
@@ -89,26 +90,29 @@ export default function Toast({
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
-  const getTypeStyles = () => {
+  const getTypeStyles = (): { backgroundColor: string; color: string } => {
     switch (type) {
       case "success":
-        return "bg-green-500 text-white";
+        return { backgroundColor: colors.beige, color: "white" };
       case "delete":
-        return "bg-red-500 text-white";
+        return { backgroundColor: colors.brown, color: "white" };
       case "error":
-        return "bg-gray-500 text-white";
+        return { backgroundColor: colors.red, color: "white" };
       case "info":
-        return "bg-gray-500 text-white";
+        return { backgroundColor: "#6b7280", color: "white" };
       default:
-        return "bg-green-500 text-white";
+        return { backgroundColor: colors.beige, color: "white" };
     }
   };
 
+  const typeStyles = getTypeStyles();
+
   return (
     <div
+      style={typeStyles}
       className={`px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
         isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"
-      } ${getTypeStyles()}`}
+      }`}
     >
       <div className="flex items-center gap-2">
         {type === "success" && (

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { toggleWishlist, getWishlistCategories } from "@/lib/api";
 import LoginPromptModal from "./LoginPromptModal";
-import Toast from "../common/Toast";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface WishlistModalProps {
   onClose: () => void;
@@ -25,14 +25,11 @@ export default function WishlistModal({
   cafeId,
   cafeName,
 }: WishlistModalProps) {
+  const { showToast } = useToastContext();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error" | "info";
-  } | null>(null);
 
   // 초기 위시리스트 카테고리 로드 (모달이 열릴 때만)
   useEffect(() => {
@@ -69,17 +66,11 @@ export default function WishlistModal({
       if (response?.data?.wished) {
         // 추가된 경우
         setSelectedCategories((prev) => [...prev, category]);
-        setToast({
-          message: "위시리스트에 추가되었습니다!",
-          type: "success",
-        });
+        showToast("위시리스트에 추가되었습니다!", "success");
       } else {
         // 제거된 경우
         setSelectedCategories((prev) => prev.filter((cat) => cat !== category));
-        setToast({
-          message: "위시리스트에서 제거되었습니다.",
-          type: "info",
-        });
+        showToast("위시리스트에서 제거되었습니다.", "info");
       }
     } catch (error: any) {
       console.error("위시리스트 토글 실패:", error);
@@ -88,10 +79,10 @@ export default function WishlistModal({
         setShowLoginPrompt(true);
       } else {
         // 백엔드 서버가 실행되지 않은 경우 사용자에게 알림
-        setToast({
-          message: "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.",
-          type: "error",
-        });
+        showToast(
+          "서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.",
+          "error"
+        );
       }
     } finally {
       setLoading(false);
@@ -204,17 +195,6 @@ export default function WishlistModal({
           onClose={() => setShowLoginPrompt(false)}
           message="로그인 후 위시리스트 기능을 이용할 수 있습니다."
         />
-      )}
-
-      {/* 토스트 */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-[60]">
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        </div>
       )}
     </div>
   );

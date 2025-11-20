@@ -5,7 +5,7 @@ import Button from "../common/Button";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { reportReview, checkReviewReportStatus } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import Toast from "../common/Toast";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 interface ReportReviewModalProps {
   onClose: () => void;
@@ -29,15 +29,12 @@ export default function ReportReviewModal({
 }: ReportReviewModalProps) {
   useEscapeKey(onClose);
   const { isAuthenticated } = useAuth();
+  const { showToast } = useToastContext();
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [customReason, setCustomReason] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [isAlreadyReported, setIsAlreadyReported] = useState(false);
   const [isReported, setIsReported] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error" | "info";
-  } | null>(null);
 
   // 모달이 열릴 때 신고 상태 확인
   useEffect(() => {
@@ -60,26 +57,17 @@ export default function ReportReviewModal({
 
   const handleSubmit = async () => {
     if (!isAuthenticated) {
-      setToast({
-        message: "로그인이 필요한 서비스입니다.",
-        type: "error",
-      });
+      showToast("로그인이 필요한 서비스입니다.", "error");
       return;
     }
 
     if (!selectedReason) {
-      setToast({
-        message: "신고 사유를 선택해주세요.",
-        type: "error",
-      });
+      showToast("신고 사유를 선택해주세요.", "error");
       return;
     }
 
     if (selectedReason === "OTHER" && !customReason.trim()) {
-      setToast({
-        message: "기타 사유를 입력해주세요.",
-        type: "error",
-      });
+      showToast("기타 사유를 입력해주세요.", "error");
       return;
     }
 
@@ -106,15 +94,12 @@ export default function ReportReviewModal({
         error.message &&
         error.message.includes("본인 작성물은 신고할 수 없습니다")
       ) {
-        setToast({
-          message: "본인의 리뷰는 신고할 수 없습니다.",
-          type: "error",
-        });
+        showToast("본인의 리뷰는 신고할 수 없습니다.", "error");
       } else {
-        setToast({
-          message: "신고 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
-          type: "error",
-        });
+        showToast(
+          "신고 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          "error"
+        );
       }
     } finally {
       setLoading(false);
@@ -323,15 +308,6 @@ export default function ReportReviewModal({
             </div>
 
             {/* 토스트 */}
-            {toast && (
-              <div className="fixed top-4 right-4 z-[60]">
-                <Toast
-                  message={toast.message}
-                  type={toast.type}
-                  onClose={() => setToast(null)}
-                />
-              </div>
-            )}
           </>
         )}
       </div>

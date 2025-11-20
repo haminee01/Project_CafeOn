@@ -9,6 +9,7 @@ import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import { formatSimpleDate } from "@/utils/dateFormat";
 import { getAccessToken } from "@/stores/authStore";
+import { colors } from "@/constants/colors";
 
 // 페이지네이션 상수
 const ITEMS_PER_PAGE = 10;
@@ -97,9 +98,29 @@ const QuestionList = ({
 
   // 상태 색상 변환
   const getStatusColor = (status: string | null) => {
-    return status === "ANSWERED"
-      ? "text-green-600 bg-green-100"
-      : "text-orange-600 bg-orange-100";
+    if (status === "ANSWERED") {
+      return `text-white`; // beige 배경에 흰색 텍스트
+    } else {
+      return `text-white`; // brown 배경에 흰색 텍스트
+    }
+  };
+
+  // 상태 배경색 스타일
+  const getStatusBgColor = (status: string | null) => {
+    if (status === "ANSWERED") {
+      return { backgroundColor: colors.beige, color: "white" };
+    } else {
+      return { backgroundColor: colors.brown, color: "white" };
+    }
+  };
+
+  // 가시성 배경색 스타일
+  const getVisibilityBgColor = (visibility: QuestionVisibility) => {
+    if (visibility === QuestionVisibility.PUBLIC) {
+      return { backgroundColor: colors.beige, color: "white" };
+    } else {
+      return { backgroundColor: "#6b7280", color: "white" }; // gray-500
+    }
   };
 
   // 로딩 상태 표시
@@ -149,16 +170,18 @@ const QuestionList = ({
                     {/* 상태 배지 */}
                     {questionStatuses[item.id] && (
                       <span
-                        className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
-                          questionStatuses[item.id]
-                        )}`}
+                        style={getStatusBgColor(questionStatuses[item.id])}
+                        className="px-2 py-1 text-xs rounded-full"
                       >
                         {getStatusText(questionStatuses[item.id])}
                       </span>
                     )}
 
                     {/* 가시성 배지 */}
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-600">
+                    <span
+                      style={getVisibilityBgColor(item.visibility)}
+                      className="px-2 py-1 text-xs rounded-full"
+                    >
                       {getVisibilityText(item.visibility)}
                     </span>
                   </div>

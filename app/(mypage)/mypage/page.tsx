@@ -12,6 +12,7 @@ import {
 import { FaUser } from "react-icons/fa";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useToastContext } from "@/components/common/ToastProvider";
 
 const WithdrawalModal = ({
   onConfirm,
@@ -38,15 +39,10 @@ const WithdrawalModal = ({
   );
 };
 
-const PasswordAlert = () => (
-  <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#999999] text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fadeInOut">
-    비밀번호가 변경되었습니다.
-  </div>
-);
-
 export default function MypageMainPage() {
   const router = useRouter();
   const { user, updateUser, logout } = useAuth();
+  const { showToast } = useToastContext();
   const [profile, setProfile] = useState({
     nickname: "",
     name: "",
@@ -59,7 +55,6 @@ export default function MypageMainPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // useRef 훅을 사용하여 숨겨진 input 요소에 접근
@@ -79,10 +74,11 @@ export default function MypageMainPage() {
         });
       } catch (error) {
         console.error("회원 정보 조회 실패:", error);
-        alert(
+        showToast(
           error instanceof Error
             ? error.message
-            : "회원 정보를 불러오지 못했습니다."
+            : "회원 정보를 불러오지 못했습니다.",
+          "error"
         );
       } finally {
         setIsLoading(false);
@@ -95,7 +91,7 @@ export default function MypageMainPage() {
   // 닉네임 저장 핸들러
   const handleSaveNickname = async () => {
     if (!profile.nickname.trim()) {
-      alert("닉네임을 입력해주세요.");
+      showToast("닉네임을 입력해주세요.", "error");
       return;
     }
 
@@ -109,12 +105,13 @@ export default function MypageMainPage() {
           username: profile.nickname,
         });
       }
-      alert("회원정보가 수정되었습니다.");
+      showToast("회원정보가 수정되었습니다.", "success");
     } catch (error) {
-      alert(
+      showToast(
         error instanceof Error
           ? error.message
-          : "회원 정보 수정에 실패했습니다."
+          : "회원 정보 수정에 실패했습니다.",
+        "error"
       );
     }
   };
@@ -147,12 +144,13 @@ export default function MypageMainPage() {
             profileImageUrl: newImageUrl,
           });
         }
-        alert("프로필 이미지가 변경되었습니다.");
+        showToast("프로필 이미지가 변경되었습니다.", "success");
       } catch (error) {
-        alert(
+        showToast(
           error instanceof Error
             ? error.message
-            : "프로필 이미지 변경에 실패했습니다."
+            : "프로필 이미지 변경에 실패했습니다.",
+          "error"
         );
       }
     }
@@ -164,12 +162,13 @@ export default function MypageMainPage() {
   const handleConfirmWithdrawal = async () => {
     try {
       await deleteUser();
-      alert("회원탈퇴가 완료되었습니다.");
+      showToast("회원탈퇴가 완료되었습니다.", "success");
       logout();
       router.push("/login");
     } catch (error) {
-      alert(
-        error instanceof Error ? error.message : "회원 탈퇴에 실패했습니다."
+      showToast(
+        error instanceof Error ? error.message : "회원 탈퇴에 실패했습니다.",
+        "error"
       );
     } finally {
       setIsWithdrawalModalOpen(false);
@@ -180,19 +179,19 @@ export default function MypageMainPage() {
   const handleChangePassword = async () => {
     // 입력값 검증
     if (!oldPassword) {
-      alert("현재 비밀번호를 입력해주세요.");
+      showToast("현재 비밀번호를 입력해주세요.", "error");
       return;
     }
     if (!newPassword) {
-      alert("새 비밀번호를 입력해주세요.");
+      showToast("새 비밀번호를 입력해주세요.", "error");
       return;
     }
     if (newPassword !== confirmPassword) {
-      alert("새 비밀번호가 일치하지 않습니다.");
+      showToast("새 비밀번호가 일치하지 않습니다.", "error");
       return;
     }
     if (oldPassword === newPassword) {
-      alert("현재 비밀번호와 새 비밀번호가 같습니다.");
+      showToast("현재 비밀번호와 새 비밀번호가 같습니다.", "error");
       return;
     }
 
@@ -204,16 +203,16 @@ export default function MypageMainPage() {
       });
 
       // 성공 시 알림 표시
-      setShowAlert(true);
-      setTimeout(() => {
-        setShowAlert(false);
-        setOldPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      }, 3000);
+      showToast("비밀번호가 변경되었습니다.", "success");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (error) {
-      alert(
-        error instanceof Error ? error.message : "비밀번호 변경에 실패했습니다."
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "비밀번호 변경에 실패했습니다.",
+        "error"
       );
     }
   };
@@ -384,8 +383,6 @@ export default function MypageMainPage() {
           onCancel={handleCancelWithdrawal}
         />
       )}
-
-      {showAlert && <PasswordAlert />}
     </div>
   );
 }
