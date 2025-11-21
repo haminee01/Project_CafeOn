@@ -102,6 +102,19 @@ export default function CafeDetailPage({ params }: CafeDetailPageProps) {
 
         // API에서 카페 상세 정보 조회
         const cafeData = await getCafeDetail(resolvedParams.cafeId);
+
+        // 디버깅: API 응답 확인
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            "[CafeDetail] API 응답 reviewsSummary:",
+            cafeData.reviewsSummary
+          );
+          console.log(
+            "[CafeDetail] reviewsSummary length:",
+            cafeData.reviewsSummary?.length
+          );
+        }
+
         const mapped = mapApiToCafeDetail(cafeData);
         setCafe(mapped);
       } catch (err: any) {

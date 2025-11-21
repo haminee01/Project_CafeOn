@@ -115,12 +115,14 @@ export default function ReviewWriteModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
       <div className="bg-white rounded-2xl p-5 sm:p-6 md:p-8 max-w-lg md:max-w-xl lg:max-w-2xl w-full">
-        <div className="flex justify-end items-center mb-4 sm:mb-6">
-          <Button
+        {/* 헤더 */}
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h2 className="text-xl font-bold text-gray-900">
+            {isEditMode ? "리뷰 수정" : "리뷰 작성"}
+          </h2>
+          <button
             onClick={onClose}
-            color="gray"
-            size="sm"
-            className="!p-1 !min-w-0"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg
               className="w-6 h-6"
@@ -135,7 +137,7 @@ export default function ReviewWriteModal({
                 d="M6 18L18 6M6 6l12 12"
               />
             </svg>
-          </Button>
+          </button>
         </div>
 
         <div className="space-y-5 sm:space-y-6">
