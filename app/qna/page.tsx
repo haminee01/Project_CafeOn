@@ -108,9 +108,9 @@ const QuestionList = ({
   // 상태 배경색 스타일
   const getStatusBgColor = (status: string | null) => {
     if (status === "ANSWERED") {
-      return { backgroundColor: colors.beige, color: "white" };
+      return { backgroundColor: "rgba(110, 66, 19, 1)", color: "white" };
     } else {
-      return { backgroundColor: colors.brown, color: "white" };
+      return { backgroundColor: "rgba(110, 66, 19, 0.5)", color: "white" };
     }
   };
 
