@@ -427,14 +427,14 @@ export default function ReviewSection({
   return (
     <div className="py-12" onClick={handleClickOutside}>
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
           <h2 className="text-2xl font-bold text-gray-900">리뷰 모아보기</h2>
 
           {/* 정렬 버튼 */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
             <button
               onClick={() => setSortBy("latest")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${
                 sortBy === "latest"
                   ? "bg-primary text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -444,7 +444,7 @@ export default function ReviewSection({
             </button>
             <button
               onClick={() => setSortBy("rating-high")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${
                 sortBy === "rating-high"
                   ? "bg-primary text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -454,7 +454,7 @@ export default function ReviewSection({
             </button>
             <button
               onClick={() => setSortBy("rating-low")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${
                 sortBy === "rating-low"
                   ? "bg-primary text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
