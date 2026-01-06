@@ -1,17 +1,9 @@
 import apiClient from "./axios";
 import { normalizeError as normalizeErrorUtil } from "@/utils/errorHandler";
-import { AppError } from "@/errors/AppError";
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-/**
- * API 호출 시 에러를 표준화하여 throw
- * @deprecated normalizeErrorUtil을 직접 사용하세요
- */
-function normalizeError(
-  error: unknown,
-  context?: Record<string, unknown>
-): AppError {
+// API 에러를 표준화하여 throw (source 자동 추가)
+function normalizeError(error: unknown, context?: Record<string, unknown>) {
   return normalizeErrorUtil(error, { source: "api.ts", ...context });
 }
 
@@ -184,21 +176,10 @@ export async function getNearbyCafes(params: {
     }
     return [];
   } catch (error) {
-    const normalizedError = normalizeError(error, {
+    throw normalizeError(error, {
       action: "getNearbyCafes",
       params,
     });
-    // 타임아웃 에러인 경우 특별 처리 (빈 배열 반환)
-    if (
-      normalizedError.code === "NETWORK_ERROR" &&
-      normalizedError.message.includes("timeout")
-    ) {
-      console.warn("근처 카페 조회 타임아웃 (30초 초과), 빈 배열 반환");
-      return [];
-    }
-    // 기타 네트워크 에러도 빈 배열 반환 (에러를 throw하지 않음)
-    console.warn("근처 카페 API 실패, 빈 배열 반환");
-    return [];
   }
 }
 
@@ -289,10 +270,7 @@ export async function getRandomCafes() {
     }
     return [];
   } catch (error) {
-    console.error("랜덤 카페 조회 실패:", error);
-    // API 실패 시 빈 배열 반환 (에러를 throw하지 않음)
-    console.warn("랜덤 카페 API 실패, 빈 배열 반환");
-    return [];
+    throw normalizeError(error, { action: "getRandomCafes" });
   }
 }
 
@@ -318,10 +296,7 @@ export async function getHotCafes() {
     }
     return [];
   } catch (error) {
-    console.error("인기 카페 조회 실패:", error);
-    // API 실패 시 빈 배열 반환
-    console.warn("인기 카페 API 실패, 빈 배열 반환");
-    return [];
+    throw normalizeError(error, { action: "getHotCafes" });
   }
 }
 
@@ -339,10 +314,7 @@ export async function getWishlistTopCafes() {
     }
     return [];
   } catch (error) {
-    console.error("찜 많은 카페 조회 실패:", error);
-    // API 실패 시 빈 배열 반환
-    console.warn("찜 많은 카페 API 실패, 빈 배열 반환");
-    return [];
+    throw normalizeError(error, { action: "getWishlistTopCafes" });
   }
 }
 
@@ -366,17 +338,10 @@ export async function getRelatedCafes(cafeId: string) {
     }
     return [];
   } catch (error) {
-    // 백엔드 API가 아직 구현되지 않은 경우 404/500 에러가 발생할 수 있음
-    // 에러를 조용히 처리하고 빈 배열 반환 (또는 임시로 랜덤 카페 사용 가능)
-    const normalizedError = normalizeError(error);
-    const { statusCode, message } = normalizedError;
-    if (statusCode === 404 || statusCode === 500) {
-      return [];
-    }
-
-    // 기타 에러의 경우에도 빈 배열 반환
-    console.warn("관련 카페 조회 실패:", statusCode || message);
-    return [];
+    throw normalizeError(error, {
+      action: "getRelatedCafes",
+      cafeId,
+    });
   }
 }
 
@@ -545,29 +510,10 @@ export async function getWishlist(params?: {
     const response = await apiClient.get("/api/my/wishlist", { params });
     return response.data;
   } catch (error) {
-    // 403 또는 401 에러인 경우 (권한 없음)
-    const normalizedError = normalizeError(error);
-    const status = normalizedError.statusCode;
-    if (status === 403 || status === 401) {
-      throw error;
-    }
-
-    // 500 에러 등 기타 에러인 경우 빈 결과 반환
-    if (status === 500 || status === 400) {
-      console.warn("위시리스트 조회 실패:", status || normalizedError.message);
-      return {
-        data: {
-          content: [],
-          totalElements: 0,
-          totalPages: 0,
-          number: params?.page || 0,
-          size: params?.size || 20,
-        },
-      };
-    }
-
-    console.error("위시리스트 조회 API 호출 실패:", error);
-    throw new Error(normalizedError.message || "위시리스트 조회 실패");
+    throw normalizeError(error, {
+      action: "getWishlist",
+      params,
+    });
   }
 }
 
@@ -577,21 +523,10 @@ export async function getWishlistCategories(cafeId: string) {
     const response = await apiClient.get(`/api/my/wishlist/${cafeId}`);
     return response.data;
   } catch (error) {
-    console.error("위시리스트 카테고리 조회 API 호출 실패:", error);
-    const normalizedError = normalizeError(error);
-
-    // 백엔드 서버가 실행되지 않은 경우 모킹된 응답 반환
-    if (
-      normalizedError.code === "ERR_NETWORK" ||
-      normalizedError.message?.includes("Network Error")
-    ) {
-      return {
-        message: "카테고리 조회 완료 (모킹)",
-        data: [],
-      };
-    }
-
-    throw new Error(normalizedError.message || "카테고리 조회 실패");
+    throw normalizeError(error, {
+      action: "getWishlistCategories",
+      cafeId,
+    });
   }
 }
 
@@ -603,24 +538,11 @@ export async function toggleWishlist(cafeId: string, category: string) {
     );
     return response.data;
   } catch (error) {
-    console.error("위시리스트 토글 API 호출 실패:", error);
-    const normalizedError = normalizeError(error);
-
-    // 백엔드 서버가 실행되지 않은 경우 모킹된 응답 반환
-    if (
-      normalizedError.code === "ERR_NETWORK" ||
-      normalizedError.message?.includes("Network Error")
-    ) {
-      return {
-        message: "위시리스트가 반영되었습니다. (모킹)",
-        data: {
-          cafeId: parseInt(cafeId),
-          wished: true,
-        },
-      };
-    }
-
-    throw new Error(normalizedError.message || "위시리스트 처리 실패");
+    throw normalizeError(error, {
+      action: "toggleWishlist",
+      cafeId,
+      category,
+    });
   }
 }
 
